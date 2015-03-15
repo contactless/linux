@@ -20,6 +20,7 @@
 #include <linux/libfdt.h>
 #include <linux/err.h>
 #include <linux/idr.h>
+#include <linux/sysfs.h>
 
 #include "of_private.h"
 
@@ -77,6 +78,7 @@ struct overlay_changeset {
 	struct fragment *fragments;
 	bool symbols_fragment;
 	struct of_changeset cset;
+	struct kobject kobj;
 };
 
 /* flags are sticky - once set, do not reset */
@@ -866,6 +868,17 @@ static void free_overlay_changeset(struct overlay_changeset *ovcs)
 		of_node_put(ovcs->fragments[i].overlay);
 	}
 	kfree(ovcs->fragments);
+	kobject_put(&ovcs->kobj);
+}
+
+static inline struct overlay_changeset *kobj_to_ovcs(struct kobject *kobj)
+{
+	return container_of(kobj, struct overlay_changeset, kobj);
+}
+
+static void overlay_changeset_release(struct kobject *kobj)
+{
+	struct overlay_changeset *ovcs = kobj_to_ovcs(kobj);
 
 	/*
 	 * There should be no live pointers into ovcs->overlay_mem and
@@ -884,6 +897,12 @@ static void free_overlay_changeset(struct overlay_changeset *ovcs)
 	}
 	kfree(ovcs);
 }
+
+static struct kobj_type overlay_changeset_ktype = {
+	.release = overlay_changeset_release,
+};
+
+static struct kset *ov_kset;
 
 /*
  * internal documentation
@@ -927,6 +946,8 @@ static int of_overlay_apply(struct overlay_changeset *ovcs,
 	if (ret)
 		goto out;
 
+	kobject_init(&ovcs->kobj, &overlay_changeset_ktype);
+
 	ret = overlay_notify(ovcs, OF_OVERLAY_PRE_APPLY);
 	if (ret)
 		goto out;
@@ -942,6 +963,21 @@ static int of_overlay_apply(struct overlay_changeset *ovcs,
 			pr_debug("overlay changeset revert error %d\n",
 				 ret_revert);
 			devicetree_state_flags |= DTSF_APPLY_FAIL;
+		}
+		goto out;
+	}
+
+	ovcs->kobj.kset = ov_kset;
+	ret = kobject_add(&ovcs->kobj, NULL, "%d", ovcs->id);
+	if (ret != 0) {
+		pr_err("%s: kobject_add() failed\n", __func__);
+		ret_tmp = 0;
+		ret_revert = __of_changeset_revert_entries(&ovcs->cset,
+							   &ret_tmp);
+		if (ret_revert) {
+			pr_debug("overlay changeset revert error %d\n",
+				 ret_revert);
+			devicetree_state_flags |= DTSF_REVERT_FAIL;
 		}
 		goto out;
 	}
@@ -1278,3 +1314,13 @@ int of_overlay_remove_all(void)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(of_overlay_remove_all);
+
+/* called from of_init() */
+int of_overlay_init(void)
+{
+	ov_kset = kset_create_and_add("overlays", NULL, &of_kset->kobj);
+	if (!ov_kset)
+		return -ENOMEM;
+
+	return 0;
+}
