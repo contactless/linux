@@ -14,6 +14,7 @@
 #include <linux/of_device.h>
 #include <linux/of_fdt.h>
 #include <linux/string.h>
+#include <linux/kstrtox.h>
 #include <linux/ctype.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
@@ -21,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/idr.h>
 #include <linux/sysfs.h>
+#include <linux/atomic.h>
 
 #include "of_private.h"
 
@@ -80,6 +82,16 @@ struct overlay_changeset {
 	struct of_changeset cset;
 	struct kobject kobj;
 };
+
+/* master enable switch; once set to 0 can't be re-enabled */
+static atomic_t ov_enable = ATOMIC_INIT(1);
+
+static int __init of_overlay_disable_setup(char *str __always_unused)
+{
+	atomic_set(&ov_enable, 0);
+	return 1;
+}
+__setup("of_overlay_disable", of_overlay_disable_setup);
 
 /* flags are sticky - once set, do not reset */
 static int devicetree_state_flags;
@@ -898,6 +910,35 @@ static void overlay_changeset_release(struct kobject *kobj)
 	kfree(ovcs);
 }
 
+static ssize_t enable_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&ov_enable));
+}
+
+static ssize_t enable_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	bool new_enable;
+
+	ret = kstrtobool(buf, &new_enable);
+	if (ret != 0)
+		return ret;
+	/* if we've disabled it, no going back */
+	if (atomic_read(&ov_enable) == 0)
+		return -EPERM;
+	atomic_set(&ov_enable, (int)new_enable);
+	return count;
+}
+
+static struct kobj_attribute enable_attr = __ATTR_RW(enable);
+
+static const struct attribute *overlay_global_attrs[] = {
+	&enable_attr.attr,
+	NULL
+};
+
 static struct kobj_type overlay_changeset_ktype = {
 	.release = overlay_changeset_release,
 };
@@ -937,6 +978,12 @@ static int of_overlay_apply(struct overlay_changeset *ovcs,
 			    const struct device_node *base)
 {
 	int ret = 0, ret_revert, ret_tmp;
+
+	/* administratively disabled */
+	if (!atomic_read(&ov_enable)) {
+		ret = -EPERM;
+		goto out;
+	}
 
 	ret = of_resolve_phandles(ovcs->overlay_root);
 	if (ret)
@@ -1318,9 +1365,14 @@ EXPORT_SYMBOL_GPL(of_overlay_remove_all);
 /* called from of_init() */
 int of_overlay_init(void)
 {
+	int rc;
+
 	ov_kset = kset_create_and_add("overlays", NULL, &of_kset->kobj);
 	if (!ov_kset)
 		return -ENOMEM;
 
-	return 0;
+	rc = sysfs_create_files(&ov_kset->kobj, overlay_global_attrs);
+	WARN(rc, "%s: error adding global attributes\n", __func__);
+
+	return rc;
 }
