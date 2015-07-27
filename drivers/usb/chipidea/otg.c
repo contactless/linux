@@ -198,6 +198,10 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 			 */
 			hw_wait_vbus_lower_bsv(ci);
 
+		/* Ignore B session valid voltage transition because
+		 *  5V rail is not connected to chip Vbus line */
+		msleep(10);
+
 		ci_role_start(ci, role);
 		/* vbus change may have already occurred */
 		if (role == CI_ROLE_GADGET)
