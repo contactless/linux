@@ -4554,6 +4554,10 @@
 			See Documentation/admin-guide/sysctl/vm.rst for details.
 
 	ohci1394_dma=early	[HW,EARLY] enable debugging via the ohci1394 driver.
+
+	of_overlay_disable	[OF] Disable device tree overlays at boot time.
+
+	ohci1394_dma=early	[HW] enable debugging via the ohci1394 driver.
 			See Documentation/core-api/debugging-via-ohci1394.rst for more
 			info.
 
