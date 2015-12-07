@@ -62,7 +62,7 @@ static int sun4i_gem_create_ioctl(struct drm_device *drm, void *data,
 
 static const struct drm_ioctl_desc sun4i_drv_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(SUN4I_GEM_CREATE, sun4i_gem_create_ioctl,
-			  DRM_UNLOCKED | DRM_AUTH),
+			  DRM_AUTH),
 };
 
 static const struct drm_driver sun4i_drv_driver = {
