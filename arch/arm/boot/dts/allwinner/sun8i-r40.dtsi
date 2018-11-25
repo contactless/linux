@@ -848,6 +848,17 @@
 			#thermal-sensor-cells = <1>;
 		};
 
+		pwm: pwm@1c23400 {
+			compatible = "allwinner,sun8i-r40-pwm";
+			reg = <0x01c23400 0x400>;
+			interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&osc24M>, <&ccu CLK_APB1>;
+			clock-names = "mux-0", "mux-1";
+			pwm-channels = <8>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
 		uart0: serial@1c28000 {
 			compatible = "snps,dw-apb-uart";
 			reg = <0x01c28000 0x400>;
