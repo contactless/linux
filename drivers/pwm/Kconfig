@@ -643,7 +643,7 @@ config PWM_STMPE
 	  expanders.
 
 config PWM_SUN4I
-	tristate "Allwinner PWM support"
+	tristate "Allwinner SUN4I PWM support"
 	depends on ARCH_SUNXI || COMPILE_TEST
 	depends on HAS_IOMEM && COMMON_CLK
 	help
@@ -662,6 +662,16 @@ config PWM_SUNPLUS
 
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-sunplus.
+
+config PWM_SUN8I
+	tristate "Allwinner SUN8I (R40/V40/T3) PWM support"
+	depends on ARCH_SUNXI || COMPILE_TEST
+	depends on HAS_IOMEM && COMMON_CLK
+	help
+	  Generic PWM framework driver for Allwinner R40/V40/T3 SoCs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-sun8i.
 
 config PWM_TEGRA
 	tristate "NVIDIA Tegra PWM support"
