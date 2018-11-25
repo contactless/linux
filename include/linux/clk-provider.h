@@ -1353,6 +1353,7 @@ int __must_check clk_hw_register(struct device *dev, struct clk_hw *hw);
 int __must_check devm_clk_hw_register(struct device *dev, struct clk_hw *hw);
 int __must_check of_clk_hw_register(struct device_node *node, struct clk_hw *hw);
 
+bool devm_clk_name_match(struct clk *clk, const char *string);
 void clk_unregister(struct clk *clk);
 
 void clk_hw_unregister(struct clk_hw *hw);
