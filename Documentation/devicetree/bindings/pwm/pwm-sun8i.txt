@@ -1,0 +1,24 @@
+Allwinner sun8i R40/V40/T3 SoC PWM controller
+
+Required properties:
+  - compatible: Should be one of:
+    - "allwinner,sun8i-r40-pwm"
+  - reg: Physical base address and length of the controller's registers
+  - interrupts: Should contain interrupt.
+  - clocks: From common clock binding, handle to the parent clock.
+  - clock-names: Must contain the clock names described just above.
+  - pwm-channels: PWM channels of the controller.
+  - #pwm-cells: Should be 3. See pwm.txt in this directory for a description of
+    the cells format.
+
+Example:
+
+pwm: pwm@1c23400 {
+	     compatible = "allwinner,sun8i-r40-pwm";
+	     reg = <0x01c23400 0x400>;
+	     interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
+	     clocks = <&osc24M>, <&ccu CLK_APB1>;
+	     clock-names = "mux-0", "mux-1";
+	     pwm-channels = <8>;
+	     #pwm-cells = <3>;
+};
