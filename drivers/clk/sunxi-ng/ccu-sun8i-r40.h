@@ -42,7 +42,9 @@
 
 #define CLK_AXI			25
 #define CLK_AHB1		26
-#define CLK_APB1		27
+
+/* The APB1 clock is exported */
+
 #define CLK_APB2		28
 
 /* All the bus gates are exported */
