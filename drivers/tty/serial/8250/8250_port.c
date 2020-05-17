@@ -15,6 +15,7 @@
 #include <linux/moduleparam.h>
 #include <linux/ioport.h>
 #include <linux/init.h>
+#include <linux/iopoll.h>
 #include <linux/irq.h>
 #include <linux/console.h>
 #include <linux/gpio/consumer.h>
@@ -1438,20 +1439,49 @@ void serial8250_em485_stop_tx(struct uart_8250_port *p, bool toggle_ier)
 }
 EXPORT_SYMBOL_GPL(serial8250_em485_stop_tx);
 
+static inline int __get_lsr(struct uart_8250_port *p)
+{
+	return serial_in(p, UART_LSR);
+}
+
+static inline int __wait_for_empty(struct uart_8250_port *p, u64 timeout_us)
+{
+	int lsr;
+
+	return readx_poll_timeout(__get_lsr, p, lsr,
+				  (lsr & UART_LSR_BOTH_EMPTY) == UART_LSR_BOTH_EMPTY,
+				  0, timeout_us);
+}
+
 static enum hrtimer_restart serial8250_em485_handle_stop_tx(struct hrtimer *t)
 {
 	struct uart_8250_em485 *em485 = container_of(t, struct uart_8250_em485,
 			stop_tx_timer);
 	struct uart_8250_port *p = em485->port;
 	unsigned long flags;
+	enum hrtimer_restart restart = HRTIMER_NORESTART;
 
 	serial8250_rpm_get(p);
 	uart_port_lock_irqsave(&p->port, &flags);
 	if (em485->active_timer == &em485->stop_tx_timer) {
+		/*
+		 * On 8250 without TEMT interrupt, check LSR state and
+		 * restart timer if not empty yet.
+		 */
+		if (!(p->capabilities & UART_CAP_NOTEMT)) {
+			int ret = __wait_for_empty(p, 100);
+
+			if (ret < 0) {
+				restart = HRTIMER_RESTART;
+				goto out;
+			}
+		}
+
 		p->rs485_stop_tx(p, true);
 		em485->active_timer = NULL;
 		em485->tx_stopped = true;
 	}
+out:
 	uart_port_unlock_irqrestore(&p->port, flags);
 	serial8250_rpm_put(p);
 
@@ -1479,6 +1509,12 @@ static void __stop_tx_rs485(struct uart_8250_port *p, u64 stop_delay)
 	if (stop_delay > 0) {
 		em485->active_timer = &em485->stop_tx_timer;
 		hrtimer_start(&em485->stop_tx_timer, ns_to_ktime(stop_delay), HRTIMER_MODE_REL);
+	} else if (!(p->capabilities & UART_CAP_NOTEMT) && __wait_for_empty(p, 100)) {
+		/* Short timer of 1us to check for clear fifos */
+		ktime_t tim = ktime_set(0, 1000);
+
+		em485->active_timer = &em485->stop_tx_timer;
+		hrtimer_start(&em485->stop_tx_timer, tim, HRTIMER_MODE_REL);
 	} else {
 		p->rs485_stop_tx(p, true);
 		em485->active_timer = NULL;
@@ -1581,9 +1617,10 @@ void serial8250_em485_start_tx(struct uart_8250_port *up, bool toggle_ier)
 {
 	unsigned char mcr = serial8250_in_MCR(up);
 
-	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier)
+	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier){
 		up->rx_disabled = true;
 		serial8250_stop_rx(&up->port);
+	}
 
 	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
 		mcr |= UART_MCR_RTS;
