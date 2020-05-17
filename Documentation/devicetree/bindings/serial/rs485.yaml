@@ -50,6 +50,10 @@ properties:
     description: enables the receiving of data even while sending data.
     $ref: /schemas/types.yaml#/definitions/flag
 
+  rs485-rx-enable-gpios:
+    description: GPIO to handle a separate RS485 receive enable signal
+    maxItems: 1
+
   rs485-term-gpios:
     description: GPIO pin to enable RS485 bus termination.
     maxItems: 1
