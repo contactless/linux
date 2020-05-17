@@ -1458,7 +1458,7 @@ static int omap8250_probe(struct platform_device *pdev)
 	up.port.private_data = priv;
 
 	up.tx_loadsz = 64;
-	up.capabilities = UART_CAP_FIFO;
+	up.capabilities = UART_CAP_FIFO | UART_CAP_TEMT;
 #ifdef CONFIG_PM
 	/*
 	 * Runtime PM is mostly transparent. However to do it right we need to a
