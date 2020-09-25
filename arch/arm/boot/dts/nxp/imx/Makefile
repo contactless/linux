@@ -339,6 +339,11 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-tx6ul-0011.dtb \
 	imx6ul-tx6ul-mainboard.dtb \
 	imx6ul-var-som-concerto.dtb \
+	imx6ul-wirenboard-evk.dtb \
+	imx6ul-wirenboard61.dtb \
+	imx6ul-wirenboard65.dtb \
+	imx6ul-wirenboard660.dtb \
+	imx6ul-wirenboard670.dtb \
 	imx6ull-14x14-evk.dtb \
 	imx6ull-colibri-aster.dtb \
 	imx6ull-colibri-emmc-aster.dtb \
