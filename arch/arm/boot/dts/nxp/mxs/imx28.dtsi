@@ -1143,14 +1143,6 @@
 				#io-channel-cells = <1>;
 			};
 
-			spdif: spdif@80054000 {
-				reg = <0x80054000 0x2000>;
-				interrupts = <45>;
-				dmas = <&dma_apbx 2>;
-				dma-names = "tx";
-				status = "disabled";
-			};
-
 			mxs_rtc: rtc@80056000 {
 				compatible = "fsl,imx28-rtc", "fsl,stmp3xxx-rtc";
 				reg = <0x80056000 0x2000>;
