@@ -1,0 +1,33 @@
+/dts-v1/;
+
+#include "imx6ul-wirenboard65.dts"
+
+/ {
+	model = "Wiren Board rev. 6.6.0 (i.MX6UL/ULL)";
+	compatible = "contactless,imx6ul-wirenboard660", "contactless,imx6ul-wirenboard65", "contactless,imx6ul-wirenboard61", "contactless,imx6ul-wirenboard60", "contactless,imx6ul-wirenboard-evk", "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+	wirenboard {
+		analog-inputs {
+			A1 {
+				divider-r1-ohms = <88700>;
+				divider-r2-ohms = <10000>;
+			};
+
+			A2 {
+				divider-r1-ohms = <88700>;
+				divider-r2-ohms = <10000>;
+			};
+
+			A3 {
+				divider-r1-ohms = <88700>;
+				divider-r2-ohms = <10000>;
+			};
+
+			A4 {
+				divider-r1-ohms = <88700>;
+				divider-r2-ohms = <10000>;
+			};
+		};
+    };
+};
+
+
