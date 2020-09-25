@@ -1,0 +1,237 @@
+/dts-v1/;
+
+#include "imx6ul-wirenboard660.dts"
+
+/ {
+	model = "Wiren Board rev. 6.7.0 (i.MX6UL/ULL)";
+	compatible = "contactless,imx6ul-wirenboard670", "contactless,imx6ul-wirenboard660", "contactless,imx6ul-wirenboard65", "contactless,imx6ul-wirenboard61", "contactless,imx6ul-wirenboard60", "contactless,imx6ul-wirenboard-evk", "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+
+	/delete-node/ leds; // Removing led from Eth1
+
+	wirenboard {
+		gpios {
+			A1_IN {
+				io-gpios = <&gpio3 14 1>; /* inverted */
+			};
+
+			A2_IN {
+				io-gpios = <&gpio3 13 1>; /* inverted */
+			};
+
+			A3_IN {
+				io-gpios = <&gpio3 28 1>; /* inverted */
+			};
+
+			A4_IN {
+				io-gpios = <&gpio3 27 1>; /* inverted */
+			};
+		};
+
+		gsm {
+			power-gpios = <&gpio5 4 0>;
+		};
+
+    };
+};
+
+&ecspi3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3>;
+
+	cs-gpios = <&gpio4 12 GPIO_ACTIVE_LOW>;
+
+	dmas = <&sdma 7 7 1>, <&sdma 8 7 2>;
+	dma-names = "rx", "tx";
+
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_io_gpio>;
+
+	// uart6 is now on mod4 => should be disabled at boot
+	/delete-node/ pinctrl_uart6;
+
+	pinctrl_uart6_txrx: uart6txrxgrp {
+		fsl,pins = <
+			MX6UL_PAD_CSI_MCLK__UART6_DCE_TX	0x1b0b1
+			MX6UL_PAD_CSI_PIXCLK__UART6_DCE_RX	0x1b0b1
+		>;
+	};
+
+	pinctrl_uart6_ctsb: uart6ctsbgrp {
+		fsl,pins = <
+			MX6UL_PAD_CSI_VSYNC__GPIO4_IO19	0x1b0b1
+		>;
+	};
+
+	pinctrl_mod4_txrx_gpio: mod4gpiogrp-1 {
+		fsl,pins = <
+			MX6UL_PAD_CSI_MCLK__GPIO4_IO17		0x30b0
+			MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18	0x30b0
+		>;
+	};
+
+	pinctrl_mod4_de_gpio: mod4gpiogrp-2 {
+		fsl,pins = <
+			MX6UL_PAD_CSI_VSYNC__GPIO4_IO19	0x30b0
+		>;
+	};
+
+	pinctrl_uart8: uart8grp {
+		fsl,pins = <
+			MX6UL_PAD_LCD_DATA21__UART8_DCE_RX   0x1b0b1
+			MX6UL_PAD_LCD_DATA20__UART8_DCE_TX   0x1b0b1
+		>;
+	};
+
+	pinctrl_ecspi3: ecspi3grp {
+		fsl,pins = <
+			MX6UL_PAD_NAND_CE1_B__ECSPI3_MOSI	0x100b1
+			MX6UL_PAD_NAND_CLE__ECSPI3_MISO	0x100b1
+			MX6UL_PAD_NAND_CE0_B__ECSPI3_SCLK	0x100b1
+			MX6UL_PAD_NAND_READY_B__GPIO4_IO12	0x1b0b1 /* SSO */
+		>;
+	};
+
+	pinctrl_spilcd: spilcdgrp {
+		fsl,pins = <
+			MX6UL_PAD_LCD_DATA18__GPIO3_IO23	0x30b0
+			MX6UL_PAD_SNVS_TAMPER7__GPIO5_IO07	0x30b0
+			MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08	0x30b0
+			MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09	0x30b0
+		>;
+	};
+};
+
+&pinctrl_enet2	{
+	fsl,pins = <
+		MX6UL_PAD_ENET2_RX_EN__ENET2_RX_EN	0x1b0b0
+		MX6UL_PAD_ENET2_RX_DATA0__ENET2_RDATA00	0x1b0b0
+		MX6UL_PAD_ENET2_RX_DATA1__ENET2_RDATA01	0x1b0b0
+		MX6UL_PAD_ENET2_TX_EN__ENET2_TX_EN	0x1b0b0
+		MX6UL_PAD_ENET2_TX_DATA0__ENET2_TDATA00	0x1b0b0
+		MX6UL_PAD_ENET2_TX_DATA1__ENET2_TDATA01	0x1b0b0
+		MX6UL_PAD_ENET2_TX_CLK__ENET2_REF_CLK2	0x4001b031
+		MX6UL_PAD_ENET2_RX_ER__ENET2_RX_ER	0x1b0b0
+	>;
+};
+
+&pinctrl_io_gpio	{	/* GPIOs for IN1 - IN4 have changed */
+	fsl,pins = <
+		MX6UL_PAD_LCD_DATA10__GPIO3_IO15	0x30b0 /* FET1 */
+		MX6UL_PAD_LCD_DATA11__GPIO3_IO16	0x30b0 /* FET2 */
+		MX6UL_PAD_LCD_DATA12__GPIO3_IO17	0x30b0 /* FET3 */
+		MX6UL_PAD_LCD_DATA13__GPIO3_IO18	0x30b0 /* FET4 */
+		MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x30b0 /* RESET_SIM900 (GSM_POWER) */
+		MX6UL_PAD_LCD_DATA15__GPIO3_IO20	0x30b0 /* POWER_SIM900 (PWRKEY) */
+		MX6UL_PAD_LCD_DATA14__GPIO3_IO19	0x30b0 /* STATUS SIM900 */
+		MX6UL_PAD_LCD_DATA19__GPIO3_IO24	0x30b0 /* SIM select */
+		MX6UL_PAD_UART1_CTS_B__GPIO1_IO18	0xf0b0 /* Battery STAT1, 22K Ohm pulled up */
+		MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0xf0b0 /* Battery STAT2, 22K Ohm pulled up */
+		MX6UL_PAD_JTAG_TDO__CCM_CLKO2	0xb0 /* 24MHz clock output */
+		MX6UL_PAD_UART3_RTS_B__GPIO1_IO27	0x30b0 /* 5V enable */
+		MX6UL_PAD_LCD_DATA04__GPIO3_IO09	0x30b0 /* V_OUT_ON */
+		MX6UL_PAD_LCD_DATA03__GPIO3_IO08	0xb0b0 /* V_OUT_ST, 100K Ohm PU */
+		MX6UL_PAD_CSI_DATA02__GPIO4_IO23	0x70b0 /* RS-485-1 failsafe bias, pulled up */
+
+		MX6UL_PAD_LCD_DATA09__GPIO3_IO14 	0x30b0 /* IN1 */
+		MX6UL_PAD_LCD_DATA08__GPIO3_IO13 	0x30b0 /* IN2 */
+		MX6UL_PAD_LCD_DATA23__GPIO3_IO28 	0x30b0 /* IN3 */
+		MX6UL_PAD_LCD_DATA22__GPIO3_IO27 	0x30b0 /* IN4 */
+
+		MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x30b0 /* TERM RS485-1, 47K Ohm PD */
+		MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x30b0 /* TERM RS485-2, 47K Ohm PD */
+
+		MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x80000000 /* SPDIF_OUT connected to MODULE 2 TX PIN via 3K, must be high when i2c*/
+	>;
+};
+
+&uart6 { /* uart on mod4 */
+	rts-gpios = <&gpio4 19 GPIO_ACTIVE_LOW>;
+	status = "disabled";
+};
+
+// w1 and w2 have changed places
+&pinctrl_w1_gpio {
+	fsl,pins = <
+		MX6UL_PAD_LCD_RESET__GPIO3_IO04	0x30b0
+		MX6UL_PAD_NAND_DQS__GPIO4_IO16	0x30b0
+	>;
+};
+
+&pinctrl_w2_gpio {
+	fsl,pins = <
+		MX6UL_PAD_JTAG_TMS__GPIO1_IO11	0x30b0
+		MX6UL_PAD_JTAG_TDI__GPIO1_IO13	0x30b0
+	>;
+};
+
+&onewire_w1 {
+	gpios = <&gpio3 4 0>;
+	pu-gpios = <&gpio4 16 0>;
+};
+
+&onewire_w2 {
+	gpios = <&gpio1 11 0>;
+	pu-gpios = <&gpio1 13 0>;
+};
+
+&pinctrl_uart4_rs485 {
+	fsl,pins = <
+		MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX   0x1b0b1
+		MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX   0x1b0b1
+		MX6UL_PAD_LCD_HSYNC__UART4_DCE_CTS   0x1b0b1
+		MX6UL_PAD_LCD_ENABLE__GPIO3_IO01   0xb0b0
+		MX6UL_PAD_SD1_DATA3__GPIO2_IO21   0xb0b0
+		MX6UL_PAD_SD1_DATA2__GPIO2_IO20   0xb0b0
+		MX6UL_PAD_UART2_RTS_B__GPIO1_IO23   0x30b0 /* CAN transceiver power, 100K Ohm Pull Down */
+		MX6UL_PAD_CSI_HSYNC__GPIO4_IO20    0x70b0 /* RS-485-2 failsafe bias, 47K Ohm Pull Up */
+	>;
+};
+
+&pinctrl_uart4_can {
+	fsl,pins = <
+		MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX   0x1b0b1
+		MX6UL_PAD_LCD_ENABLE__UART4_DCE_RX   0x1b0b1
+		MX6UL_PAD_UART4_RX_DATA__GPIO1_IO29   0xb0b0
+		MX6UL_PAD_SD1_DATA3__GPIO2_IO21   0xb0b0
+		MX6UL_PAD_SD1_DATA2__GPIO2_IO20   0xb0b0
+		MX6UL_PAD_LCD_HSYNC__GPIO3_IO02     0x30b0 /* RTS, 100K Ohm Pull Down */
+		MX6UL_PAD_UART2_RTS_B__GPIO1_IO23   0xf0b0 /* CAN transceiver power, 22K Ohm Pull Up */
+		MX6UL_PAD_CSI_HSYNC__GPIO4_IO20    0x30b0 /* RS-485-2 failsafe bias, 100K Ohm Pull Down  */
+	>;
+};
+
+&pinctrl_flexcan2{
+	fsl,pins = <
+		MX6UL_PAD_SD1_DATA3__FLEXCAN2_RX	0x1b020
+		MX6UL_PAD_SD1_DATA2__FLEXCAN2_TX	0x1b020
+		MX6UL_PAD_UART4_TX_DATA__GPIO1_IO28	0xb0b0
+		MX6UL_PAD_UART4_RX_DATA__GPIO1_IO29	0xb0b0
+		MX6UL_PAD_LCD_ENABLE__GPIO3_IO01	0xb0b0
+		MX6UL_PAD_LCD_HSYNC__GPIO3_IO02     0x30b0 /* RTS, 100K Ohm Pull Down */
+		MX6UL_PAD_UART2_RTS_B__GPIO1_IO23   0xf0b0 /* CAN transceiver power, 22K Ohm Pull Up */
+		MX6UL_PAD_CSI_HSYNC__GPIO4_IO20    0x30b0 /* RS-485-2 failsafe bias, 100K Ohm Pull Down  */
+	>;
+};
+
+
+&pinctrl_mod3_de_gpio  {
+	fsl,pins = <
+		MX6UL_PAD_LCD_CLK__GPIO3_IO00	0x30b0
+	>;
+};
+
+&pinctrl_uart7_ctsb {
+	fsl,pins = <
+		MX6UL_PAD_LCD_CLK__GPIO3_IO00  0x1b0b1
+	>;
+};
+
+&uart8 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart8>;
+	status = "disabled";
+};
