@@ -614,6 +614,13 @@ int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 	int status, ret;
 	bool mirror = false;
 	bool open_drain = false;
+	int val;
+	
+	/* Use base if defined in DTS */
+	status = device_property_read_u32(dev, "linux,gpio-base", &val);
+	if (!status) {
+		base = val;
+	}
 
 	mutex_init(&mcp->lock);
 
@@ -652,7 +659,8 @@ int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 					      "microchip,irq-active-high");
 
 		mirror = device_property_read_bool(dev, "microchip,irq-mirror");
-		open_drain = device_property_read_bool(dev, "drive-open-drain");
+		open_drain = device_property_read_bool(dev, "drive-open-drain") |
+			     device_property_read_bool(dev, "microchip,irq-open-drain");
 	}
 
 	if ((status & IOCON_SEQOP) || !(status & IOCON_HAEN) || mirror ||
