@@ -41,6 +41,13 @@ patternProperties:
           example when the BMC is rebooted while the host remains up.
         type: boolean
 
+        open-drain:
+          description:
+            (optional) Emulate open-drain output. Logic "1" correspond to
+            high-Z state (GPIO configured as input), logic "0" is output low.
+          type: boolean
+
+
     required:
       - gpios
 
