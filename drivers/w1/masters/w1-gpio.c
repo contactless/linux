@@ -35,13 +35,33 @@ static u8 w1_gpio_set_pullup(void *data, int delay)
 			 * This will OVERRIDE open drain emulation and force-pull
 			 * the line high for some time.
 			 */
-			gpiod_set_raw_value(ddata->gpiod, 1);
-			msleep(ddata->pullup_duration);
+			gpiod_set_value(pdata->gpiod, 1);
+			msleep(pdata->pullup_duration);
 			/*
 			 * This will simply set the line as input since we are doing
 			 * open drain emulation in the GPIO library.
 			 */
-			gpiod_set_value(ddata->gpiod, 1);
+			gpiod_set_value(pdata->gpiod, 0);
+			pr_info("w1: end w1_gpio_set_pullup\n");
+		}
+		pdata->pullup_duration = 0;
+	}
+
+	return 0;
+}
+
+static u8 w1_gpio_set_strong_pullup(void *data, int delay)
+{
+	struct w1_gpio_platform_data *pdata = data;
+
+	if (delay) {
+		pdata->pullup_duration = delay;
+	} else {
+		if (pdata->pullup_duration) {
+			/* Strong pull-up is supported as a push-pull, active high. */
+			gpiod_set_value(pdata->strong_pullup_gpiod, 1);	/* activate pull-up */
+			msleep(pdata->pullup_duration);
+			gpiod_set_value(pdata->strong_pullup_gpiod, 0);  /* deactivate */
 		}
 		ddata->pullup_duration = 0;
 	}
@@ -99,7 +119,16 @@ static int w1_gpio_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(ddata->pullup_gpiod),
 				     "gpio_request (ext_pullup_enable_pin) failed\n");
 
-	master->data = ddata;
+	/* IS_ERR if error, NULL if not specified */
+	pdata->strong_pullup_gpiod =
+		devm_gpiod_get_optional(dev, "pu", GPIOD_OUT_LOW);
+
+	if (IS_ERR(pdata->strong_pullup_gpiod)) {
+		dev_err(dev, "devm_gpiod_get_optional (strong pullup) failed\n");
+		return PTR_ERR(pdata->strong_pullup_gpiod);
+	}
+
+	master->data = pdata;
 	master->read_bit = w1_gpio_read_bit;
 	gpiod_direction_output(ddata->gpiod, 1);
 	master->write_bit = w1_gpio_write_bit;
@@ -110,14 +139,26 @@ static int w1_gpio_probe(struct platform_device *pdev)
 	 * high using a raw accessor to provide pull-up for the w1
 	 * line.
 	 */
-	if (gflags == GPIOD_OUT_LOW_OPEN_DRAIN)
+	if (pdata->strong_pullup_gpiod)
+		master->set_pullup = w1_gpio_set_strong_pullup;
+	else if (gflags == GPIOD_OUT_LOW_OPEN_DRAIN)
 		master->set_pullup = w1_gpio_set_pullup;
 
 	err = w1_add_master_device(master);
-	if (err)
-		return dev_err_probe(dev, err, "w1_add_master device failed\n");
+	if (err) {
+		dev_err(dev, "w1_add_master device failed\n");
+		return err;
+	}
+
+	/* Three different pullups. Why so many? */
+
+	if (pdata->enable_external_pullup)
+		pdata->enable_external_pullup(1);
 
 	gpiod_set_value(ddata->pullup_gpiod, 1);
+
+	if (pdata->strong_pullup_gpiod)
+		gpiod_set_value(pdata->strong_pullup_gpiod, 0);
 
 	platform_set_drvdata(pdev, master);
 
