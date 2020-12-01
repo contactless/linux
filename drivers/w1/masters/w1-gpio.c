@@ -92,9 +92,28 @@ static int w1_gpio_probe(struct platform_device *pdev)
 	enum gpiod_flags gflags = GPIOD_OUT_LOW_OPEN_DRAIN;
 	int err;
 
-	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
-	if (!ddata)
-		return -ENOMEM;
+	if (of_have_populated_dt()) {
+		/*
+		 * Changed devm_kzalloc to kzalloc. Can't use devm managed alloc here
+		 * because struct platform_device :: struct device dev :: void* platform_data is kfreed in default platform_device_release.
+		 * via pointer that is set in platform_device_alloc.
+		*/
+		pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+
+		/*
+		 * This parameter means that something else than the gpiolib has
+		 * already set the line into open drain mode, so we should just
+		 * driver it high/low like we are in full control of the line and
+		 * open drain will happen transparently.
+		 */
+		if (of_get_property(np, "linux,open-drain", NULL))
+			gflags = GPIOD_OUT_LOW;
+
+		pdev->dev.platform_data = pdata;
+	}
+	pdata = dev_get_platdata(dev);
 
 	/*
 	 * This parameter means that something else than the gpiolib has
