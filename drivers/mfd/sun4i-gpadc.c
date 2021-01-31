@@ -163,6 +163,11 @@ static int sun4i_gpadc_probe(struct platform_device *pdev)
 	regmap_write(dev->regmap, SUN4I_GPADC_INT_FIFOC, 0);
 
 	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "failed to platform_get_irq %d\n", irq);
+
+		return irq;
+	}
 	ret = devm_regmap_add_irq_chip(&pdev->dev, dev->regmap, irq,
 				       IRQF_ONESHOT, 0,
 				       &sun4i_gpadc_regmap_irq_chip,
