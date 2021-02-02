@@ -571,9 +571,9 @@ static int mcp23s08_irq_setup(struct mcp23s08 *mcp)
 	unsigned long irqflags = IRQF_ONESHOT | IRQF_SHARED;
 
 	if (mcp->irq_active_high)
-		irqflags |= IRQF_TRIGGER_HIGH;
+		irqflags |= IRQF_TRIGGER_RISING;
 	else
-		irqflags |= IRQF_TRIGGER_LOW;
+		irqflags |= IRQF_TRIGGER_FALLING;
 
 	err = devm_request_threaded_irq(chip->parent, mcp->irq, NULL,
 					mcp23s08_irq,
