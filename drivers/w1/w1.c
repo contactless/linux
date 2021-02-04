@@ -1102,8 +1102,13 @@ void w1_search_process_cb(struct w1_master *dev, u8 search_type,
 			w1_slave_detach(sl);
 			mutex_lock(&dev->list_mutex);
 		}
-		else if (test_bit(W1_SLAVE_ACTIVE, &sl->flags))
+		else if (test_bit(W1_SLAVE_ACTIVE, &sl->flags)) {
 			sl->ttl = dev->slave_ttl;
+			if (sl->family && sl->family->fops && sl->family->fops->read_powermode){
+				if (sl->family->fops->read_powermode(sl) < 0)
+					dev_warn(&sl->dev, "%s: device %s read_powermode error.\n", __func__, sl->name);
+			}
+		}
 	}
 	mutex_unlock(&dev->list_mutex);
 
