@@ -267,7 +267,7 @@ static int copy_scratchpad(struct w1_slave *sl);
 static int recall_eeprom(struct w1_slave *sl);
 
 /**
- * read_powermode() - Query the power mode of the slave
+ * w1_therm_read_powermode() - Query the power mode of the slave
  * @sl: slave to retrieve the power mode
  *
  * Ask the device to get its power mode (external or parasite)
@@ -278,7 +278,7 @@ static int recall_eeprom(struct w1_slave *sl);
  * * 1 externally powered device
  * * <0 kernel error code
  */
-static int read_powermode(struct w1_slave *sl);
+static int w1_therm_read_powermode(struct w1_slave *sl);
 
 /**
  * trigger_bulk_read() - function to trigger a bulk read on the bus
@@ -470,6 +470,7 @@ static const struct w1_family_ops w1_therm_fops = {
 	.remove_slave	= w1_therm_remove_slave,
 	.groups		= w1_therm_groups,
 	.chip_info	= W1_CHIPINFO,
+	.read_powermode = w1_therm_read_powermode
 };
 
 static const struct w1_family_ops w1_ds18s20_fops = {
@@ -477,6 +478,7 @@ static const struct w1_family_ops w1_ds18s20_fops = {
 	.remove_slave	= w1_therm_remove_slave,
 	.groups		= w1_ds18s20_groups,
 	.chip_info	= W1_CHIPINFO,
+	.read_powermode = w1_therm_read_powermode
 };
 
 static const struct w1_family_ops w1_ds28ea00_fops = {
@@ -484,6 +486,7 @@ static const struct w1_family_ops w1_ds28ea00_fops = {
 	.remove_slave	= w1_therm_remove_slave,
 	.groups		= w1_ds28ea00_groups,
 	.chip_info	= W1_CHIPINFO,
+	.read_powermode = w1_therm_read_powermode
 };
 
 /* Family binding operations struct */
@@ -1007,16 +1010,6 @@ static int w1_therm_add_slave(struct w1_slave *sl)
 		bulk_read_device_counter++;
 	}
 
-	/* Getting the power mode of the device {external, parasite} */
-	SLAVE_POWERMODE(sl) = read_powermode(sl);
-
-	if (SLAVE_POWERMODE(sl) < 0) {
-		/* no error returned as device has been added */
-		dev_warn(&sl->dev,
-			"%s: Device has been added, but power_mode may be corrupted. err=%d\n",
-			 __func__, SLAVE_POWERMODE(sl));
-	}
-
 	/* Getting the resolution of the device */
 	if (SLAVE_SPECIFIC_FUNC(sl)->get_resolution) {
 		SLAVE_RESOLUTION(sl) =
@@ -1445,7 +1438,7 @@ error:
 	return ret;
 }
 
-static int read_powermode(struct w1_slave *sl)
+static int w1_therm_read_powermode(struct w1_slave *sl)
 {
 	struct w1_master *dev_master = sl->master;
 	int max_trying = W1_THERM_MAX_TRY;
@@ -1471,8 +1464,8 @@ static int read_powermode(struct w1_slave *sl)
 			 * 1 is externally powered,
 			 * 0 is parasite powered
 			 */
-			ret = w1_touch_bit(dev_master, 1);
-			/* ret should be either 1 either 0 */
+			ret = w1_touch_bit(dev_master, 1);	/* ret may be 0, 1, negative error */
+			SLAVE_POWERMODE(sl) = ret;	/* Store it in family_data */
 		}
 	}
 	mutex_unlock(&dev_master->bus_mutex);
@@ -1708,7 +1701,7 @@ static ssize_t temperature_show(struct device *device,
 static ssize_t ext_power_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
-	struct w1_slave *sl = dev_to_w1_slave(device);
+	struct w1_slave 	*sl = dev_to_w1_slave(device);
 
 	if (!sl->family_data) {
 		dev_info(device,
@@ -1717,7 +1710,7 @@ static ssize_t ext_power_show(struct device *device,
 	}
 
 	/* Getting the power mode of the device {external, parasite} */
-	SLAVE_POWERMODE(sl) = read_powermode(sl);
+	w1_therm_read_powermode(sl);
 
 	if (SLAVE_POWERMODE(sl) < 0) {
 		dev_dbg(device,
