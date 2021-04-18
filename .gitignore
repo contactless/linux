@@ -183,3 +183,7 @@ sphinx_*/
 
 # Rust analyzer configuration
 /rust-project.json
+# Wirenboard
+zImage-*
+initramfs_usbgadget
+/pkgs/
