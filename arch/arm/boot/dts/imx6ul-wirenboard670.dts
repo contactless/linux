@@ -62,7 +62,7 @@
 
 	pinctrl_uart6_ctsb: uart6ctsbgrp {
 		fsl,pins = <
-			MX6UL_PAD_CSI_VSYNC__GPIO4_IO19	0x1b0b1
+			MX6UL_PAD_CSI_VSYNC__GPIO4_IO19	0x30b0
 		>;
 	};
 
@@ -148,8 +148,15 @@
 	>;
 };
 
-&uart6 { /* uart on mod4 */
-	rts-gpios = <&gpio4 19 GPIO_ACTIVE_LOW>;
+// uart on mod3; look into hwconf-manager for actual namings
+&uart6 {
+	rts-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
+	status = "disabled";
+};
+
+// uart on mod4; look into hwconf-manager for actual namings
+&uart7 {
+	rts-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
@@ -182,7 +189,7 @@
 	fsl,pins = <
 		MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX   0x1b0b1
 		MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX   0x1b0b1
-		MX6UL_PAD_LCD_HSYNC__UART4_DCE_CTS   0x1b0b1
+		MX6UL_PAD_LCD_HSYNC__GPIO3_IO02   0x30b0
 		MX6UL_PAD_LCD_ENABLE__GPIO3_IO01   0xb0b0
 		MX6UL_PAD_SD1_DATA3__GPIO2_IO21   0xb0b0
 		MX6UL_PAD_SD1_DATA2__GPIO2_IO20   0xb0b0
@@ -226,7 +233,7 @@
 
 &pinctrl_uart7_ctsb {
 	fsl,pins = <
-		MX6UL_PAD_LCD_CLK__GPIO3_IO00  0x1b0b1
+		MX6UL_PAD_LCD_CLK__GPIO3_IO00	0x30b0
 	>;
 };
 
