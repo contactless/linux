@@ -332,7 +332,8 @@ else
 Package: $packagename
 Provides: linux-image, linux-image-2.6, linux-modules-$version
 Breaks: linux-image-4.9.22-$wb_target (<< $packageversion)
-Replaces: linux-image-4.9.22-$wb_target (<< $packageversion)
+Replaces: linux-image-4.9.22-$wb_target (<< $packageversion), linux-image-4.1.15-imxv5-x0.1, linux-image-4.9.6-wb
+Conflicts: linux-image-4.1.15-imxv5-x0.1, linux-image-4.9.6-wb, wb-configs (<= 1.72), wb-hwconf-manager (<< 1.38.3)
 Suggests: $fwpackagename
 Architecture: any
 Description: Linux kernel, version $version, $wb_description
