@@ -187,3 +187,6 @@ sphinx_*/
 zImage-*
 initramfs_usbgadget
 /pkgs/
+!/debian
+!/debian/changelog
+!/debian/control
