@@ -22,6 +22,7 @@ properties:
       - const: allwinner,sun8i-a83t-sid
       - const: allwinner,sun8i-h3-sid
       - const: allwinner,sun20i-d1-sid
+      - const: allwinner,sun8i-r40-sid
       - const: allwinner,sun50i-a64-sid
       - items:
           - enum:
