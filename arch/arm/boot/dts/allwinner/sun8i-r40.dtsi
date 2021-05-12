@@ -303,6 +303,17 @@
 			#dma-cells = <1>;
 		};
 
+		sid: eeprom@1c1b000 {
+			compatible = "allwinner,sun8i-r40-sid";
+			reg = <0x1c1b000 0x200>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			ths_calibration: thermal-sensor-calibration@40 {
+				reg = <0x40 4>;
+			};
+		};
+
 		spi0: spi@1c05000 {
 			compatible = "allwinner,sun8i-r40-spi",
 				     "allwinner,sun8i-h3-spi";
@@ -919,8 +930,9 @@
 			clock-names = "bus", "mod";
 			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 			resets = <&ccu RST_BUS_THS>;
-			/* TODO: add nvmem-cells for calibration */
 			#thermal-sensor-cells = <1>;
+			nvmem-cells = <&ths_calibration>;
+			nvmem-cell-names = "calibration";
 		};
 
 		pwm: pwm@1c23400 {
