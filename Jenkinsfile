@@ -126,7 +126,7 @@ pipeline {
             }}
 
             steps {
-                build job: 'contactless/wb-releases/master', wait: true, parameters: [booleanParam(name: 'FORCE_OVERWRITE', value: true)]
+                build job: 'wirenboard/wb-releases/master', wait: true, parameters: [booleanParam(name: 'FORCE_OVERWRITE', value: true)]
             }
         }
     }
