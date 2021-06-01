@@ -491,6 +491,8 @@
 		ethphy0: ethernet-phy@0 {
 			reg = <0>;
 			smsc,disable-energy-detect;
+			clocks = <&clks IMX6UL_CLK_ENET_REF>;
+			clock-names = "rmii-ref";
 		};
 
 		ethphy3: ethernet-phy@3 {
