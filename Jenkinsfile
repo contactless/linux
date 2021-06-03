@@ -7,6 +7,8 @@ pipeline {
         booleanParam(name: 'UPLOAD_TO_POOL', defaultValue: true,
                      description: 'works only with ADD_VERSION_SUFFIX to keep staging clean')
         booleanParam(name: 'CLEAN', defaultValue: false, description: 'force cleaned on dev/* branches')
+        booleanParam(name: 'FORCE_OVERWRITE', defaultValue: false, description: 'replace existing version of package in apt')
+        booleanParam(name: 'REPLACE_RELEASE', defaultValue: false, description: 'replace existing github release')
         string(name: 'KERNEL_FLAVOUR', defaultValue: 'wb2 wb6', description: 'space-separated list')
         string(name: 'WBDEV_IMAGE', defaultValue: '', description: 'docker image path and tag')
     }
@@ -106,27 +108,16 @@ pipeline {
             }
         }
 
-        stage('Add packages to pool') {
+        stage('Setup deploy') {
             when { expression {
                 params.UPLOAD_TO_POOL && params.ADD_VERSION_SUFFIX
             }}
-
-            environment {
-                APTLY_CONFIG = credentials('release-aptly-config')
-            }
-
             steps {
-                sh 'wbci-repo -c $APTLY_CONFIG add-debs -f -d "jenkins:$JOB_NAME.$BUILD_NUMBER" $RESULT_SUBDIR/*.deb'
-            }
-        }
-    
-        stage('Upload via wb-releases') {
-            when { expression {
-                params.UPLOAD_TO_POOL && params.ADD_VERSION_SUFFIX
-            }}
-
-            steps {
-                build job: 'wirenboard/wb-releases/master', wait: true, parameters: [booleanParam(name: 'FORCE_OVERWRITE', value: true)]
+                wbDeploy projectSubdir: '.',
+                         resultSubdir: env.RESULT_SUBDIR,
+                         forceOverwrite: params.FORCE_OVERWRITE,
+                         replaceRelease: params.REPLACE_RELEASE,
+                         customReleaseBranchPattern: 'dev/(.*)'
             }
         }
     }
