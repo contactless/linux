@@ -211,7 +211,7 @@
 
 		status = "okay";
 
-		rtc@51 {
+		rtc_pcf: rtc@51 {
 			compatible = "nxp,pcf8563";
 			reg = <0x51>;
 		};
