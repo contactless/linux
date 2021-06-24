@@ -1,0 +1,22 @@
+/dts-v1/;
+
+#include "imx6ul-wirenboard670.dts"
+
+/ {
+	model = "Wiren Board rev. 6.8.0 (i.MX6UL/ULL)";
+	compatible = "contactless,imx6ul-wirenboard680", "contactless,imx6ul-wirenboard670", "contactless,imx6ul-wirenboard660", "contactless,imx6ul-wirenboard65", "contactless,imx6ul-wirenboard61", "contactless,imx6ul-wirenboard60", "contactless,imx6ul-wirenboard-evk", "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+};
+
+&iomuxc {
+	pinctrl_rtc_clkout: rtc-clkoutgrp {
+		fsl,pins = <
+			MX6UL_PAD_GPIO1_IO00__GPIO1_IO00 0x70b0 /*47K PU*/
+		>;
+	};
+};
+
+&rtc_pcf {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_rtc_clkout>;
+	clkout-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
+};
