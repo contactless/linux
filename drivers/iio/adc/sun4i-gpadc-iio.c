@@ -189,7 +189,7 @@ static int sun4i_prepare_for_irq(struct iio_dev *indio_dev, int channel,
 		 */
 		if ((reg & info->data->adc_chan_mask) !=
 			 info->data->adc_chan_select(channel))
-			mdelay(10);
+			usleep_range(10000, 20000);
 
 	} else {
 		/*
@@ -208,7 +208,7 @@ static int sun4i_prepare_for_irq(struct iio_dev *indio_dev, int channel,
 	 * needs a bit of time to get correct values.
 	 */
 	if ((reg & info->data->tp_adc_select) != info->data->tp_adc_select)
-		mdelay(100);
+		msleep(100);
 
 	return 0;
 }
