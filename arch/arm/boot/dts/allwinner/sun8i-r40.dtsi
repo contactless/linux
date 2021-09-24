@@ -876,19 +876,20 @@
 				function = "uart0";
 			};
 
-			/omit-if-no-ref/
+			uart1_pa_pins: uart1-pa-pins {
+				pins = "PA10", "PA11";
+			};
+
+			uart2_pa_pins: uart2-pa-pins {
+				pins = "PA2", "PA3";
+				function = "uart2";
+			};
+
 			uart2_pi_pins: uart2-pi-pins {
 				pins = "PI18", "PI19";
 				function = "uart2";
 			};
 
-			/omit-if-no-ref/
-			uart2_rts_cts_pi_pins: uart2-rts-cts-pi-pins{
-				pins = "PI16", "PI17";
-				function = "uart2";
-			};
-
-			/omit-if-no-ref/
 			uart3_pg_pins: uart3-pg-pins {
 				pins = "PG6", "PG7";
 				function = "uart3";
