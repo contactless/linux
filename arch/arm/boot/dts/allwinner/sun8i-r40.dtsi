@@ -819,8 +819,19 @@
 			};
 
 			/omit-if-no-ref/
+			uart3_ph_pins: uart3-ph-pins {
+				pins = "PH0", "PH1";
+				function = "uart3";
+			};
+
 			uart4_pg_pins: uart4-pg-pins {
 				pins = "PG10", "PG11";
+				function = "uart4";
+			};
+
+			/omit-if-no-ref/
+			uart4_ph_pins: uart4-ph-pins {
+				pins = "PH4", "PH5";
 				function = "uart4";
 			};
 
@@ -831,22 +842,40 @@
 			};
 
 			/omit-if-no-ref/
+			uart5_pi_pins: uart5-pi-pins {
+				pins = "PI10", "PI11";
+				function = "uart5";
+			};
+
+			/omit-if-no-ref/
+			uart6_pa_pins: uart6-pa-pins {
+				pins = "PA12", "PA13";
+				function = "uart6";
+			};
+
+			/omit-if-no-ref/
+			uart6_pi_pins: uart6-pi-pins {
+				pins = "PI12", "PI13";
+				function = "uart6";
+			};
+
+			/omit-if-no-ref/
 			uart7_pi_pins: uart7-pi-pins {
 				pins = "PI20", "PI21";
 				function = "uart7";
 			};
-		};
 
-		timer@1c20c00 {
-			compatible = "allwinner,sun4i-a10-timer";
-			reg = <0x01c20c00 0x90>;
-			interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&osc24M>;
+			/omit-if-no-ref/
+			uart7_pa_pins: uart7-pa-pins {
+				pins = "PA14", "PA15";
+				function = "uart7";
+			};
+
+			/omit-if-no-ref/
+			pwm_ch2_pi_pins: pwm-ch2-pi-pins {
+				pins = "PI20";
+				function = "pwm";
+			};
 		};
 
 		timer@1c20c00 {
