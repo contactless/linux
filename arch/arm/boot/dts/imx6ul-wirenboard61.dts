@@ -548,7 +548,6 @@
 
 // uart on mod1
 &uart3 {
-	rts-gpios = <&gpio1 26 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
@@ -561,7 +560,6 @@
 
 // uart on mod2
 &uart5 {
-	rts-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
@@ -574,7 +572,6 @@
 
 // uart on mod3
 &uart7 {
-	rts-gpios = <&gpio3 11 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
