@@ -150,13 +150,11 @@
 
 // uart on mod3; look into hwconf-manager for actual namings
 &uart6 {
-	rts-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
 // uart on mod4; look into hwconf-manager for actual namings
 &uart7 {
-	rts-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 
