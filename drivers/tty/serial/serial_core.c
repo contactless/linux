@@ -3649,6 +3649,14 @@ int uart_get_rs485_mode(struct uart_port *port)
 	if (port->rs485_rx_during_tx_gpio)
 		port->rs485_supported.flags |= SER_RS485_RX_DURING_TX;
 
+	port->rs485_re_gpio = devm_gpiod_get_optional(dev, "rs485-rx-enable",
+						      GPIOD_OUT_HIGH);
+	if (IS_ERR(port->rs485_re_gpio)) {
+		ret = PTR_ERR(port->rs485_re_gpio);
+		port->rs485_re_gpio = NULL;
+		return dev_err_probe(dev, ret, "Cannot get rs485-rx-enable-gpios\n");
+	}
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(uart_get_rs485_mode);
