@@ -2,7 +2,7 @@
 #
 #
 
-[[ -d .git ]] || {
+[[ -e .git ]] || {
     echo "This script must be started in kernel root directory" >&2
     exit 2
 }
