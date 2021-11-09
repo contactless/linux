@@ -1,4 +1,30 @@
-#!/bin/sh
+#!/bin/bash -e
+#
+#
+
+[[ -e .git ]] || {
+    echo "This script must be started in kernel root directory" >&2
+    exit 2
+}
+
+CORES_DEFAULT=$(nproc || echo 1)
+CORES=${CORES:-$CORES_DEFAULT}
+
+case $1 in
+*help)
+    echo "Usage: KERNEL_FLAVOUR=<flavour> $0" >&2
+    echo -e "\nOptional envvars:"
+    echo -e "\tCORES\tNumber of threads to build kernel (default $CORES)"
+    echo -e "\tFORCE_DEFAULT\tDefault answer about using exising defconfig (y/n)"
+    echo -e "\tVERSION_SUFFIX\tCustom version suffix for non-dev branches"
+    exit
+    ;;
+esac
+
+if [ ! -f debian/changelog ]; then
+    echo "Can't find debian/changelog, aborting" >&2
+    exit 2
+fi
 
 source scripts/package/wb/version.sh
 
