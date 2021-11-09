@@ -28,8 +28,13 @@ setup_kernel_vars() {
 			KERNEL_DEFCONFIG=imx6_wirenboard_initramfs_defconfig
 			KDEB_WBDESC="Wiren Board 6 (initramfs)"
 			;;
+		wb7)
+			DEBARCH=armhf
+			KERNEL_DEFCONFIG=wirenboard7_defconfig
+			KDEB_WBDESC="Wiren Board 7"
+			;;
 		*)
-			echo "Unsupported KERNEL_FLAVOUR, please specify one of: wb2, wb6"
+			echo "Unsupported KERNEL_FLAVOUR, please specify one of: wb2, wb6, wb7"
 			return 1
 	esac
 
