@@ -123,7 +123,7 @@ static void sun8i_pwm_set_polarity(struct sun8i_pwm_chip *chip, u32 ch,
 }
 
 static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
-			    struct pwm_state *state)
+			    const struct pwm_state *state)
 {
 	u64 clk_rate, clk_div, val;
 	u16 prescaler = 0;
@@ -224,7 +224,7 @@ static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
 }
 
 static int sun8i_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
-			   struct pwm_state *state)
+			   const struct pwm_state *state)
 {
 	int ret;
 	struct sun8i_pwm_chip *sun8i_pwm = to_sun8i_pwm_chip(chip);
