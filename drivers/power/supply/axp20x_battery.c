@@ -1208,7 +1208,8 @@ static int axp20x_power_probe(struct platform_device *pdev)
 	 * Update max CCC to a valid value if battery info is present or set it
 	 * to current register value by default.
 	 */
-	axp20x_get_constant_charge_current(axp20x_batt, &axp20x_batt->max_ccc);
+	axp20x_get_constant_charge_current(axp20x_batt,
+					   &axp20x_batt->max_ccc);
 
 	if (!of_property_read_u32(pdev->dev.of_node, "x-powers,charge-high-temp-microvolt", &tmp)) {
 		axp20x_set_charge_high_temp_thresh(axp20x_batt, tmp);
