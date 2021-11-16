@@ -9,7 +9,7 @@ pipeline {
         booleanParam(name: 'CLEAN', defaultValue: false, description: 'force cleaned on dev/* branches')
         booleanParam(name: 'FORCE_OVERWRITE', defaultValue: false, description: 'replace existing version of package in apt')
         booleanParam(name: 'REPLACE_RELEASE', defaultValue: false, description: 'replace existing github release')
-        string(name: 'KERNEL_FLAVOUR', defaultValue: 'wb2 wb6', description: 'space-separated list')
+        string(name: 'KERNEL_FLAVOUR', defaultValue: 'wb2 wb6 wb7', description: 'space-separated list')
         string(name: 'WBDEV_IMAGE', defaultValue: '', description: 'docker image path and tag')
     }
     environment {
