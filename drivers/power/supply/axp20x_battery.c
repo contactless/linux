@@ -1220,11 +1220,10 @@ static int axp20x_power_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int axp20x_power_remove(struct platform_device *pdev)
+static void axp20x_power_remove(struct platform_device *pdev)
 {
 	struct axp20x_batt_ps *axp20x_batt = platform_get_drvdata(pdev);
-
-	return regmap_update_bits(axp20x_batt->regmap, AXP20X_OFF_CTRL,
+	regmap_update_bits(axp20x_batt->regmap, AXP20X_OFF_CTRL,
 				  AXP20X_OFF_CTRL_BAT_DET, 0);
 }
 

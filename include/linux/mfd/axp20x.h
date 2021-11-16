@@ -9,6 +9,7 @@
 #define __LINUX_MFD_AXP20X_H
 
 #include <linux/regmap.h>
+#include <linux/notifier.h>
 
 enum axp20x_variants {
 	AXP152_ID = 0,
@@ -967,6 +968,7 @@ struct axp20x_dev {
 	const struct mfd_cell           *cells;
 	const struct regmap_config	*regmap_cfg;
 	const struct regmap_irq_chip	*regmap_irq_chip;
+	struct notifier_block 		restart_handler;
 };
 
 /* generic helper function for reading 9-16 bit wide regs */
