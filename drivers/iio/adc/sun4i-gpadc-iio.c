@@ -685,8 +685,10 @@ static void sun4i_gpadc_remove(struct platform_device *pdev)
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
-    if (!IS_ENABLED(CONFIG_THERMAL_OF) || !info->data->has_temp_sensor)
-        return;
+	if (!IS_ENABLED(CONFIG_THERMAL_OF) || !info->data->has_temp_sensor)
+		return;
+
+	devm_thermal_of_zone_unregister(info->sensor_device, info->tzd);
 
 	if (!info->no_irq)
 		iio_map_array_unregister(indio_dev);
