@@ -17,6 +17,7 @@
 #define ARCH_SUN4I_A10 0
 #define ARCH_SUN5I_A13 1
 #define ARCH_SUN6I_A31 2
+#define ARCH_SUN8I_R40 3
 
 static const struct resource adc_resources[] = {
 	DEFINE_RES_IRQ_NAMED(SUN4I_GPADC_IRQ_FIFO_DATA, "FIFO_DATA_PENDING"),
@@ -68,6 +69,15 @@ static struct mfd_cell sun6i_gpadc_cells[] = {
 	{ .name = "iio_hwmon" },
 };
 
+static struct mfd_cell sun8i_r40_gpadc_cells[] = {
+	{
+		.name	= "sun8i-r40-gpadc-iio",
+		.resources = adc_resources,
+		.num_resources = ARRAY_SIZE(adc_resources),
+	},
+	{ .name = "iio_hwmon" },
+};
+
 static const struct regmap_config sun4i_gpadc_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
@@ -85,6 +95,9 @@ static const struct of_device_id sun4i_gpadc_of_match[] = {
 	}, {
 		.compatible = "allwinner,sun6i-a31-ts",
 		.data = (void *)ARCH_SUN6I_A31,
+	}, {
+		.compatible = "allwinner,sun8i-r40-ts",
+		.data = (void *)ARCH_SUN8I_R40,
 	}, { /* sentinel */ }
 };
 
@@ -114,6 +127,10 @@ static int sun4i_gpadc_probe(struct platform_device *pdev)
 	case ARCH_SUN6I_A31:
 		cells = sun6i_gpadc_cells;
 		size = ARRAY_SIZE(sun6i_gpadc_cells);
+		break;
+	case ARCH_SUN8I_R40:
+		cells = sun8i_r40_gpadc_cells;
+		size = ARRAY_SIZE(sun8i_r40_gpadc_cells);
 		break;
 	default:
 		return -EINVAL;
