@@ -515,7 +515,7 @@ static int sun4i_gpadc_probe_dt(struct platform_device *pdev,
 		return ret;
 	}
 
-	if (IS_ENABLED(CONFIG_THERMAL_OF))
+	if (IS_ENABLED(CONFIG_THERMAL_OF) && info->data->has_temp_sensor) {
 		info->sensor_device = &pdev->dev;
 
 	return 0;
