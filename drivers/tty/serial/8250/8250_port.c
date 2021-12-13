@@ -1514,8 +1514,11 @@ static void __stop_tx_rs485(struct uart_8250_port *p, u64 stop_delay)
 		hrtimer_start(&em485->stop_tx_timer, ns_to_ktime(stop_delay), HRTIMER_MODE_REL);
 	} else if (!(p->capabilities & UART_CAP_NOTEMT) && __wait_for_empty(p, 100)) {
 		/* Short timer of char / 2 to check for clear fifos */
+		unsigned int tx_fifo_level = p->port.serial_in(&p->port, 0x20); //UART_TFL
+
+
 		em485->active_timer = &em485->stop_tx_timer;
-		hrtimer_start(&em485->stop_tx_timer, p->char_duration / 2, HRTIMER_MODE_REL);
+		hrtimer_start(&em485->stop_tx_timer, p->char_duration * tx_fifo_level, HRTIMER_MODE_REL);
 	} else {
 		p->rs485_stop_tx(p, true);
 		em485->active_timer = NULL;
