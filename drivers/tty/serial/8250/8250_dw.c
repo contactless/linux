@@ -653,6 +653,10 @@ static int dw8250_probe(struct platform_device *pdev)
 	if (!data->skip_autocfg)
 		dw8250_setup_port(p);
 
+	if (p->dev->of_node)
+		if (of_property_read_bool(p->dev->of_node, "uart-has-rtscts"))
+			up->capabilities |= UART_CAP_AFE;
+
 	/* If we have a valid fifosize, try hooking up DMA */
 	if (p->fifosize) {
 		data->data.dma.rxconf.src_maxburst = p->fifosize / 4;
