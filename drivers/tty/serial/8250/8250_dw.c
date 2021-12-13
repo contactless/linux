@@ -28,6 +28,8 @@
 #include <linux/serial_8250.h>
 #include <linux/serial_reg.h>
 
+#include <linux/of.h>
+
 #include "8250_dwlib.h"
 
 /* Offsets for the DesignWare specific registers */
@@ -675,6 +677,10 @@ static int dw8250_probe(struct platform_device *pdev)
 
 	if (!data->skip_autocfg)
 		dw8250_setup_port(p);
+
+       if (p->dev->of_node)
+               if (of_property_read_bool(p->dev->of_node, "uart-has-rtscts"))
+                       up->capabilities |= UART_CAP_AFE;
 
 	/* If we have a valid fifosize, try hooking up DMA */
 	if (p->fifosize) {
