@@ -93,7 +93,7 @@ static int pcf85063_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	/* if the clock has lost its power it makes no sense to use its time */
 	if (regs[0] & PCF85063_REG_SC_OS) {
 		dev_warn(&pcf85063->rtc->dev, "Power loss detected, invalid time\n");
-		return -EINVAL;
+		// return -EINVAL;
 	}
 
 	tm->tm_sec = bcd2bin(regs[0] & 0x7F);
