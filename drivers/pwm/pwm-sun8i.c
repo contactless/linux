@@ -133,9 +133,6 @@ static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
 	val = state->period * clk_rate;
 	do_div(val, NSEC_PER_SEC);
 
-	sun8i_pwm_set_value(sun8i_pwm, CLK_CFG_REG(ch),
-				CLK_SRC_SEL, 0 << 7);
-
 	dev_dbg(sun8i_pwm->chip.dev, "clock source freq:%lldHz\n", clk_rate);
 
 	/* calculate and set prescaler, div table, PWM entire cycle */
@@ -194,14 +191,8 @@ static int sun8i_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	if (state->enabled) {
 		sun8i_pwm_set_bit(sun8i_pwm,
-				  CLK_CFG_REG(pwm->hwpwm), CLK_GATING);
-
-		sun8i_pwm_set_bit(sun8i_pwm,
 				  PWM_ENABLE_REG, PWM_EN(pwm->hwpwm));
 	} else {
-		sun8i_pwm_clear_bit(sun8i_pwm,
-				    CLK_CFG_REG(pwm->hwpwm), CLK_GATING);
-
 		sun8i_pwm_clear_bit(sun8i_pwm,
 				    PWM_ENABLE_REG, PWM_EN(pwm->hwpwm));
 	}
@@ -277,6 +268,7 @@ static int sun8i_pwm_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 	const struct of_device_id *match;
+	int i;
 
 	match = of_match_device(sun8i_pwm_dt_ids, &pdev->dev);
 	if (!match) {
@@ -318,6 +310,16 @@ static int sun8i_pwm_probe(struct platform_device *pdev)
 	if (ret && !pwm->chip.npwm) {
 		dev_err(&pdev->dev, "Can't get pwm-channels\n");
 		return ret;
+	}
+
+	/* configure all pwm pairs */
+	for (i = 0; i < pwm->chip.npwm; ++i) {
+		/* use mux-0 */
+		sun8i_pwm_set_value(pwm, CLK_CFG_REG(i),
+					CLK_SRC_SEL, 0 << 7);
+		/* ungate clock */
+		sun8i_pwm_set_bit(pwm,
+				  CLK_CFG_REG(i), CLK_GATING);
 	}
 
 	dev_dbg(&pdev->dev, "pwm-channels:%d\n", pwm->chip.npwm);
