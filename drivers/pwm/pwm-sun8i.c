@@ -128,60 +128,15 @@ static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
 	u64 clk_rate, clk_div, val;
 	u16 prescaler = 0;
 	u16 div_id = 0;
-	struct clk *clk;
-	bool is_clk;
-	int ret;
 
 	clk_rate = clk_get_rate(sun8i_pwm->clk);
-
-	/* check period and select clock source */
 	val = state->period * clk_rate;
 	do_div(val, NSEC_PER_SEC);
-	is_clk = devm_clk_name_match(sun8i_pwm->clk, "mux-0");
-	if (val <= 1 && is_clk) {
-		clk = devm_clk_get(sun8i_pwm->chip.dev, "mux-1");
-		if (IS_ERR(clk)) {
-			dev_err(sun8i_pwm->chip.dev,
-				"Period expects a larger value\n");
-			return -EINVAL;
-		}
 
-		clk_rate = clk_get_rate(clk);
-		val = state->period * clk_rate;
-		do_div(val, NSEC_PER_SEC);
-		if (val <= 1) {
-			dev_err(sun8i_pwm->chip.dev,
-				"Period expects a larger value\n");
-			return -EINVAL;
-		}
+	sun8i_pwm_set_value(sun8i_pwm, CLK_CFG_REG(ch),
+				CLK_SRC_SEL, 0 << 7);
 
-		/* change clock source to "mux-1" */
-		clk_disable_unprepare(sun8i_pwm->clk);
-		devm_clk_put(sun8i_pwm->chip.dev, sun8i_pwm->clk);
-		sun8i_pwm->clk = clk;
-
-		ret = clk_prepare_enable(sun8i_pwm->clk);
-		if (ret) {
-			dev_err(sun8i_pwm->chip.dev,
-				"Failed to enable PWM clock\n");
-			return ret;
-		}
-
-	} else {
-		dev_err(sun8i_pwm->chip.dev,
-			"Period expects a larger value\n");
-		return -EINVAL;
-	}
-
-	is_clk = devm_clk_name_match(sun8i_pwm->clk, "mux-0");
-	if (is_clk)
-		sun8i_pwm_set_value(sun8i_pwm, CLK_CFG_REG(ch),
-				    CLK_SRC_SEL, 0 << 7);
-	else
-		sun8i_pwm_set_value(sun8i_pwm, CLK_CFG_REG(ch),
-				    CLK_SRC_SEL, 1 << 7);
-
-	dev_info(sun8i_pwm->chip.dev, "clock source freq:%lldHz\n", clk_rate);
+	dev_dbg(sun8i_pwm->chip.dev, "clock source freq:%lldHz\n", clk_rate);
 
 	/* calculate and set prescaler, div table, PWM entire cycle */
 	clk_div = val;
@@ -228,28 +183,14 @@ static int sun8i_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 {
 	int ret;
 	struct sun8i_pwm_chip *sun8i_pwm = to_sun8i_pwm_chip(chip);
-	struct pwm_state cstate;
 
-	pwm_get_state(pwm, &cstate);
-	if (!cstate.enabled) {
-		ret = clk_prepare_enable(sun8i_pwm->clk);
-		if (ret) {
-			dev_err(chip->dev, "Failed to enable PWM clock\n");
-			return ret;
-		}
+	ret = sun8i_pwm_config(sun8i_pwm, pwm->hwpwm, state);
+	if (ret) {
+		dev_err(chip->dev, "Failed to config PWM\n");
+		return ret;
 	}
 
-	if ((cstate.period != state->period) ||
-	    (cstate.duty_cycle != state->duty_cycle)) {
-		ret = sun8i_pwm_config(sun8i_pwm, pwm->hwpwm, state);
-		if (ret) {
-			dev_err(chip->dev, "Failed to config PWM\n");
-			return ret;
-		}
-	}
-
-	if (state->polarity != cstate.polarity)
-		sun8i_pwm_set_polarity(sun8i_pwm, pwm->hwpwm, state->polarity);
+	sun8i_pwm_set_polarity(sun8i_pwm, pwm->hwpwm, state->polarity);
 
 	if (state->enabled) {
 		sun8i_pwm_set_bit(sun8i_pwm,
@@ -359,14 +300,18 @@ static int sun8i_pwm_probe(struct platform_device *pdev)
 		return PTR_ERR(pwm->regmap);
 	}
 
-	/* we use mux-0 as default clock source */
+	/* we use mux-0 (24M) as the only clock source */
 	pwm->clk = devm_clk_get(&pdev->dev, "mux-0");
+
 	if (IS_ERR(pwm->clk)) {
-		pwm->clk = devm_clk_get(&pdev->dev, "mux-1");
-		if (IS_ERR(pwm->clk)) {
-			dev_err(&pdev->dev, "Failed to get PWM clock\n");
-			return PTR_ERR(pwm->clk);
-		}
+		dev_err(&pdev->dev, "Failed to get PWM clock\n");
+		return PTR_ERR(pwm->clk);
+	}
+
+	ret = clk_prepare_enable(pwm->clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable PWM clock\n");
+		return ret;
 	}
 
 	ret = of_property_read_u32(np, "pwm-channels", &pwm->chip.npwm);
@@ -375,7 +320,7 @@ static int sun8i_pwm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	dev_info(&pdev->dev, "pwm-channels:%d\n", pwm->chip.npwm);
+	dev_dbg(&pdev->dev, "pwm-channels:%d\n", pwm->chip.npwm);
 	pwm->data = match->data;
 	pwm->chip.dev = &pdev->dev;
 	pwm->chip.ops = &sun8i_pwm_ops;
