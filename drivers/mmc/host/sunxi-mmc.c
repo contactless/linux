@@ -294,6 +294,8 @@ struct sunxi_mmc_host {
 
 	struct mmc_request *mrq;
 	struct mmc_request *manual_stop_mrq;
+	struct mmc_command *cmd;
+
 	int		ferror;
 
 	/* vqmmc */
@@ -302,6 +304,8 @@ struct sunxi_mmc_host {
 	/* timings */
 	bool		use_new_timings;
 };
+
+static void sunxi_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq, struct mmc_command *cmd);
 
 static int sunxi_mmc_reset_host(struct sunxi_mmc_host *host)
 {
@@ -511,7 +515,8 @@ static void sunxi_mmc_dump_errinfo(struct sunxi_mmc_host *host)
 static irqreturn_t sunxi_mmc_finalize_request(struct sunxi_mmc_host *host)
 {
 	struct mmc_request *mrq = host->mrq;
-	struct mmc_data *data = mrq->data;
+	struct mmc_command *cmd = host->cmd;
+	struct mmc_data *data = cmd->data;
 	u32 rval;
 
 	mmc_writel(host, REG_IMASK, host->sdio_imask);
@@ -519,7 +524,7 @@ static irqreturn_t sunxi_mmc_finalize_request(struct sunxi_mmc_host *host)
 
 	if (host->int_sum & SDXC_INTERRUPT_ERROR_BIT) {
 		sunxi_mmc_dump_errinfo(host);
-		mrq->cmd->error = -ETIMEDOUT;
+		cmd->error = -ETIMEDOUT;
 
 		if (data) {
 			data->error = -ETIMEDOUT;
@@ -529,13 +534,13 @@ static irqreturn_t sunxi_mmc_finalize_request(struct sunxi_mmc_host *host)
 		if (mrq->stop)
 			mrq->stop->error = -ETIMEDOUT;
 	} else {
-		if (mrq->cmd->flags & MMC_RSP_136) {
-			mrq->cmd->resp[0] = mmc_readl(host, REG_RESP3);
-			mrq->cmd->resp[1] = mmc_readl(host, REG_RESP2);
-			mrq->cmd->resp[2] = mmc_readl(host, REG_RESP1);
-			mrq->cmd->resp[3] = mmc_readl(host, REG_RESP0);
+		if (cmd->flags & MMC_RSP_136) {
+			cmd->resp[0] = mmc_readl(host, REG_RESP3);
+			cmd->resp[1] = mmc_readl(host, REG_RESP2);
+			cmd->resp[2] = mmc_readl(host, REG_RESP1);
+			cmd->resp[3] = mmc_readl(host, REG_RESP0);
 		} else {
-			mrq->cmd->resp[0] = mmc_readl(host, REG_RESP0);
+			cmd->resp[0] = mmc_readl(host, REG_RESP0);
 		}
 
 		if (data)
@@ -613,8 +618,16 @@ static irqreturn_t sunxi_mmc_irq(int irq, void *dev_id)
 
 	spin_unlock(&host->lock);
 
-	if (finalize && ret == IRQ_HANDLED)
-		mmc_request_done(host->mmc, mrq);
+	if (finalize && ret == IRQ_HANDLED) {
+		/* note that host->mrq can be cleared by sunxi_mmc_finalize_request at this point */
+
+		if (mrq && host->cmd && (host->cmd == mrq->sbc)) {
+			/* once SET_BLOCK_COUNT is completed, send actual request */
+			sunxi_mmc_start_cmd(host->mmc, mrq, mrq->cmd);
+		} else {
+			mmc_request_done(host->mmc, mrq);
+		}
+	}
 
 	if (sdio_int)
 		mmc_signal_sdio_irq(host->mmc);
@@ -1006,20 +1019,21 @@ static void sunxi_mmc_hw_reset(struct mmc_host *mmc)
 	udelay(300);
 }
 
-static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+static void sunxi_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq, struct mmc_command *cmd)
 {
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
-	struct mmc_command *cmd = mrq->cmd;
-	struct mmc_data *data = mrq->data;
+	struct mmc_data *data = cmd->data;
 	unsigned long iflags;
 	u32 imask = SDXC_INTERRUPT_ERROR_BIT;
 	u32 cmd_val = SDXC_START | (cmd->opcode & 0x3f);
 	bool wait_dma = host->wait_dma;
 	int ret;
 
+	host->cmd = cmd;
+
 	/* Check for set_ios errors (should never happen) */
 	if (host->ferror) {
-		mrq->cmd->error = host->ferror;
+		cmd->error = host->ferror;
 		mmc_request_done(mmc, mrq);
 		return;
 	}
@@ -1050,7 +1064,8 @@ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		if ((cmd->flags & MMC_CMD_MASK) == MMC_CMD_ADTC) {
 			cmd_val |= SDXC_DATA_EXPIRE | SDXC_WAIT_PRE_OVER;
 
-			if (cmd->data->stop) {
+			/* Enable Auto CMD12 mode for open-ended transfers only */
+			if (cmd->data->stop && !cmd->mrq->sbc) {
 				imask |= SDXC_AUTO_COMMAND_DONE;
 				cmd_val |= SDXC_SEND_AUTO_STOP;
 			} else {
@@ -1070,7 +1085,7 @@ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	dev_dbg(mmc_dev(mmc), "cmd %d(%08x) arg %x ie 0x%08x len %d\n",
 		cmd_val & 0x3f, cmd_val, cmd->arg, imask,
-		mrq->data ? mrq->data->blksz * mrq->data->blocks : 0);
+		cmd->data ? cmd->data->blksz * cmd->data->blocks : 0);
 
 	spin_lock_irqsave(&host->lock, iflags);
 
@@ -1100,6 +1115,11 @@ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	mmc_writel(host, REG_CMDR, cmd_val);
 
 	spin_unlock_irqrestore(&host->lock, iflags);
+}
+
+static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+{
+	sunxi_mmc_start_cmd(mmc, mrq,  mrq->sbc ? mrq->sbc : mrq->cmd);
 }
 
 static int sunxi_mmc_card_busy(struct mmc_host *mmc)
@@ -1427,7 +1447,7 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 	mmc->f_min		=   400000;
 	mmc->f_max		= 52000000;
 	mmc->caps	       |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
-				  MMC_CAP_SDIO_IRQ;
+				  MMC_CAP_SDIO_IRQ |MMC_CAP_CMD23;
 
 	/*
 	 * Some H5 devices do not have signal traces precise enough to
