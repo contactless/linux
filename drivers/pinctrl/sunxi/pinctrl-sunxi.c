@@ -891,6 +891,25 @@ out:
 	return ret;
 }
 
+static int sunxi_pmx_request_gpio(struct pinctrl_dev *pctldev,
+				    struct pinctrl_gpio_range *range,
+				    unsigned int offset)
+{
+	u8 mux = sunxi_pmx_get(pctldev, offset);
+
+	switch (mux) {
+		case SUN4I_FUNC_INPUT:
+		case SUN4I_FUNC_IRQ:
+		case SUN4I_FUNC_OUTPUT:
+			break;
+		default:
+			sunxi_pmx_set(pctldev, offset, SUN4I_FUNC_INPUT);
+			break;
+	}
+
+	return sunxi_pmx_request(pctldev, offset);
+}
+
 static int sunxi_pmx_free(struct pinctrl_dev *pctldev, unsigned offset)
 {
 	struct sunxi_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
@@ -916,6 +935,7 @@ static const struct pinmux_ops sunxi_pmx_ops = {
 	.set_mux		= sunxi_pmx_set_mux,
 	.gpio_set_direction	= sunxi_pmx_gpio_set_direction,
 	.request		= sunxi_pmx_request,
+	.gpio_request_enable = sunxi_pmx_request_gpio,
 	.free			= sunxi_pmx_free,
 	.strict			= true,
 };
