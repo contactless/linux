@@ -84,6 +84,7 @@ if:
           - allwinner,sun6i-a31-musb
           - allwinner,sun8i-a33-musb
           - allwinner,sun8i-h3-musb
+          - allwinner,sun8i-r40-musb
 
 then:
   required:
