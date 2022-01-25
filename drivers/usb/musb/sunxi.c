@@ -66,12 +66,14 @@
 #define SUNXI_MUSB_FL_HAS_RESET			6
 #define SUNXI_MUSB_FL_NO_CONFIGDATA		7
 #define SUNXI_MUSB_FL_PHY_MODE_PEND		8
+#define SUNXI_MUSB_FL_NO_HOSTMODE		9
 
 struct sunxi_musb_cfg {
 	const struct musb_hdrc_config *hdrc_config;
 	bool has_sram;
 	bool has_reset;
 	bool no_configdata;
+	bool no_host_mode;
 };
 
 /* Our read/write methods need access and do not get passed in a musb ref :| */
@@ -246,11 +248,13 @@ static int sunxi_musb_init(struct musb *musb)
 
 	writeb(SUNXI_MUSB_VEND0_PIO_MODE, musb->mregs + SUNXI_MUSB_VEND0);
 
-	/* Register notifier before calling phy_init() */
-	ret = devm_extcon_register_notifier(glue->dev, glue->extcon,
-					EXTCON_USB_HOST, &glue->host_nb);
-	if (ret)
-		goto error_reset_assert;
+	if (!test_bit(SUNXI_MUSB_FL_NO_HOSTMODE, &glue->flags)) {
+		/* Register notifier before calling phy_init() */
+		ret = devm_extcon_register_notifier(glue->dev, glue->extcon,
+						EXTCON_USB_HOST, &glue->host_nb);
+		if (ret)
+			goto error_reset_assert;
+	}
 
 	ret = phy_init(glue->phy);
 	if (ret)
@@ -292,6 +296,8 @@ static int sunxi_musb_exit(struct musb *musb)
 	clk_disable_unprepare(glue->clk);
 	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags))
 		sunxi_sram_release(musb->controller->parent);
+
+	devm_usb_put_phy(glue->dev, glue->xceiv);
 
 	return 0;
 }
@@ -692,10 +698,18 @@ static int sunxi_musb_probe(struct platform_device *pdev)
 	if (!glue)
 		return -ENOMEM;
 
+	if (of_device_is_compatible(np, "allwinner,sun8i-r40-musb")) {
+		set_bit(SUNXI_MUSB_FL_NO_HOSTMODE, &glue->flags);
+	}
+
 	memset(&pdata, 0, sizeof(pdata));
 	switch (usb_get_dr_mode(&pdev->dev)) {
 #if defined CONFIG_USB_MUSB_DUAL_ROLE || defined CONFIG_USB_MUSB_HOST
 	case USB_DR_MODE_HOST:
+		if (test_bit(SUNXI_MUSB_FL_NO_HOSTMODE, &glue->flags)) {
+			dev_err(&pdev->dev, "only support peripheral mode\n");
+			return -EINVAL;
+		}
 		pdata.mode = MUSB_HOST;
 		glue->phy_mode = PHY_MODE_USB_HOST;
 		break;
@@ -708,6 +722,10 @@ static int sunxi_musb_probe(struct platform_device *pdev)
 #endif
 #ifdef CONFIG_USB_MUSB_DUAL_ROLE
 	case USB_DR_MODE_OTG:
+		if (test_bit(SUNXI_MUSB_FL_NO_HOSTMODE, &glue->flags)) {
+			dev_err(&pdev->dev, "only support peripheral mode\n");
+			return -EINVAL;
+		}
 		pdata.mode = MUSB_OTG;
 		glue->phy_mode = PHY_MODE_USB_OTG;
 		break;
@@ -724,6 +742,12 @@ static int sunxi_musb_probe(struct platform_device *pdev)
 
 	pdata.config = cfg->hdrc_config;
 
+	if (!of_device_is_compatible(np, "allwinner,sun8i-h3-musb") && 
+	    !of_device_is_compatible(np, "allwinner,sun8i-r40-musb"))
+		pdata.config = &sunxi_musb_hdrc_config;
+	else
+		pdata.config = &sunxi_musb_hdrc_config_h3;
+
 	glue->dev = &pdev->dev;
 	INIT_WORK(&glue->work, sunxi_musb_work);
 	glue->host_nb.notifier_call = sunxi_musb_host_notifier;
@@ -736,6 +760,9 @@ static int sunxi_musb_probe(struct platform_device *pdev)
 
 	if (cfg->no_configdata)
 		set_bit(SUNXI_MUSB_FL_NO_CONFIGDATA, &glue->flags);
+
+	if (cfg->no_host_mode)
+		set_bit(SUNXI_MUSB_FL_NO_HOSTMODE, &glue->flags);
 
 	glue->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(glue->clk)) {
@@ -840,6 +867,13 @@ static const struct sunxi_musb_cfg suniv_f1c100s_musb_cfg = {
 	.no_configdata = true,
 };
 
+static const struct sunxi_musb_cfg sun50i_h616_musb_cfg = {
+	.hdrc_config = &sunxi_musb_hdrc_config_4eps,
+	.has_reset = true,
+	.no_configdata = true,
+	.no_host_mode = true,
+};
+
 static const struct of_device_id sunxi_musb_match[] = {
 	{ .compatible = "allwinner,sun4i-a10-musb",
 	  .data = &sun4i_a10_musb_cfg, },
@@ -851,6 +885,10 @@ static const struct of_device_id sunxi_musb_match[] = {
 	  .data = &sun8i_h3_musb_cfg, },
 	{ .compatible = "allwinner,suniv-f1c100s-musb",
 	  .data = &suniv_f1c100s_musb_cfg, },
+	{ .compatible = "allwinner,sun50i-h616-musb",
+	  .data = &sun50i_h616_musb_cfg, },
+	{ .compatible = "allwinner,sun8i-r40-musb",
+	  .data = &sun50i_h616_musb_cfg, },
 	{}
 };
 MODULE_DEVICE_TABLE(of, sunxi_musb_match);
