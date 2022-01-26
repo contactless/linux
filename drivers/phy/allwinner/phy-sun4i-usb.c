@@ -32,6 +32,8 @@
 #include <linux/spinlock.h>
 #include <linux/usb/of.h>
 #include <linux/workqueue.h>
+#include <linux/usb/role.h>
+#include <linux/usb/usb_phy_generic.h>
 
 #define REG_ISCR			0x00
 #define REG_PHYCTL_A10			0x04
@@ -450,6 +452,7 @@ static int sun4i_usb_phy0_get_vbus_det(struct sun4i_usb_phy_data *data)
 	if (data->vbus_det_gpio)
 		return gpiod_get_value_cansleep(data->vbus_det_gpio);
 
+
 	if (data->vbus_power_supply) {
 		union power_supply_propval val;
 		int r;
@@ -538,13 +541,24 @@ static int sun4i_usb_phy_power_off(struct phy *_phy)
 	return 0;
 }
 
+static void sun4i_usb_phy0_set_dr_mode(struct sun4i_usb_phy_data *data, int new_mode)
+{
+	if (new_mode != data->dr_mode) {
+		dev_info(&data->phys[0].phy->dev, "Changing dr_mode to %d\n", new_mode);
+		data->dr_mode = new_mode;
+	}
+
+	data->id_det = -1; /* Force reprocessing of id */
+	data->force_session_end = true;
+	queue_delayed_work(system_wq, &data->detect, 0);
+}
+
 static int sun4i_usb_phy_set_mode(struct phy *_phy,
 				  enum phy_mode mode, int submode)
 {
 	struct sun4i_usb_phy *phy = phy_get_drvdata(_phy);
 	struct sun4i_usb_phy_data *data = to_sun4i_usb_phy_data(phy);
 	int new_mode;
-
 	if (phy->index != 0) {
 		if (mode == PHY_MODE_USB_HOST)
 			return 0;
@@ -565,15 +579,19 @@ static int sun4i_usb_phy_set_mode(struct phy *_phy,
 		return -EINVAL;
 	}
 
-	if (new_mode != data->dr_mode) {
-		dev_info(&_phy->dev, "Changing dr_mode to %d\n", new_mode);
-		data->dr_mode = new_mode;
+	if (data->cfg->phy0_dual_route) {
+		/*
+		 For SoCs with dual route the PHY mode is fully determined by 
+		 the selected mux route (i.e. USB controller to use).
+		 As both host (EHCI/OHCI) and peripheral (MUSB) controllers uses
+		 the same PHY, both drivers can try to set PHY mode.
+		 We need to ignore this requests, but not report error in case
+		 of valid mode values.
+		*/
+		return 0;
 	}
 
-	data->id_det = -1; /* Force reprocessing of id */
-	data->force_session_end = true;
-	queue_delayed_work(system_wq, &data->detect, 0);
-
+	sun4i_usb_phy0_set_dr_mode(data, new_mode);
 	return 0;
 }
 
@@ -676,8 +694,14 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
 		sun4i_usb_phy_passby(phy, !id_det);
 
 		/* Re-route PHY0 if necessary */
-		if (data->cfg->phy0_dual_route)
+		if (data->cfg->phy0_dual_route) {
+			if (id_det)
+				sun4i_usb_phy_power_off(phy->phy);
+			else
+				sun4i_usb_phy_power_on(phy->phy);
+
 			sun4i_usb_phy0_reroute(data, id_det);
+		}
 	}
 
 	if (vbus_notify)
@@ -795,8 +819,16 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
 			return -EPROBE_DEFER;
 	}
 
-	data->dr_mode = of_usb_get_dr_mode_by_phy(np, 0);
+	data->dr_mode = usb_get_dr_mode(dev);
+	if (data->dr_mode == USB_DR_MODE_UNKNOWN) {
+		data->dr_mode = of_usb_get_dr_mode_by_phy(np, 0);
 
+		if (data->dr_mode == USB_DR_MODE_UNKNOWN) {
+			data->dr_mode = USB_DR_MODE_OTG;
+		}
+	}
+
+	dev_info(dev, "phy0 dr_mode=%d\n",data->dr_mode);
 	data->extcon = devm_extcon_dev_allocate(dev, sun4i_usb_phy0_cable);
 	if (IS_ERR(data->extcon)) {
 		dev_err(dev, "Couldn't allocate our extcon device\n");
