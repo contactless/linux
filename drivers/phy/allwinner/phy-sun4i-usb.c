@@ -842,7 +842,6 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	struct phy_provider *phy_provider;
-	struct resource *res;
 	struct usb_role_switch_desc role_sw_desc = { 0 };
 	int i, ret;
 
