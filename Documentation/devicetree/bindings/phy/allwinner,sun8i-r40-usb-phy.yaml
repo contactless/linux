@@ -55,6 +55,19 @@ properties:
       - const: usb1_reset
       - const: usb2_reset
 
+  port0-host-controllers:
+    $ref: /schemas/types.yaml#/definitions/phandle-array
+    description: Port 0 is shared between host and device controllers. This property contains list of host controllers for port 0.
+    items:
+      - description: EHCI0 (USB 2.0 HS) controller
+      - description: OHCI0 (USB 1.1 FS/LS) controller
+
+  port0-peripheral-controllers:
+    $ref: /schemas/types.yaml#/definitions/phandle-array
+    description: Port 0 is shared between host and device controllers. This property contains list of peripheral controllers for port 0.
+    items:
+      - description: USB_OTG (musb) controller
+
   usb0_id_det-gpios:
     maxItems: 1
     description: GPIO to the USB OTG ID pin
@@ -74,6 +87,13 @@ properties:
 
   usb2_vbus-supply:
     description: Regulator controlling USB2 Host controller
+
+  dr_mode:
+    description: On SoCs with dual route PHY0, port 0 role is controlled by phy, not OTG (peripheral) controller
+    enum:
+      - host
+      - otg
+      - peripheral
 
 required:
   - "#phy-cells"
