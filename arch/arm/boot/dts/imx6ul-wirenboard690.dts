@@ -1,0 +1,125 @@
+/dts-v1/;
+
+#include "imx6ul-wirenboard680.dts"
+
+/ {
+	model = "Wiren Board rev. 6.9.0 (i.MX6UL/ULL)";
+	compatible = "contactless,imx6ul-wirenboard690", "contactless,imx6ul-wirenboard680", "contactless,imx6ul-wirenboard670", "contactless,imx6ul-wirenboard660", "contactless,imx6ul-wirenboard65", "contactless,imx6ul-wirenboard61", "contactless,imx6ul-wirenboard60", "contactless,imx6ul-wirenboard-evk", "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+};
+
+&iomuxc {
+	/delete-node/ pinctrl_spilcd; // LCD connector has been removed
+
+	pinctrl_wdg_gpio: wdggrp {
+		fsl,pins = <
+			MX6UL_PAD_LCD_DATA03__GPIO3_IO08	 0x30b0 /* watchdog toggle out */
+		>;
+	};
+};
+
+&pinctrl_io_gpio	{	/* LCD_DATA03 has become a WD-IN */
+	fsl,pins = <
+		MX6UL_PAD_LCD_DATA10__GPIO3_IO15	0x30b0 /* FET1 */
+		MX6UL_PAD_LCD_DATA11__GPIO3_IO16	0x30b0 /* FET2 */
+		MX6UL_PAD_LCD_DATA12__GPIO3_IO17	0x30b0 /* FET3 */
+		MX6UL_PAD_LCD_DATA13__GPIO3_IO18	0x30b0 /* FET4 */
+		MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x30b0 /* MODEM_ON (GSM_POWER) */
+		MX6UL_PAD_LCD_DATA15__GPIO3_IO20	0x30b0 /* POWER GSM (PWRKEY) */
+		MX6UL_PAD_LCD_DATA14__GPIO3_IO19	0x30b0 /* STATUS GSM */
+		MX6UL_PAD_LCD_DATA19__GPIO3_IO24	0x30b0 /* SIM select */
+		MX6UL_PAD_UART1_CTS_B__GPIO1_IO18	0xf0b0 /* Battery STAT1, 22K Ohm pulled up */
+		MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0xf0b0 /* Battery STAT2, 22K Ohm pulled up */
+		MX6UL_PAD_JTAG_TDO__CCM_CLKO2	0xb0 /* 24MHz clock output */
+		MX6UL_PAD_UART3_RTS_B__GPIO1_IO27	0x30b0 /* 5V enable */
+		MX6UL_PAD_LCD_DATA04__GPIO3_IO09	0x30b0 /* V_OUT_ON */
+		MX6UL_PAD_CSI_DATA02__GPIO4_IO23	0x70b0 /* RS-485-1 failsafe bias, pulled up */
+
+		MX6UL_PAD_LCD_DATA09__GPIO3_IO14 	0x30b0 /* IN1 */
+		MX6UL_PAD_LCD_DATA08__GPIO3_IO13 	0x30b0 /* IN2 */
+		MX6UL_PAD_LCD_DATA23__GPIO3_IO28 	0x30b0 /* IN3 */
+		MX6UL_PAD_LCD_DATA22__GPIO3_IO27 	0x30b0 /* IN4 */
+
+		MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x30b0 /* TERM RS485-1, 47K Ohm PD */
+		MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x30b0 /* TERM RS485-2, 47K Ohm PD */
+
+		MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x80000000 /* SPDIF_OUT connected to MODULE 2 TX PIN via 3K, must be high when i2c*/
+	>;
+};
+
+
+&pinctrl_enet1	{
+	fsl,pins = <
+		MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
+		MX6UL_PAD_ENET1_RX_ER__ENET1_RX_ER	0x1b0b0
+		MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00	0x1b0b0
+		MX6UL_PAD_ENET1_RX_DATA1__ENET1_RDATA01	0x1b0b0
+		MX6UL_PAD_ENET1_TX_EN__ENET1_TX_EN	0x1b0b0
+		MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
+		MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
+		MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1	0x4001b031
+		MX6UL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x70b0 /*pulled up*/
+	>;
+};
+
+
+&pinctrl_enet2	{	/* Since WB6.9.x Eth1 reset is independent from Eth0 */
+	fsl,pins = <
+		MX6UL_PAD_ENET2_RX_EN__ENET2_RX_EN	0x1b0b0
+		MX6UL_PAD_ENET2_RX_DATA0__ENET2_RDATA00	0x1b0b0
+		MX6UL_PAD_ENET2_RX_DATA1__ENET2_RDATA01	0x1b0b0
+		MX6UL_PAD_ENET2_TX_EN__ENET2_TX_EN	0x1b0b0
+		MX6UL_PAD_ENET2_TX_DATA0__ENET2_TDATA00	0x1b0b0
+		MX6UL_PAD_ENET2_TX_DATA1__ENET2_TDATA01	0x1b0b0
+		MX6UL_PAD_ENET2_TX_CLK__ENET2_REF_CLK2	0x4001b031
+		MX6UL_PAD_GPIO1_IO07__ENET2_MDC		0x1b0b0
+		MX6UL_PAD_GPIO1_IO06__ENET2_MDIO	0x1b0b0
+		MX6UL_PAD_CSI_DATA03__GPIO4_IO24	0x70b0 /* RESET */
+		MX6UL_PAD_ENET2_RX_ER__ENET2_RX_ER	0x1b0b0
+	>;
+};
+
+&mcp6542	{
+	/* external watchdog timer using mcp6542  */
+	gpios = <&gpio3 8 0>;
+};
+
+&fec1 {
+	pinctrl-names = "default";
+	phy-handle = <&ethphy0>;
+	pinctrl-0 = <&pinctrl_enet1>;
+	phy-mode = "rmii";
+	phy-reset-gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
+	phy-reset-duration = <100>;
+	status = "okay";
+
+	/delete-node/ mdio;
+};
+
+&fec2 {
+	pinctrl-names = "default";
+	phy-handle = <&ethphy1>;
+	pinctrl-0 = <&pinctrl_enet2>;
+	phy-mode = "rmii";
+	phy-reset-gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
+	phy-reset-duration = <100>;
+	status = "okay";
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy0: ethernet-phy@0 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <0>;
+			smsc,disable-energy-detect;
+			status = "okay";
+		};
+
+		ethphy1: ethernet-phy@1 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <1>;
+			smsc,disable-energy-detect;
+			status = "okay";
+		};
+	};
+};
