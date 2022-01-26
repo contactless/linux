@@ -95,6 +95,9 @@ properties:
       - otg
       - peripheral
 
+  wirenboard,mux-on-id-pin:
+    description: On Wiren Board 7 USB0 is muxed between USB-A connector for host mode and USB-C connector for peripheral mode. The mux is controller by voltage on perihperal connector. The same signal is used as USB ID.
+
 required:
   - "#phy-cells"
   - compatible
