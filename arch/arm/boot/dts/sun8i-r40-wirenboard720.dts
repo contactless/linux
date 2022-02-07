@@ -342,7 +342,20 @@
 		io-channels = <&axp_adc 0>, <&axp_adc 1>, <&axp_adc 2>;
 	};
 
-        vin: vin {
+	/*
+	Because PMIC battery driver must be enabled at boot time,
+	we have to give it  some battery description to
+	override default (or preserved from last boot) register
+	values when it comes to charging voltage and current
+	*/
+	fallback_battery_desc: fallback-battery-desc {
+		compatible = "simple-battery";
+		constant-charge-current-max-microamp = <300000>;
+		constant-charge-voltage-max-microvolt = <4100000>;
+		status = "okay";
+	};
+
+	vin: vin {
 		compatible = "gpio-charger";
 		charger-type = "mains";
 		gpios = <PIN_PD 19 GPIO_ACTIVE_HIGH>;
@@ -1027,4 +1040,18 @@
 
 &gpadc {
 	status = "okay";
+};
+
+/*
+Neither MFD core, nor AXP driver doesn't support dynamic device-tree
+modification. So we have to enable the battery driver on boot time
+even if no battery module is installed.
+*/
+&battery_power_supply {
+	status = "okay";
+	monitored-battery = <&fallback_battery_desc>;
+
+	// it's ~40C conservative high temperature limit.
+	// to be overrided by battery overlay
+	x-powers,charge-high-temp-microvolt = <499200>;
 };
