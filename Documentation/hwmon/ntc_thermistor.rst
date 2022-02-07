@@ -96,6 +96,27 @@ pulldown_ohm, and connect should be provided. When none of the four models
 are suitable or the user can get the resistance directly, the user should
 provide read_ohm and _not_ provide the others.
 
+The driver also provides support for a fixed resistor in series with NTC.
+It's often used to shift the temperature trip points defined by hardware,
+for instance temperature protection in charger ICs.
+In this case, the driver always measure the sum of NTC's and fixed resistor's
+resistances. Or, put it another way, the fixed resistance has to be substracted
+from measurement result to give true NTC resistance.
+The example circuit is as follows (for circuit 4 above):
+
+     [pullup_uV]
+	 |
+	 $ (pullup_ohm)
+	 |
+	 +----------------------------[read_uV]
+	 |
+	[TH]
+	 |
+	 $ (series_ohm)
+	 |
+	-+- (ground)
+
+
 Sysfs Interface
 ---------------
 
