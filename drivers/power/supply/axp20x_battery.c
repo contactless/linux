@@ -286,6 +286,16 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
 			return ret;
 
 		val->intval = !!(reg & AXP20X_PWR_OP_BATT_PRESENT);
+
+		// Some PMICs fail to detect disconnected battery. Check volatge to be sure.
+		if (val->intval) {
+			ret = iio_read_channel_processed(axp20x_batt->batt_v,
+							&val1);
+
+			// 500 mV is hopefuly higher than noise and lower than any Li battery
+			if (!ret && val1 < 500)
+				val->intval = 0;
+		}
 		break;
 
 	case POWER_SUPPLY_PROP_STATUS:
