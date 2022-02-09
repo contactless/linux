@@ -773,6 +773,28 @@ static int axp717_set_voltage_min_design(struct axp20x_batt_ps *axp_batt,
 				  AXP717_V_OFF_MASK, val1);
 }
 
+static int axp20x_set_charge_high_temp_thresh(struct axp20x_batt_ps *axp_batt,
+					unsigned ts_uv)
+{
+	unsigned val1 = ts_uv / 12800; // 12.8mV per LSB
+
+	if (val1 > 0xFF)
+		return -EINVAL;
+
+	return regmap_write(axp_batt->regmap, AXP20X_V_HTF_CHRG, val1);
+}
+
+static int axp20x_set_charge_low_temp_thresh(struct axp20x_batt_ps *axp_batt,
+					unsigned ts_uv)
+{
+	unsigned val1 = ts_uv / 12800; // 12.8mV per LSB
+
+	if (val1 > 0xFF)
+		return -EINVAL;
+
+	return regmap_write(axp_batt->regmap, AXP20X_V_LTF_CHRG, val1);
+}
+
 static int axp20x_battery_set_prop(struct power_supply *psy,
 				   enum power_supply_property psp,
 				   const union power_supply_propval *val)
@@ -1085,6 +1107,7 @@ static int axp20x_power_probe(struct platform_device *pdev)
 	struct power_supply_battery_info *info;
 	struct device *dev = &pdev->dev;
 	int ret;
+	u32 tmp;
 
 	if (!of_device_is_available(pdev->dev.of_node))
 		return -ENODEV;
@@ -1127,6 +1150,13 @@ static int axp20x_power_probe(struct platform_device *pdev)
 	 * to current register value by default.
 	 */
 	axp20x_get_constant_charge_current(axp20x_batt, &axp20x_batt->max_ccc);
+
+	if (!of_property_read_u32(pdev->dev.of_node, "x-powers,charge-high-temp-microvolt", &tmp)) {
+		axp20x_set_charge_high_temp_thresh(axp20x_batt, tmp);
+	}
+	if (!of_property_read_u32(pdev->dev.of_node, "x-powers,charge-low-temp-microvolt", &tmp)) {
+		axp20x_set_charge_low_temp_thresh(axp20x_batt, tmp);
+	}
 
 	return 0;
 }
