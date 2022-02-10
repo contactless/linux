@@ -62,7 +62,7 @@
 */
 
 #define MAX_CURRENT_UPDATE_INTERVAL_MS 10000
-#define MAX_CURRENT_UPDATE_V_DELTA_UV 5000
+#define MAX_CURRENT_UPDATE_V_DELTA_UV 75000
 #define VOLTAGE_JITTER_THRESHOLD_UV 2000
 
 struct edlc_battery {
@@ -244,10 +244,11 @@ static void eldc_battery_update_current(struct edlc_battery *bat, int delta_uv, 
 		tmp_divisor = bat->voltage_max_uv / 1000;
 		tmp_divisor *= tmp_divisor;
 		tmp_divisor *= delta_ms;
-		// printk("tmp: %lld, td: %lld, dv: %d, dt: %d, e:%d\n", tmp, tmp_divisor, delta_uv, delta_ms, bat->info.energy_full_design_uwh);
 
 		bat->current_ua = 1000 * (int32_t) div64_s64(tmp, tmp_divisor);
 		bat->power_uw = (bat->current_ua / 1000) * (bat->voltage_uv / 1000);
+
+		// printk("tmp: %lld, td: %lld, dv: %d, dt: %d, e:%d. %d uA, %d uW\n", tmp, tmp_divisor, delta_uv, delta_ms, bat->info.energy_full_design_uwh, bat->current_ua, bat->power_uw);
 	}
 	bat->current_valid = true;
 }
