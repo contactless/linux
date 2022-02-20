@@ -981,7 +981,8 @@ static int sunxi_pinctrl_gpio_get_direction(struct gpio_chip *gc,
 		default:
 			dev_dbg(gc->parent, "%s: get direction GPIO %d, unexpected mux %x. Maybe request the pin first?\n",
 				gc->label, offset + gc->base, mux);
-			return -EINVAL;
+			/* Other code don't really expect errors routinely happening here, so return direction in instead */
+			return GPIO_LINE_DIRECTION_IN;
 	}
 }
 
