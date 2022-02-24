@@ -20,6 +20,7 @@
 		spi10 = &spi_rfm69;
 		usb0 = &usbotg1;
 		usb1 = &usbotg2;
+		wbc_modem = &wbc_modem;
 /*
     Swap mmc0 and mmc1 aliases
 
@@ -421,7 +422,8 @@
 			};
 		};
 
-		gsm {
+		gsm {  // left for 2g-only modems compatibility
+			compatible = "wirenboard,wbc-uart";
 			power-type = <2>;
 			power-gpios = <&gpio4 24 0>;
 			pwrkey-gpios = <&gpio3 20 0>;
@@ -452,6 +454,29 @@
 		};
 	};
 };
+
+/* wbc-modem is connected to port2 of usb-hub */
+&usbotg2 {
+	usb-hub@1 {
+		compatible = "usb424,2514";
+		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wbc_modem: wbc-modem@2 {
+			compatible = "wirenboard,wbc-usb";
+			reg = <2>;
+			status = "disabled";
+
+			power-type = <2>;
+			power-gpios = <&gpio4 24 0>;
+			pwrkey-gpios = <&gpio3 20 0>;
+			status-gpios = <&gpio3 19 1>;
+			simselect-gpios = <&gpio3 24 0>;
+		};
+	};
+};
+
 
 &clks {
 	assigned-clocks = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
