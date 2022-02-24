@@ -32,6 +32,7 @@
 		mmc1 = &mmc0;
 		rtc0 = &ext_rtc;
 		rtc1 = &rtc;
+		wbc_modem = &wbc_modem;
 	};
 
 	chosen {
@@ -54,7 +55,7 @@
 			enable-active-high;
 		};
 
-		/* USB Wi-Fi is directly connected to SoC, power supply is 
+		/* USB Wi-Fi is directly connected to SoC, power supply is
 		   switched by dedicated P-channel FET */
 		reg_usb_wifi_3v3: regulator@2 {
 			reg = <2>;
@@ -316,7 +317,6 @@
 			};
 		};
 
-
 		hwmon-nodes {
 			cputemp {
 				title = "CPU Temperature";
@@ -431,7 +431,7 @@
 	vcc-pa-supply = <&reg_dcdc1>; //ok
 	// vcc-pb-supply = <&reg_dcdc1>; /* VCC-IO */
 	vcc-pc-supply = <&reg_aldo2>; /* eMMC, SoM wi-fi gpios*/
-	vcc-pd-supply = <&reg_dcdc1>; //ok 
+	vcc-pd-supply = <&reg_dcdc1>; //ok
 	vcc-pe-supply = <&reg_eldo3>; //ok
 	vcc-pf-supply = <&reg_dcdc1>; //ok
 	vcc-pg-supply = <&reg_dcdc1>; // microSD 3v3!!
@@ -712,6 +712,23 @@
 
 &ehci2 {
 	status = "okay";
+
+	/* wbc-modem is connected to 1st port of usb bus */
+	wbc_modem: wbc-modem@1 {
+		reg = <1>;
+
+		compatible = "wirenboard,wbc-usb";
+		power-type = <2>;
+		status = "disabled";
+
+		/* keeps compatibility in wb of-parsing tools */
+		gpio-xlate-type = "bank_pin";
+		gpio-pins-per-bank = <32>;
+		power-gpios = <PIN_PD 27 GPIO_ACTIVE_HIGH>;
+		pwrkey-gpios = <PIN_PD 26 GPIO_ACTIVE_HIGH>;
+		status-gpios = <PIN_PD 25 GPIO_ACTIVE_LOW>;
+		simselect-gpios = <PIN_PB 2 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 
