@@ -34,6 +34,12 @@
     };
 };
 
+/* wbc-modem is connected to port3 of usb-hub */
+&wbc_modem {
+	reg = <3>;
+	power-gpios = <&gpio5 4 0>;
+};
+
 &ecspi3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi3>;
