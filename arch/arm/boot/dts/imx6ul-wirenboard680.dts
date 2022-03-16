@@ -15,7 +15,7 @@
 	};
 };
 
-&rtc_pcf {
+&rtc_onboard {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_rtc_clkout>;
 	clkout-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
