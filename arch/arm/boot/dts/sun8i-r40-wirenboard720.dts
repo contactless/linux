@@ -30,7 +30,7 @@
 		serial7 = &uart7;
 		mmc0 = &mmc2;
 		mmc1 = &mmc0;
-		rtc0 = &ext_rtc;
+		rtc0 = &rtc_onboard;
 		rtc1 = &rtc;
 		wbc_modem = &wbc_modem;
 	};
@@ -408,7 +408,7 @@
 	status = "okay";
 	clock-frequency = <10000>;
 
-	ext_rtc: rtc@51 {
+	rtc_onboard: rtc@51 {
 		compatible = "nxp,pcf85063tp";
 		quartz-load-femtofarads = <12500>;
 		reg = <0x51>;
