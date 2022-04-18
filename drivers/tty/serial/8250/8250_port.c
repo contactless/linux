@@ -1583,8 +1583,10 @@ void serial8250_em485_start_tx(struct uart_8250_port *up, bool toggle_ier)
 {
 	unsigned char mcr = serial8250_in_MCR(up);
 
-	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier)
+	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier){
 		serial8250_stop_rx(&up->port);
+		up->rx_disabled = true;
+    }
 
 	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
 		mcr |= UART_MCR_RTS;
