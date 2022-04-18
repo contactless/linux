@@ -1,0 +1,28 @@
+/dts-v1/;
+
+#include "imx6ul-wirenboard670.dts"
+
+/ {
+	model = "Wiren Board rev. 6.7.0 (i.MX6UL/ULL)";
+	compatible = "contactless,imx6ul-wirenboard670-nousbhub", "contactless,imx6ul-wirenboard670", "contactless,imx6ul-wirenboard660", "contactless,imx6ul-wirenboard65", "contactless,imx6ul-wirenboard61", "contactless,imx6ul-wirenboard60", "contactless,imx6ul-wirenboard-evk", "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+};
+
+/* wb6.7.x devices without usb-hub: wbc-modem is connected directly to SoC's usb */
+
+/delete-node/ &wbc_modem;
+
+&usbotg2 {
+	/delete-node/ usb-hub@1;
+
+	wbc_modem: wbc-modem@1 {
+		compatible = "wirenboard,wbc-usb";
+		reg = <1>;
+		status = "disabled";
+
+		power-type = <2>;
+		power-gpios = <&gpio5 4 0>;
+		pwrkey-gpios = <&gpio3 20 0>;
+		status-gpios = <&gpio3 19 1>;
+		simselect-gpios = <&gpio3 24 0>;
+	};
+};
