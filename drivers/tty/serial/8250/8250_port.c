@@ -1314,6 +1314,7 @@ void serial8250_em485_stop_tx(struct uart_8250_port *p, bool toggle_ier)
 		serial8250_clear_and_reinit_fifos(p);
 
 		if (toggle_ier) {
+			p->rx_disabled = false;
 			p->ier |= UART_IER_RLSI | UART_IER_RDI;
 			serial_port_out(&p->port, UART_IER, p->ier);
 		}
@@ -1462,6 +1463,7 @@ void serial8250_em485_start_tx(struct uart_8250_port *up, bool toggle_ier)
 	unsigned char mcr = serial8250_in_MCR(up);
 
 	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier)
+		up->rx_disabled = true;
 		serial8250_stop_rx(&up->port);
 
 	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
@@ -1816,6 +1818,9 @@ void serial8250_handle_irq_locked(struct uart_port *port, unsigned int iir)
 	if (!(status & (UART_LSR_FIFOE | UART_LSR_BRK_ERROR_BITS)) &&
 	    (port->status & (UPSTAT_AUTOCTS | UPSTAT_AUTORTS)) &&
 	    !(up->ier & (UART_IER_RLSI | UART_IER_RDI)))
+		skip_rx = true;
+
+	if (up->rx_disabled)
 		skip_rx = true;
 
 	if (status & (UART_LSR_DR | UART_LSR_BI) && !skip_rx) {
