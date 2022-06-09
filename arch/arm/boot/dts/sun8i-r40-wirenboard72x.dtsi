@@ -14,9 +14,6 @@
 #define PIN_PI &pio 8
 
 / {
-	model = "Wiren Board rev. 7.2.0 (A40i)";
-	compatible = "wirenboard,wirenboard-720", "wirenboard,wirenboard-700", "allwinner,sun8i-r40";
-
 	aliases {
 		ethernet0 = &gmac;
 		ethernet1 = &emac;
@@ -33,6 +30,7 @@
 		rtc0 = &rtc_onboard;
 		rtc1 = &rtc;
 		wbc_modem = &wbc_modem;
+		rtc_onboard = &rtc_onboard;
 	};
 
 	chosen {
@@ -938,9 +936,6 @@
 	status = "okay";
 
 	vqmmc-supply = <&vcc_sd>;
-	vmmc-supply = <&vcc_sd>;
-
-	no-1-8-v; /* we don't have SD card power switch, so 3.3=>1.8V voltage switching can not be implemented */
 };
 
 
