@@ -197,15 +197,14 @@ static int sun4i_prepare_for_irq(struct iio_dev *indio_dev, int channel,
 		ret = regmap_write(info->regmap, SUN4I_GPADC_CTRL1,
 				   info->data->tp_mode_en |
 				   info->data->tp_adc_select |
-				   info->data->adc_chan_select(channel));
-		/*
-		 * When the IP changes channel, it needs a bit of time to get
-		 * correct values.
-		 */
-		if ((reg & info->data->adc_chan_mask) !=
-			 info->data->adc_chan_select(channel))
-			usleep_range(10000, 20000);
-
+				   info->data->adc_chan_select(channel)) ||
+			/*
+			 * We need to clear adc's fifo just after setting the channel
+			 * (to clean previous channel's measurements)
+			 */
+			regmap_write(info->regmap, SUN4I_GPADC_INT_FIFOC,
+			   SUN4I_GPADC_INT_FIFOC_TP_FIFO_TRIG_LEVEL(1) |
+			   SUN4I_GPADC_INT_FIFOC_TP_FIFO_FLUSH);
 	} else {
 		/*
 		 * The temperature sensor returns valid data only when the ADC
