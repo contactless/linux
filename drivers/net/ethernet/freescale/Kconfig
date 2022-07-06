@@ -35,6 +35,14 @@ config FEC
 	  Say Y here if you want to use the built-in 10/100 Fast ethernet
 	  controller on some Motorola ColdFire and Freescale i.MX/S32 processors.
 
+config FEC_SPECIAL_INTERFACE_NAMES
+	bool "Use special interface names for FEC devices (ethFECX)"
+	depends on FEC
+	help
+	  This option makes FEC driver use special interface names
+	  (ethFEC0, ethFEC1, ...) instead of eth0, eth1, ... so
+	  they can be renamed/reordered in userspace.
+
 config FEC_MPC52xx
 	tristate "FEC MPC52xx driver"
 	depends on PPC_MPC52xx && PPC_BESTCOMM
