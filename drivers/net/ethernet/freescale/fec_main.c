@@ -4356,8 +4356,23 @@ fec_probe(struct platform_device *pdev)
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
 	/* Init network device */
+#ifdef CONFIG_FEC_SPECIAL_INTERFACE_NAMES
+	/*
+	 * Since interface name swapping is broken in systemd since Debian stretch,
+	 * we can use special names like ethFECX in order
+	 * to rename them in userspace afterwards.
+	 *
+	 * For that we use alloc_netdev_mqs() which is wrapped
+	 * in alloc_etherdev_mqs() (at least in 5.10.35).
+	 */
+	ndev = alloc_netdev_mqs(sizeof(struct fec_enet_private) +
+				  FEC_STATS_SIZE, "ethFEC%d", NET_NAME_UNKNOWN,
+				  ether_setup, num_tx_qs, num_rx_qs);
+#else
 	ndev = alloc_etherdev_mqs(sizeof(struct fec_enet_private) +
 				  FEC_STATS_SIZE, num_tx_qs, num_rx_qs);
+#endif
+
 	if (!ndev)
 		return -ENOMEM;
 
