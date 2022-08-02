@@ -1,7 +1,32 @@
 /dts-v1/;
 #include "sun8i-r40-wirenboard73x.dtsi"
 
+/* CAN is disabled on WB 7.3
+	see https://wirenboard.com/wiki/WB_7:_Errata (ERRWB73002) for details
+*/
+
 / {
 	model = "Wiren Board rev. 7.3.0 (A40i)";
-	compatible = "wirenboard,wirenboard-730", "wirenboard,wirenboard-720", "wirenboard,wirenboard-700", "allwinner,sun8i-r40";
+	compatible = "wirenboard,wirenboard-730", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+
+	regulators {
+		/* GPIO hogs crash kernel on sunxi, so use dummy regulator */
+		errwb73002_disable_can: errwb73002-disable-can {
+			compatible = "regulator-fixed";
+			regulator-name = "errwb73002-disable-can";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <PIN_PE 11 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+	};
+};
+
+/delete-node/ &can0;
+
+/* RS-485 on "RS-485-2" can't be enabled by older userspace, and there is no CAN anyway,
+   so enable it here.
+*/
+&uart4 { 
+	status = "okay";
 };
