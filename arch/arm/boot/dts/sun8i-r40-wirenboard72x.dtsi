@@ -711,6 +711,8 @@
 &ehci2 {
 	status = "okay";
 
+	#address-cells = <1>;
+	#size-cells = <0>;
 	/* wbc-modem is connected to 1st port of usb bus */
 	wbc_modem: wbc-modem@1 {
 		reg = <1>;
