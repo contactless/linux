@@ -1,41 +1,7 @@
 /dts-v1/;
-#include "sun8i-r40-wirenboard72x.dtsi"
+#include "sun8i-r40-wirenboard73x.dtsi"
 
 / {
 	model = "Wiren Board rev. 7.3.0 (A40i)";
 	compatible = "wirenboard,wirenboard-730", "wirenboard,wirenboard-720", "wirenboard,wirenboard-700", "allwinner,sun8i-r40";
-
-	regulators {
-		vdd_sd_power: vdd-sd-power {
-			compatible = "regulator-fixed";
-			regulator-name = "vdd-sd-power";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = <PIN_PD 23 GPIO_ACTIVE_HIGH>;
-			enable-active-low;
-		};
-	};
-};
-
-&mmc0 {
-	vmmc-supply = <&vdd_sd_power>;
-	sd-uhs-sdr25;
-	sd-uhs-sdr50;
-	sd-uhs-sdr104;
-	max-frequency = <150000000>; /* 200 MHz doesn't work, probably due to signal integrity issues */
-};
-
-&pio {
-	pinctrl_rtc_clkout_gpio: rtc-clkout-pins {
-		pins = "PI17";
-		function = "gpio_in";
-	};
-};
-
-&rtc_onboard {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_rtc_clkout_gpio>;
-	clkout-gpios = <PIN_PI 17 GPIO_ACTIVE_HIGH>;
-	gpio-xlate-type = "bank_pin";
-	gpio-pins-per-bank = <32>;
 };
