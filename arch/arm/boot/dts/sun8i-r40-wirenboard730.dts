@@ -6,8 +6,9 @@
 */
 
 / {
+	/* wirenboard-720 is left for userspace compatibility */
 	model = "Wiren Board rev. 7.3.0 (A40i)";
-	compatible = "wirenboard,wirenboard-730", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+	compatible = "wirenboard,wirenboard-730", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x",  "wirenboard,wirenboard-720", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
 
 	regulators {
 		/* GPIO hogs crash kernel on sunxi, so use dummy regulator */
