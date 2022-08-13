@@ -1,5 +1,6 @@
 /dts-v1/;
 #include "sun8i-r40-wirenboard73x.dtsi"
+#include "sun8i-r40-wirenboard72x-eui-eeprom.dtsi"
 
 /* CAN is disabled on WB 7.3
 	see https://wirenboard.com/wiki/WB_7:_Errata (ERRWB73002) for details
