@@ -1,0 +1,87 @@
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	/* JTAG_SEL SoC pin must be left floating! Otherwise pins PB14-PB17 are used for JTAG
+	   regardless of pinmux settings!
+	*/
+	i2c_eeprom1: i2c_eeprom1 {
+		compatible = "i2c-gpio";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		sda-gpios = <&pio 1 16 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&pio 1 17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+
+		i2c-gpio,delay-us = <10>;        /* ~100 kHz */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_eeprom1_pins>;
+
+		eeprom@50 {
+			compatible = "atmel,24c02";
+			reg = <0x50>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			eth0_mac_address: mac@80 {
+				reg = <0xfa 0x6>;
+			};
+		};
+	};
+
+	i2c_eeprom2: i2c_eeprom2 {
+		compatible = "i2c-gpio";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		sda-gpios = <&pio 1 14 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&pio 1 15 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+
+		i2c-gpio,delay-us = <10>;        /* ~100 kHz */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_eeprom2_pins>;
+
+		eeprom@50 {
+			compatible = "atmel,24c02";
+			reg = <0x50>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* To make it work make sure local-mac-address property is not set by U-Boot */
+			eth1_mac_address: mac@80 {
+				reg = <0xfa 0x6>;
+			};
+		};
+	};
+};
+
+&pio {
+	i2c_eeprom1_pins: i2c-eeprom1-pins {
+		pins = "PB16", "PB17";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	i2c_eeprom2_pins: i2c-eeprom2-pins {
+		pins = "PB14", "PB15";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+};
+
+/* Ethernet ports */
+/* To make it work make sure local-mac-address property is not set by U-Boot */
+&gmac {
+	nvmem-cells = <&eth0_mac_address>;
+	nvmem-cell-names = "mac-address";
+};
+
+&emac {
+	nvmem-cells = <&eth1_mac_address>;
+	nvmem-cell-names = "mac-address";
+};
