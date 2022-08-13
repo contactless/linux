@@ -15,8 +15,8 @@
 
 / {
 	aliases {
-		ethernet0 = &gmac;
-		ethernet1 = &emac;
+		ethernet0 = &emac;
+		ethernet1 = &gmac;
 		serial0 = &uart0;
 		serial1 = &uart1;
 		serial2 = &uart2;
@@ -135,64 +135,6 @@
 		always-running;
 		timeout-sec = <30>;
 		status = "okay";
-	};
-
-	/* JTAG_SEL SoC pin must be left floating! Otherwise pins PB14-PB17 are used for JTAG
-	   regardless of pinmux settings!
-	*/
-	i2c_eeprom1 {
-		compatible = "i2c-gpio";
-
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		sda-gpios = <PIN_PB 16 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
-		scl-gpios = <PIN_PB 17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
-
-		i2c-gpio,delay-us = <10>;        /* ~100 kHz */
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&i2c_eeprom1_pins>;
-
-		eeprom@50 {
-			compatible = "atmel,24c02";
-			reg = <0x50>;
-
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			eth0_mac_address: mac@80 {
-				reg = <0xfa 0x6>;
-			};
-		};
-	};
-
-	i2c_eeprom2 {
-		compatible = "i2c-gpio";
-
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		sda-gpios = <PIN_PB 14 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
-		scl-gpios = <PIN_PB 15 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
-
-		i2c-gpio,delay-us = <10>;        /* ~100 kHz */
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&i2c_eeprom2_pins>;
-
-		eeprom@50 {
-			compatible = "atmel,24c02";
-			reg = <0x50>;
-
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			/* To make it work make sure local-mac-address property is not set by U-Boot */
-			eth1_mac_address: mac@80 {
-				reg = <0xfa 0x6>;
-			};
-		};
 	};
 
 	wirenboard {
@@ -519,20 +461,8 @@
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", ""; /* 28 - 31 */
 
-	i2c_eeprom1_pins: i2c-eeprom1-pins {
-		pins = "PB16", "PB17";
-		function = "gpio_in";
-		bias-pull-up;
-	};
-
-	i2c_eeprom2_pins: i2c-eeprom2-pins {
-		pins = "PB14", "PB15";
-		function = "gpio_in";
-		bias-pull-up;
-	};
-
     	/* w/o ECOL and ETXERR */
-    	gmac_mii_pins_reduced: gmac-mii-pins-reduced {
+	gmac_mii_pins_reduced: gmac-mii-pins-reduced {
 		pins = "PA0", "PA1", "PA2", "PA3",
 			"PA4", "PA5", "PA6", "PA7",
 			"PA8", "PA9", "PA10", "PA11", "PA12",
@@ -764,10 +694,6 @@
 	phy-mode = "mii";
 	phy-supply = <&reg_dcdc1>;
 	status = "okay";
-
-	/* To make it work make sure local-mac-address property is not set by U-Boot */
-	nvmem-cells = <&eth0_mac_address>;
-	nvmem-cell-names = "mac-address";
 };
 
 &gmac_mdio {
@@ -788,10 +714,6 @@
 	phy-handle = <&phy2>;
 	phy-mode = "mii";
 	phy-supply = <&reg_dcdc1>;
-
-	nvmem-cells = <&eth1_mac_address>;
-	nvmem-cell-names = "mac-address";
-
 	status = "okay";
 };
 
