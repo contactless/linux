@@ -1,5 +1,6 @@
 /dts-v1/;
 #include "sun8i-r40-wirenboard72x.dtsi"
+#include "sun8i-r40-wirenboard72x-eui-eeprom.dtsi"
 
 / {
 	model = "Wiren Board rev. 7.2.0 (A40i)";
