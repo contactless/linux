@@ -1,0 +1,13 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard73x.dtsi"
+
+/*
+Revision 7.3.2 is the first revision without EEPROM with MAC addresses.
+MAC addresses are assigned during factory provisioning process 
+*/
+
+/ {
+	model = "Wiren Board rev. 7.3.2 (A40i)";
+	/* wirenboard-720 is left for userspace compatibility */
+	compatible = "wirenboard,wirenboard-732", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-720", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+};
