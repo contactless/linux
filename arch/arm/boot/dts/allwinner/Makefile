@@ -257,6 +257,7 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-r40-wirenboard730.dtb \
 	sun8i-r40-wirenboard731.dtb \
 	sun8i-r40-wirenboard732.dtb \
+	sun8i-r40-wirenboard733.dtb \
 	sun8i-s3-elimo-initium.dtb \
 	sun8i-s3-lichee-zero-plus.dtb \
 	sun8i-s3-pinecube.dtb \
