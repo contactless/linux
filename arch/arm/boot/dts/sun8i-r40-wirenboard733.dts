@@ -1,0 +1,28 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard73x.dtsi"
+
+/ {
+	model = "Wiren Board rev. 7.3.3 (A40i)";
+	/* wirenboard-720 is left for userspace compatibility */
+	compatible = "wirenboard,wirenboard-733", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-720", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+};
+
+&a1_volt {
+	output-ohms = <2870>;
+	full-ohms = <29870>;
+};
+
+&a2_volt {
+	output-ohms = <2870>;
+	full-ohms = <29870>;
+};
+
+&a3_volt {
+	output-ohms = <2870>;
+	full-ohms = <29870>;
+};
+
+&vin_volt {
+	output-ohms = <2870>;
+	full-ohms = <49870>;
+};
