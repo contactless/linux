@@ -36,7 +36,7 @@ create_package() {
 
 	# Create the package
 	dpkg-gencontrol $forcearch -Vkernel:debarch="${debarch}" -p$pname -P"$pdir"
-	dpkg --build "$pdir" ..
+	dpkg-deb -Zgzip --build "$pdir" ..
 }
 
 set_debarch() {
@@ -450,6 +450,9 @@ clean:
 	mv debian/ debian.backup # debian/ might be cleaned away
 	\$(MAKE) clean
 	mv debian.backup debian
+
+override_dh_builddeb:
+	dh_builddeb -- -Zgzip
 
 binary: binary-arch
 EOF
