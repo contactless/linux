@@ -51,3 +51,32 @@
 		};
     };
 };
+
+&gpio3 {
+	gpio-line-names =
+		"", // 0
+		"", // 1
+		"", // 2
+		"EEPROM-1 SCL", // 3
+		"", // 4
+		"", // 5
+		"EEPROM-2 SDA", // 6
+		"EEPROM-2 SCL", // 7
+		"V_OUT STATUS", // 8
+		"V_OUT ON", // 9
+		"WI-FI ON", // 10
+		"MOD3 RTS", // 11
+		"EEPROM-1 SDA", // 12
+		"", // 13
+		"", // 14
+		"A1 OUT", // 15
+		"A2 OUT", // 16
+		"A3 OUT", // 17
+		"A4 OUT", // 18
+		"GSM STATUS", // 19
+		"GSM PWRKEY", // 20
+		"MOD3 TX", // 21
+		"MOD3 RX", // 22
+		"RS-485-2 FAILSAFE", // 23
+		"SIM_SELECT"; // 24
+};
