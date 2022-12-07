@@ -380,53 +380,53 @@
 
 	gpio-line-names =
 		/* PA */
-		"SoM Eth1 RXD3", "SoM Eth1 RXD2", "SoM Eth1 RXD1", "SoM Eth1 RXD0", /*  0 - 3 */
-		"SoM Eth1 TXD3", "SoM Eth1 TXD2", "SoM Eth1 TXD1", "SoM Eth1 TXD0", /*  4 - 7 */
-		"SoM Eth1 RXCK", "SoM Eth1 RXERR", "SoM Eth1 RXDV", "SoM Eth1 MDC", /*  8 - 11 */
-		"SoM Eth1 MDIO", "SoM Eth1 TXEN", "SoM Eth1 TXCK", "SoM Eth1 CRS", /* 12 - 15 */
-		"CAN_TX", "CAN_RX", "", "", /* 16 - 19 */
+		"SOM ETH1 RXD3", "SOM ETH1 RXD2", "SOM ETH1 RXD1", "SOM ETH1 RXD0", /*  0 - 3 */
+		"SOM ETH1 TXD3", "SOM ETH1 TXD2", "SOM ETH1 TXD1", "SOM ETH1 TXD0", /*  4 - 7 */
+		"SOM ETH1 RXCK", "SOM ETH1 RXERR", "SOM ETH1 RXDV", "SOM ETH1 MDC", /*  8 - 11 */
+		"SOM ETH1 MDIO", "SOM ETH1 TXEN", "SOM ETH1 TXCK", "SOM ETH1 CRS", /* 12 - 15 */
+		"CAN TX", "CAN RX", "", "", /* 16 - 19 */
 		"", "", "", "", /* 20 - 23 */
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PB */
-		"SoM PMIC_SCK", "SoM PMIC_SDA", "SIM_SELECT", "BUZZER", /*  0 - 3 */
+		"SOM PMIC SCL", "SOM PMIC SDA", "SIM_SELECT", "BUZZER", /*  0 - 3 */
 		"MOD1 RTS", "SODIMM:111 [NC]", "SODIMM:113 [NC]", "SODIMM:121 [NC]", /*  4 - 7 */
-		"SODIMM:123 [NC]", "Red LED", "Green LED", "[NC]", /*  8 - 11 */
-		"SODIMM:125 [NC]", "W1-UP", "EEPROM-2 SDA", "EEPROM-2 SCL", /* 12 - 15 */
+		"SODIMM:123 [NC]", "RED LED", "GREEN LED", "[NC]", /*  8 - 11 */
+		"SODIMM:125 [NC]", "W1 UP", "EEPROM-2 SDA", "EEPROM-2 SCL", /* 12 - 15 */
 		"EEPROM-1 SDA", "EEPROM-1 SCL", "WBIO SCL", "WBIO SDA", /* 16 - 19 */
-		"SODIMM:52 [NC[", "SODIMM:50 [NC]", "DEBUG UART TX", "DEBUG UART RX", /* 20 - 23 */
+		"SODIMM:52 [NC]", "SODIMM:50 [NC]", "DEBUG UART TX", "DEBUG UART RX", /* 20 - 23 */
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PC */
-		"MOD4 SPI MOSI", "MOD4 SPI MISO", "MOD4 SPI CLK", "SoM Wi-Fi ON", /*  0 - 3 */
-		"SoM BT ON", "microSD CD", "SoM eMMC CMD", "SoM eMMC CLK", /*  4 - 7 */
-		"SoM eMMC D0", "SoM eMMC D1", "SoM eMMC D2", "SoM eMMC D3", /*  8 - 11 */
-		"SoM eMMC D4", "SoM eMMC D5", "SoM eMMC D6", "SoM eMMC D7", /* 12 - 15 */
-		"SoM Wi-Fi HOST_WAKE", "SoM BT WAKE", "SoM BT HOST_WAKE", "RS-485-1 RTS", /* 16 - 19 */
+		"MOD4 SPI MOSI", "MOD4 SPI MISO", "MOD4 SPI CLK", "SOM WI-FI ON", /*  0 - 3 */
+		"SOM BT ON", "MICROSD CD", "SOM EMMC CMD", "SOM EMMC CLK", /*  4 - 7 */
+		"SOM EMMC D0", "SOM EMMC D1", "SOM EMMC D2", "SOM EMMC D3", /*  8 - 11 */
+		"SOM EMMC D4", "SOM EMMC D5", "SOM EMMC D6", "SOM EMMC D7", /* 12 - 15 */
+		"SOM WI-FI HOST_WAKE", "SOM BT WAKE", "SOM BT HOST_WAKE", "RS-485-1 RTS", /* 16 - 19 */
 		"MOD2 RTS", "RS-485-2 RTS", "SODIMM:16 [NC]", "MOD4 SPI CS", /* 20 - 23 */
-		"SoM eMMC RST", "", "", "", /* 24 - 27 */
+		"SOM EMMC RST", "", "", "", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PD */
 		"LVDS D0 P", "LVDS D0 N", "LVDS D1 P", "LVDS D1 N", /*  0 - 3 */
 		"LVDS D2 P", "LVDS D2 N", "LVDS DCK P", "LVDS DCK N", /*  4 - 7 */
 		"LVDS D3 P", "LVDS D3 N", "D1 OUT", "A3 OUT", /*  8 - 11 */
-		"A2 OUT", "A1 OUT", "Pushbutton", "[NC]", /* 12 - 15 */
-		"[NC]", "[NC]", "[NC]", "WBMZ Status", /* 16 - 19 */
-		"USB0 ID", "Watchdog out", "[NC]", "[NC]", /* 20 - 23 */
-		"Wi-Fi ON", "GSM Status", "GSM PWRKEY", "GSM ON", /* 24 - 27 */
+		"A2 OUT", "A1 OUT", "PUSHBUTTON", "[NC]", /* 12 - 15 */
+		"[NC]", "[NC]", "[NC]", "WBMZ STATUS", /* 16 - 19 */
+		"USB0 ID", "WATCHDOG OUT", "[NC]", "[NC]", /* 20 - 23 */
+		"WI-FI ON", "GSM STATUS", "GSM PWRKEY", "GSM ON", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PE */
-		"USB0 ON", "5Vout ON", "V_OUT ON", "W2 UP",  /*  0 - 3 */
-		"SODIMM:79 [NC]", "RS-485-2 Termination", "RS-485-1 Termination", "RS-485-2 Failsafe", /*  4 - 7 */
-		"RS-485-1 Failsafe", "[NC]", "MOD3 RTS", "CAN TXRX ON", /*  8 - 11 */
+		"USB0 ON", "5V_OUT ON", "V_OUT ON", "W2 UP",  /*  0 - 3 */
+		"SODIMM:79 [NC]", "RS-485-2 TERMINATION", "RS-485-1 TERMINATION", "RS-485-2 FAILSAFE", /*  4 - 7 */
+		"RS-485-1 FAILSAFE", "[NC]", "MOD3 RTS", "CAN TXRX ON", /*  8 - 11 */
 		"", "", "", "", /* 12 - 15 */
 		"", "", "", "", /* 16 - 19 */
 		"", "", "", "", /* 20 - 23 */
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PF */
-		"microSD D1", "microSD D0", "microSD CLK", "microSD CMD", /*  0 - 3 */
-		"microSD D3", "microSD D2", "", "", /*  4 - 7 */
+		"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD", /*  0 - 3 */
+		"MICROSD D3", "MICROSD D2", "", "", /*  4 - 7 */
 		"", "", "", "", /*  8 - 11 */
 		"", "", "", "", /* 12 - 15 */
 		"", "", "", "", /* 16 - 19 */
@@ -434,9 +434,9 @@
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PG */
-		"SoM Wi-Fi CMD", "SoM Wi-Fi CLK", "SoM Wi-Fi D0", "SoM Wi-Fi D1", /*  0 - 3 */
-		"SoM Wi-Fi D2", "SoM Wi-Fi D3", "SoM BT TX", "SoM BT RX", /*  4 - 7 */
-		"SoM BT reserved", "SoM BT reserved", "RS-485-2 TX", "RS-485-2 RX", /*  8 - 11 */
+		"SOM WI-FI CMD", "SOM WI-FI CLK", "SOM WI-FI D0", "SOM WI-FI D1", /*  0 - 3 */
+		"SOM WI-FI D2", "SOM WI-FI D3", "SOM BT TX", "SOM BT RX", /*  4 - 7 */
+		"SOM BT RESERVED", "SOM BT RESERVED", "RS-485-2 TX", "RS-485-2 RX", /*  8 - 11 */
 		"", "", "", "", /* 12 - 15 */
 		"", "", "", "", /* 16 - 19 */
 		"", "", "", "", /* 20 - 23 */
@@ -445,11 +445,11 @@
 		/* PH PH0-PH21 interrupts*/
 		"MOD4 TX", "MOD4 RX", "W1", "A3 IN", /*  0 - 3 */
 		"D1 IN", "CAN/UART RX ALT", "A2 IN", "A1 IN", //*  4 - 7 */
-		"SoM Eth0 RXD3", "SoM Eth0 RXD2", "SoM Eth0 RXD1", "SoM Eth0 RXD0", /*  8 - 11 */
-		"SoM Eth0 RST", "Eth1 RST", "SoM Eth0 TXD3", "SoM Eth0 TXD2", /* 12 - 15 */
-		"SoM Eth0 TXD1", "SoM Eth0 TXD0", "SoM Eth0 RXCK", "SoM Eth0 RXERR", /* 16 - 19 */
-		"SoM Eth0 RXDV", "SoM Eth0 MDC", "SoM Eth0 MDIO", "SoM Eth0 TXEN", /* 20 - 23 */
-		"SoM Eth0 TXCK", "SoM Eth0 CRS", "SoM Eth0 COL", "SoM LCD Backlight ON", /* 24 - 27 */
+		"SOM ETH0 RXD3", "SOM ETH0 RXD2", "SOM ETH0 RXD1", "SOM ETH0 RXD0", /*  8 - 11 */
+		"SOM ETH0 RST", "SOM ETH1 RST", "SOM ETH0 TXD3", "SOM ETH0 TXD2", /* 12 - 15 */
+		"SOM ETH0 TXD1", "SOM ETH0 TXD0", "SOM ETH0 RXCK", "SOM ETH0 RXERR", /* 16 - 19 */
+		"SOM ETH0 RXDV", "SOM ETH0 MDC", "SOM ETH0 MDIO", "SOM ETH0 TXEN", /* 20 - 23 */
+		"SOM ETH0 TXCK", "SOM ETH0 CRS", "SOM ETH0 COL", "SOM LCD BACKLIGHT ON", /* 24 - 27 */
 		"", "", "", "", /* 28 - 31 */
 		/* PI PI10-PI19 interrupts*/
 		"RTC SCK", "RTC SDA", "SODIMM: 76 [NC]", "[NC]", /*  0 - 3 */
