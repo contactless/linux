@@ -653,6 +653,143 @@
 	vref-supply = <&reg_vref_3v3>;
 };
 
+&gpio1 {
+	gpio-line-names = 
+	    "A4 IN", // 0
+		"", // 1
+		"", // 2
+		"", // 3
+		"", // 4
+		"", // 5
+		"", // 6
+		"", // 7
+		"", // 8
+		"MOD2 RTS", // 9
+		"", // 10
+		"W1", // 11
+		"", // 12
+		"W1 UP", // 13
+		"", // 14
+		"", // 15
+		"", // 16
+		"", // 17
+		"BATTERY CHARGING", // 18
+		"BATTERY PRESENT", // 19
+		"", // 20
+		"", // 21
+		"", // 22
+		"CAN TXRX ON", // 23
+		"MOD1 TX", // 24
+		"MOD1 RX", // 25
+		"MOD1 RTS", // 26
+		"5V_OUT ON"; // 27
+};
+
+&gpio2 {
+	gpio-line-names = 
+		"", // 0
+		"", // 1
+		"", // 2
+		"", // 3
+		"", // 4
+		"", // 5
+		"", // 6
+		"", // 7
+		"", // 8
+		"", // 9
+		"", // 10
+		"", // 11
+		"", // 12
+		"", // 13
+		"", // 14
+		"", // 15
+		"RTC SDA", // 16
+		"RTC SCL", // 17
+		"", // 18
+		"WATCHDOG OUT"; // 19
+};
+
+&gpio3 {
+	gpio-line-names =
+		"", // 0
+		"", // 1
+		"", // 2
+		"EEPROM-1 SCL", // 3
+		"", // 4
+		"", // 5
+		"EEPROM-2 SDA", // 6
+		"EEPROM-2 SCL", // 7
+		"V_OUT STATUS", // 8
+		"V_OUT ON", // 9
+		"WI-FI ON", // 10
+		"MOD3 RTS", // 11
+		"EEPROM-1 SDA", // 12
+		"RFM69 _DIO2", // 13
+		"RFM69 IRQ", // 14
+		"A1 OUT", // 15
+		"A2 OUT", // 16
+		"A3 OUT", // 17
+		"A4 OUT", // 18
+		"GSM STATUS", // 19
+		"GSM PWRKEY", // 20
+		"MOD3 TX", // 21
+		"MOD3 RX", // 22
+		"RS-485-2 FAILSAFE", // 23
+		"SIM_SELECT", // 24
+		"RFM69 SCK", // 25
+		"RFM69 CS", // 26
+		"RFM69 MOSI", // 27
+		"RFM69 MISO"; // 28
+};
+
+&gpio4 {
+	gpio-line-names =
+		"", // 0
+		"", // 1
+		"", // 2
+		"", // 3
+		"", // 4
+		"", // 5
+		"", // 6
+		"", // 7
+		"", // 8
+		"", // 9
+		"", // 10
+		"USB0 ON", // 11
+		"W2", // 12
+		"A1 IN", // 13
+		"A2 IN", // 14
+		"A3 IN", // 15
+		"W2 UP", // 16
+		"", // 17
+		"", // 18
+		"", // 19
+		"", // 20
+		"MOD2 TX", // 21
+		"MOD2 RX", // 22
+		"RS-485-1 FAILSAFE", // 23
+		"GSM ON", // 24
+		"MOD3 SPI SCK", // 25
+		"MOD3 SPI CS", // 26
+		"MOD3 SPI MOSI", // 27
+		"MOD3 SPI MISO"; // 28
+};
+
+&gpio5 {
+	gpio-line-names =
+		"", // 0
+		"", // 1
+		"", // 2
+		"", // 3
+		"", // 4
+		"", // 5
+		"", // 6
+		"", // 7
+		"", // 8
+		"", // 9
+		"PUSHBUTTON"; // 10
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_io_gpio>;
