@@ -957,6 +957,7 @@
 &usb_otg {
 	dr_mode = "peripheral";
 	status = "okay";
+	maximum-speed = "full-speed";
 };
 
 /* CPU RTC is useless since it doesn't have separate power supply. However we must keep it on to get proper LOSC for the rest of SoC.*/
