@@ -1,0 +1,44 @@
+/* disable eth1 */
+&ethernet1 {
+    status = "disabled";
+};
+
+/* disable 1-Wire on both pins to use these pins as GPIO */
+&onewire_w1 {
+    status = "disabled";
+};
+
+&onewire_w2 {
+    status = "disabled";
+};
+
+/* disable forced 1-Wire pull-ups and map them to regulators
+ * in order to make them unavailable from userspace
+ * and thus to protect W1 and W2 GPIOs
+ */
+/ {
+    regulators {
+        reg_pu_dummy_w1 {
+            compatible = "regulator-fixed";
+            regulator-name = "reg_pu_dummy_w1";
+            pinctrl-names = "default";
+            pinctrl-0 = &pinctrl_w1_gpio;
+            gpio = <&pio 1 13 GPIO_ACTIVE_HIGH>;
+            enable-active-high;
+        };
+
+        reg_pu_dummy_w2 {
+            compatible = "regulator-fixed";
+            regulator-name = "reg_pu_dummy_w2";
+            pinctrl-names = "default";
+            pinctrl-0 = &pinctrl_w2_gpio;
+            gpio = <&pio 4 3 GPIO_ACTIVE_HIGH>;
+            enable-active-high;
+        };
+    };
+};
+
+/* enable RS-485-2 which is usually enabled by hwconf */
+&uart4 {
+    status = "okay";
+};
