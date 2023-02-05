@@ -21,61 +21,12 @@ case $1 in
     ;;
 esac
 
-if [ ! -f debian/changelog ]; then
-    echo "Can't find debian/changelog, aborting" >&2
-    exit 2
-fi
 
-source scripts/package/wb/version.sh
-setup_kernel_vars || exit $?
+source scripts/package/wb/common.sh
+init_build_dir
 
 export DEBEMAIL="info@wirenboard.com"
 export DEBFULLNAME="Wirenboard robot"
-
-export KBUILD_OUTPUT=".build-$KERNEL_FLAVOUR"
-
-mkdir -p "$KBUILD_OUTPUT"
-
-get_kernel_revision() {
-    local changelog_top=$(head -1 debian/changelog)
-    local packageversion="$(echo $changelog_top | sed 's/.*(\(.*\)).*/\1/')${WB_VERSION_SUFFIX}"
-
-    case $packageversion in
-    *-*)
-        local revision=${packageversion##*-}
-        ;;
-    *)
-        echo "Package version must be in format '${version}-<revision>'" >&2
-        exit 2
-        ;;
-    esac
-
-    echo "-${revision}"
-}
-
-make_config() {
-    if [[ -t 0 && -e "${KBUILD_OUTPUT}/.config" ]]; then
-        echo ".config already present"
-        if [[ -n "$FORCE_DEFAULT" ]]; then
-            echo "Forced using $KERNEL_DEFCONFIG: $FORCE_DEFAULT"
-            yn=$FORCE_DEFAULT
-        else
-            read -n 1 -p "Use $KERNEL_DEFCONFIG instead? (y/N) " yn
-            echo
-        fi
-        if [[ "$yn" == "y" ]]; then
-            make ARCH=arm $KERNEL_DEFCONFIG
-        else
-            echo "Using existing .config"
-        fi
-    else
-        make ARCH=arm $KERNEL_DEFCONFIG
-    fi
-}
-
-make_image() {
-    make -j${CORES} LOCALVERSION=$(get_kernel_revision) ARCH=arm KBUILD_DEBARCH=${DEBARCH} zImage modules dtbs
-}
 
 make_deb () {
     fakeroot make -j${CORES} ARCH=arm KBUILD_DEBARCH=${DEBARCH} \
