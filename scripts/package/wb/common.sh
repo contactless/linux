@@ -21,10 +21,6 @@ case $1 in
     ;;
 esac
 
-if [ ! -f debian/changelog ]; then
-    echo "Can't find debian/changelog, aborting" >&2
-    exit 2
-fi
 
 source scripts/package/wb/version.sh
 
