@@ -40,6 +40,8 @@
 #include "sun8i_tcon_top.h"
 #include "sunxi_engine.h"
 
+static bool hw_preconfigured;
+
 static struct drm_connector *sun4i_tcon_get_connector(const struct drm_encoder *encoder)
 {
 	struct drm_connector *connector;
@@ -741,6 +743,13 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
 			 const struct drm_encoder *encoder,
 			 const struct drm_display_mode *mode)
 {
+	if (tcon->hw_preconfigured) {
+		// avoid the first modeset
+		tcon->hw_preconfigured = false;
+		hw_preconfigured = false;
+		return;
+	}
+
 	switch (encoder->encoder_type) {
 	case DRM_MODE_ENCODER_DSI:
 		/* DSI is tied to special case of CPU interface */
@@ -881,6 +890,7 @@ static int sun4i_tcon_init_regmap(struct device *dev,
 		return PTR_ERR(tcon->regs);
 	}
 
+	if (!tcon->hw_preconfigured) {
 	/* Make sure the TCON is disabled and all IRQs are off */
 	regmap_write(tcon->regs, SUN4I_TCON_GCTL_REG, 0);
 	regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, 0);
@@ -889,6 +899,7 @@ static int sun4i_tcon_init_regmap(struct device *dev,
 	/* Disable IO lines and set them to tristate */
 	regmap_write(tcon->regs, SUN4I_TCON0_IO_TRI_REG, ~0);
 	regmap_write(tcon->regs, SUN4I_TCON1_IO_TRI_REG, ~0);
+	}
 
 	return 0;
 }
@@ -1160,6 +1171,9 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 	tcon->dev = dev;
 	tcon->id = engine->id;
 	tcon->quirks = of_device_get_match_data(dev);
+	
+	if (tcon->id == 0)
+		tcon->hw_preconfigured = hw_preconfigured;
 
 	tcon->lcd_rst = devm_reset_control_get(dev, "lcd");
 	if (IS_ERR(tcon->lcd_rst)) {
@@ -1181,11 +1195,13 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 		}
 	}
 
+	if (!tcon->hw_preconfigured) {
 	/* Make sure our TCON is reset */
 	ret = reset_control_reset(tcon->lcd_rst);
 	if (ret) {
 		dev_err(dev, "Couldn't deassert our reset line\n");
 		return ret;
+	}
 	}
 
 	if (tcon->quirks->supports_lvds) {
@@ -1350,7 +1366,14 @@ static int sun4i_tcon_probe(struct platform_device *pdev)
 	const struct sun4i_tcon_quirks *quirks;
 	struct drm_bridge *bridge;
 	struct drm_panel *panel;
+	u32 fb_start;
 	int ret;
+
+	ret = of_property_read_u32_index(of_chosen, "p-boot,framebuffer-start", 0, &fb_start);
+	if (ret == 0) {
+		/* the display pipeline is already initialized by p-boot */
+		hw_preconfigured = true;
+	}
 
 	quirks = of_device_get_match_data(&pdev->dev);
 
