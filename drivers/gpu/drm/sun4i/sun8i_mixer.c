@@ -24,6 +24,7 @@
 #include <drm/drm_probe_helper.h>
 
 #include "sun4i_drv.h"
+#include "sun4i_tcon.h"
 #include "sun8i_mixer.h"
 #include "sun8i_ui_layer.h"
 #include "sun8i_vi_layer.h"
@@ -33,6 +34,8 @@ struct de2_fmt_info {
 	u32	drm_fmt;
 	u32	de2_fmt;
 };
+
+static bool hw_preconfigured;
 
 static const struct de2_fmt_info de2_formats[] = {
 	{
@@ -278,6 +281,33 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
 	struct drm_plane *plane;
 	u32 route = 0, pipe_en = 0;
 
+	if (mixer->hw_preconfigured && engine->id == 0) {
+		struct sun4i_tcon* tcon;
+		u32 val, saved, ret;
+
+		/*
+		 * This is the first commit, wait for vblank on tcon0 before continuing.
+		 */
+		list_for_each_entry(tcon, &mixer->drv->tcon_list, list) {
+			if (tcon->id == 0) {
+				regmap_read(tcon->regs, SUN4I_TCON_GINT0_REG, &saved);
+				saved &= 0xffff0000;
+
+				regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, 0);
+
+				ret = regmap_read_poll_timeout(tcon->regs, SUN4I_TCON_GINT0_REG, val,
+							 val & (SUN4I_TCON_GINT0_VBLANK_INT(0) |
+								SUN4I_TCON_GINT0_VBLANK_INT(1) |
+								SUN4I_TCON_GINT0_TCON0_TRI_FINISH_INT),
+							 100, 40000);
+
+				regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, saved);
+			}
+		}
+
+		mixer->hw_preconfigured = false;
+	}
+
 	DRM_DEBUG_DRIVER("Committing changes\n");
 
 	drm_for_each_plane(plane, state->dev) {
@@ -466,6 +496,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	dev_set_drvdata(dev, mixer);
 	mixer->engine.ops = &sun8i_engine_ops;
 	mixer->engine.node = dev->of_node;
+	mixer->drv = drv;
 
 	if (of_property_present(dev->of_node, "iommus")) {
 		/*
@@ -489,6 +520,11 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	 * id is needed, it will fail during id matching anyway.
 	 */
 	mixer->engine.id = sun8i_mixer_of_get_id(dev->of_node);
+
+	if (mixer->engine.id == 0) {
+		mixer->hw_preconfigured = hw_preconfigured;
+		hw_preconfigured = false;
+	}
 
 	mixer->cfg = of_device_get_match_data(dev);
 	if (!mixer->cfg)
@@ -537,8 +573,11 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	 * reason for the mixer to be functional. Make sure it's the
 	 * case.
 	 */
+
+	if (!mixer->hw_preconfigured) {
 	if (mixer->cfg->mod_rate)
 		clk_set_rate(mixer->mod_clk, mixer->cfg->mod_rate);
+	}
 
 	clk_prepare_enable(mixer->mod_clk);
 
@@ -546,6 +585,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 
 	base = sun8i_blender_base(mixer);
 
+	if (!mixer->hw_preconfigured) {
 	/* Reset registers and disable unused sub-engines */
 	if (mixer->cfg->is_de3) {
 		for (i = 0; i < DE3_MIXER_UNIT_SIZE; i += 4)
@@ -577,6 +617,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	/* Enable the mixer */
 	regmap_write(mixer->engine.regs, SUN8I_MIXER_GLOBAL_CTL,
 		     SUN8I_MIXER_GLOBAL_CTL_RT_EN);
+	} /* hw_preconfigured */
 
 	/* Set background color to black */
 	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_BKCOLOR(base),
@@ -597,8 +638,10 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 			     SUN8I_MIXER_BLEND_MODE(base, i),
 			     SUN8I_MIXER_BLEND_MODE_DEF);
 
+	if (!mixer->hw_preconfigured) {
 	regmap_update_bits(mixer->engine.regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
 			   SUN8I_MIXER_BLEND_PIPE_CTL_EN_MSK, 0);
+	}
 
 	return 0;
 
@@ -628,6 +671,15 @@ static const struct component_ops sun8i_mixer_ops = {
 
 static int sun8i_mixer_probe(struct platform_device *pdev)
 {
+	int ret;
+	u32 fb_start;
+
+	ret = of_property_read_u32_index(of_chosen, "p-boot,framebuffer-start", 0, &fb_start);
+	if (ret == 0) {
+		/* the display pipeline is already initialized by p-boot */
+		hw_preconfigured = true;
+	}
+
 	return component_add(&pdev->dev, &sun8i_mixer_ops);
 }
 
