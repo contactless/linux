@@ -455,7 +455,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct backlight_properties props;
 	struct backlight_device *bl;
 	struct pwm_bl_data *pb;
-	struct pwm_state state;
+	struct pwm_state state, state_real;
 	unsigned int i;
 	int ret;
 
@@ -520,6 +520,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	/* Sync up PWM state. */
 	pwm_init_state(pb->pwm, &state);
+
+	/* Read real state, but only if the PWM is enabled. */
+	pwm_get_state(pb->pwm, &state_real);
+	if (state_real.enabled)
+		state = state_real;
 
 	/*
 	 * The DT case will set the pwm_period_ns field to 0 and store the
@@ -613,6 +618,24 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	bl->props.brightness = data->dft_brightness;
 	bl->props.power = pwm_backlight_initial_power_state(pb);
+	if (bl->props.power == FB_BLANK_UNBLANK && pb->levels) {
+		u64 level;
+
+		/* If the backlight is already on, determine the default
+		 * brightness from PWM duty cycle instead of forcing
+		 * the brightness determined by the driver 
+		 */
+		pwm_get_state(pb->pwm, &state);
+		level = (u64)state.duty_cycle * pb->scale;
+		do_div(level, (u64)state.period);
+
+		for (i = 0; i <= data->max_brightness; i++) {
+			if (data->levels[i] > level) {
+				bl->props.brightness = i;
+				break;
+			}
+		}
+	}
 	backlight_update_status(bl);
 
 	platform_set_drvdata(pdev, bl);
