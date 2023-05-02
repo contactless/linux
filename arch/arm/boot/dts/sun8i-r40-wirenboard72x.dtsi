@@ -461,12 +461,15 @@
 		"", "", "", "", /* 24 - 27 */
 		"", "", "", ""; /* 28 - 31 */
 
-    	/* w/o ECOL and ETXERR */
+	/* w/o ECOL and ETXERR (used for CAN) and
+	   w/o CRS which for some reason is kept as output by the A40i GMAC,
+	   which, in turn, leads to wrong LED mode conifguration on IP101 phy.
+	 */
 	gmac_mii_pins_reduced: gmac-mii-pins-reduced {
 		pins = "PA0", "PA1", "PA2", "PA3",
 			"PA4", "PA5", "PA6", "PA7",
 			"PA8", "PA9", "PA10", "PA11", "PA12",
-			"PA13", "PA14", "PA15";
+			"PA13", "PA14";
 		drive-strength = <40>;
 
 		function = "gmac";
