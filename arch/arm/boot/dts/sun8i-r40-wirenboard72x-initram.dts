@@ -4,7 +4,7 @@
 
 / {
 	model = "Wiren Board rev. 7.2.0 (A40i)";
-	compatible = "wirenboard,wirenboard-720-initram", "wirenboard,wirenboard-720", "wirenboard,wirenboard-700", "allwinner,sun8i-r40";
+	compatible = "wirenboard,wirenboard-720-initram", "wirenboard,wirenboard-720", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-700", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
 };
 
 /*
