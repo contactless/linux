@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright 2019 Bootlin
+%YAML 1.2
+---
+$id: "http://devicetree.org/schemas/gpio/wirenboard,wbec-gpio.yaml#"
+$schema: "http://devicetree.org/meta-schemas/core.yaml#"
+
+title: Wiren Board Embedded Controller GPIO Driver
+
+maintainers:
+  - Pavel Gasheev <pavel.gasheev@wirenboard.com>
+
+description: |
+  The WB EC GPIO describes the GPIO block included in the WB EC.
+
+  The driver exposes GPIOs from the WB EC.
+  For GPIO description look at WB EC firmware.
+  Current GPIOs are:
+  - [3:0] - A1-A4 inputs
+  - [4] - V_OUT control
+  - [5] - WBMZ Status
+
+properties:
+  compatible:
+    const: wirenboard,wbec-gpio
+
+  reg:
+    const: 0
+
+  "#gpio-cells":
+    const: 2
+
+  gpio-controller: true
+
+  ngpios:
+    minimum: 1
+    description:
+      Number of GPIOs
+
+  gpio-line-names:
+    minItems: 1
+
+required:
+  - compatible
+  - reg
+  - "#gpio-cells"
+  - gpio-controller
+  - ngpios
+
+additionalProperties: false
+
+examples:
+  - |
+    wbec_gpio: wbec-gpio@0 {
+      compatible = "wirenboard,wbec-gpio";
+      reg = <0>;
+
+      gpio-controller;
+      #gpio-cells = <2>;
+      ngpios = <6>;
+      gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "EC V OUT", "EC WBMZ STATUS";
+    };
