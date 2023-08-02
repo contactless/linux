@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/rtc/wirenboard,wbec-rtc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Wiren Board Embedded Controller RTC Driver
+
+maintainers:
+  - Pavel Gasheev <pavel.gasheev@wirenboard.com>
+
+description: |
+  Enables access to the Real Time Clock (RTC) on the Wiren Board Embedded Controller.
+
+properties:
+  compatible:
+    const: wirenboard,wbec-rtc
+
+  reg:
+    const: 0
+
+  wakeup-source: true
+
+required:
+  - compatible
+  - reg
+  - wakeup-source
+
+additionalProperties: false
+
+examples:
+  - |
+    rtc_onboard: wbec-rtc@0 {
+      compatible = "wirenboard,wbec-rtc";
+      reg = <0>;
+
+      wakeup-source;
+    };
+...
