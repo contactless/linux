@@ -968,4 +968,13 @@ config INPUT_STPMIC1_ONKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called stpmic1_onkey.
 
+config INPUT_WBEC_PWRBUTTON
+	tristate "Wiren Board Embedded Controller Power Button Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for power button connected to
+	  Wiren Board Embedded Controller.
+	  Power button can be used to power on from shutdown,
+	  safely power off and force a shutdown on long press.
+
 endif
