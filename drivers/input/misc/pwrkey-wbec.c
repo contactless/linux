@@ -133,5 +133,5 @@ module_platform_driver(wbec_pwrkey_driver);
 
 MODULE_ALIAS("platform:wbec-pwrkey");
 MODULE_AUTHOR("Pavel Gasheev <pavel.gasheev@wirenboard.com>");
-MODULE_DESCRIPTION("Wiren Board 7 Embedded Controller Power Key driver");
+MODULE_DESCRIPTION("Wiren Board Embedded Controller Power Key driver");
 MODULE_LICENSE("GPL");
