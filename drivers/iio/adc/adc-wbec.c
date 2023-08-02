@@ -14,7 +14,7 @@
 #include <linux/bitops.h>
 #include <linux/regmap.h>
 #include <linux/platform_device.h>
-#include <linux/mod_devicetable.h>
+#include <linux/of.h>
 
 #include <linux/iio/iio.h>
 #include <linux/iio/types.h>
@@ -207,6 +207,6 @@ static struct platform_driver wbec_adc_driver = {
 module_platform_driver(wbec_adc_driver);
 
 MODULE_AUTHOR("Pavel Gasheev <pavel.gasheev@wirenboard.com>");
-MODULE_DESCRIPTION("Wiren Board 7 Embedded Controller IIO driver");
+MODULE_DESCRIPTION("Wiren Board Embedded Controller IIO driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wbec-adc");
