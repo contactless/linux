@@ -95,14 +95,14 @@ fwrev_show(struct device *dev,
 	char suffix_str[32] = "";
 
 	ret = regmap_bulk_read(wbec->regmap, WBEC_REG_INFO_FW_VER_MAJOR,
-			version.raw, ARRAY_SIZE(version.raw));
+			version.raw, sizeof(version.raw));
 	if (ret)
 		return ret;
 
 	if (version.suffix > 0)
-		snprintf(suffix_str, sizeof(suffix_str), "+wb%d", version.suffix);
+		sprintf(suffix_str, "+wb%d", version.suffix);
 	else if (version.suffix < 0)
-		snprintf(suffix_str, sizeof(suffix_str), "-rc%d", -version.suffix);
+		sprintf(suffix_str, "-rc%d", -version.suffix);
 
 	return sprintf(buf, "%d.%d.%d%s\n",
 			version.major, version.minor, version.patch, suffix_str);
@@ -428,6 +428,6 @@ static struct spi_driver wbec_driver = {
 module_spi_driver(wbec_driver);
 
 MODULE_AUTHOR("Pavel Gasheev <pavel.gasheev@wirenboard.com>");
-MODULE_DESCRIPTION("Wiren Board 7 Embedded Controller MFD driver");
+MODULE_DESCRIPTION("Wiren Board Embedded Controller MFD driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("spi:wbec");
