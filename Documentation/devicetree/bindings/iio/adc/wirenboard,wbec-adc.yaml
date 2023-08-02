@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/iio/adc/wirenboard,wbec-adc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Wiren Board Embedded Controller ADC Driver
+
+maintainers:
+  - Pavel Gasheev <pavel.gasheev@wirenboard.com>
+
+description: |
+  The WB EC ADC describes the ADC block included in the WB EC.
+  The driver produces next IIO channels:
+  [0] - Voltage on Vin terminal in mV
+  [1] - Voltage on 3.3V bus in mV
+  [2] - Voltage on 5V bus in mV
+  [3] - Voltage on USB debug console in mV
+  [4] - Voltage on USB debug network in mV
+  [5] - Board temperature in deg C
+  [6..11] - ADC1..ADC6 channels in mV after divider (on WB EC pin)
+
+properties:
+  compatible:
+    const: wirenboard,wbec-adc
+
+  reg:
+    const: 0
+
+  "#io-channel-cells":
+    const: 1
+
+required:
+  - compatible
+  - reg
+  - "#io-channel-cells"
+
+additionalProperties: false
+
+examples:
+  - |
+    wbec_adc: wbec-adc@0 {
+      compatible = "wirenboard,wbec-adc";
+      reg = <0>;
+      #io-channel-cells = <1>;
+    };
+...
