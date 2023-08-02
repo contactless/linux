@@ -170,6 +170,6 @@ static struct platform_driver wbec_wdt_driver = {
 module_platform_driver(wbec_wdt_driver);
 
 MODULE_AUTHOR("Pavel Gasheev <pavel.gasheev@wirenboard.com>");
-MODULE_DESCRIPTION("Wiren Board 7 Embedded Controller Watchdog driver");
+MODULE_DESCRIPTION("Wiren Board Embedded Controller Watchdog driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wbec-watchdog");
