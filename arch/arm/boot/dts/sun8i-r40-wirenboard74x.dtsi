@@ -1,0 +1,1177 @@
+/dts-v1/;
+#include "sun8i-r40.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pwm/pwm.h>
+
+#define PIN_PA &pio 0
+#define PIN_PB &pio 1
+#define PIN_PC &pio 2
+#define PIN_PD &pio 3
+#define PIN_PE &pio 4
+#define PIN_PF &pio 5
+#define PIN_PG &pio 6
+#define PIN_PH &pio 7
+#define PIN_PI &pio 8
+
+/ {
+	aliases {
+		ethernet0 = &emac;
+		ethernet1 = &gmac;
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		serial6 = &uart6;
+		serial7 = &uart7;
+		mmc0 = &mmc2;
+		mmc1 = &mmc0;
+		rtc0 = &rtc_onboard;
+		rtc1 = &rtc;
+		rtc2 = &rtc_onboard_txco;
+		wbc_modem = &wbc_modem;
+		rtc_onboard = &rtc_onboard;
+		rtc_onboard_txco = &rtc_onboard_txco;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_usb0_vbus: regulator@1 {
+			reg = <1>;
+			compatible = "regulator-fixed";
+			regulator-name = "usb0_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+
+			gpio = <PIN_PE 0 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		/* USB Wi-Fi is directly connected to SoC, power supply is
+		   switched by dedicated P-channel FET */
+		reg_usb_wifi_3v3: regulator@2 {
+			reg = <2>;
+			compatible = "regulator-fixed";
+			regulator-name = "usb_wifi_3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <PIN_PD 24 GPIO_ACTIVE_HIGH>;
+			enable-active-low;
+		};
+
+		/* Wi-Fi on SoM */
+		som_wifi_pwrseq: som_wifi_pwrseq {
+			compatible = "mmc-pwrseq-simple";
+			reset-gpios = <PIN_PC 3 GPIO_ACTIVE_LOW>; /* PC3*/
+			// clocks = <&ccu CLK_OUTA>;
+			// clock-names = "ext_clock";
+		};
+
+		/* MicroSD reference voltage regulator */
+		vcc_sd: vdd-sd {
+			compatible = "regulator-gpio";
+			regulator-name = "vcc-sd";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+			gpios = <PIN_PC 22 GPIO_ACTIVE_HIGH>;
+			states = <3300000 0
+                                  1800000 1>;
+		};
+
+		vdd_sd_power: vdd-sd-power {
+			compatible = "regulator-fixed";
+			regulator-name = "vdd-sd-power";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <PIN_PD 23 GPIO_ACTIVE_HIGH>;
+			enable-active-low;
+		};
+
+		vdd_periph_power: vdd-periph-power {
+			compatible = "regulator-fixed";
+			regulator-name = "vdd-periph-power";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+
+			gpio = <PIN_PB 13 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+	};
+
+	i2c_wbec: i2c_wbec {
+		compatible = "i2c-gpio";
+		sda-gpios = <PIN_PB 16 GPIO_ACTIVE_HIGH>; /* sda/mosi */
+		scl-gpios = <PIN_PB 17 GPIO_ACTIVE_HIGH>; /* scl/miso */
+
+		i2c-gpio,delay-us = <2>;	/* ~100 kHz */
+
+		pinctrl-0 = <&pinctrl_wbec_i2c_gpio>;
+		pinctrl-names = "default";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	/* Enable 1-wire network on terminal block W1 */
+	onewire_w1: onewire_w1 {
+		compatible = "w1-gpio";
+		gpios = <PIN_PH 2 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <PIN_PI 0 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	/* Enable 1-wire network on terminal block W2 */
+	onewire_w2: onewire_w2 {
+		compatible = "w1-gpio";
+		gpios = <PIN_PI 17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <PIN_PI 1 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	leds-pwm {
+		compatible = "pwm-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm_ch6_pb_pins &pwm_ch7_pb_pins>;
+
+		green {
+			/* PB10 PWM7 SODIMM:119 */
+			label = "green";
+			pwms = <&pwm 7 100000 0>;
+			max-brightness = <255>;
+			linux,default-trigger = "default-off";
+			default-state = "on";
+			active-low;
+		};
+
+		red {
+			/* PB9 PWM6 SODIMM:117 */
+			label = "red";
+			pwms = <&pwm 6 100000 0>;
+			max-brightness = <255>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	wirenboard {
+		adc-type = <3>;
+		pwm-buzzer = <1>;
+
+		analog-inputs {
+			/* we don't use standard 'io-channels = <&adc1 N>' here because
+			   there is seemingly no way to associate iio channel index (N
+			   in above example) with channel name as in sysfs path
+			*/
+			A1 {
+				iio-device = <&a1_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <0>;
+			};
+
+			A2 {
+				iio-device = <&a2_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <1>;
+			};
+
+			A3 {
+				iio-device = <&a3_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			A4 {
+				iio-device = <&a4_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			Vin {
+				iio-device = <&vin_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <3>;
+			};
+
+			V3_3 {
+				iio-device = <&v33_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <4>;
+			};
+
+			V5_0 {
+				iio-device = <&v50_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <5>;
+			};
+
+			Vbus_debug {
+				iio-device = <&vbus_debug_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <6>;
+			};
+
+			Vbus_network {
+				iio-device = <&vbus_network_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <7>;
+			};
+		};
+
+		gpios {
+			A1_OUT {
+				io-gpios = <PIN_PD 13 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <0>;
+			};
+
+			A2_OUT {
+				io-gpios = <PIN_PD 12 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <1>;
+			};
+
+			A3_OUT {
+				io-gpios = <PIN_PD 11 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <2>;
+			};
+
+			A4_OUT {
+				io-gpios = <PIN_PD 10 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <3>;
+			};
+
+			A1_IN {
+				io-gpios = <PIN_PH 7 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <4>;
+			};
+
+			A2_IN {
+				io-gpios = <PIN_PH 6 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <5>;
+			};
+
+			A3_IN {
+				io-gpios = <PIN_PH 3 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <6>;
+			};
+
+			A4_IN {
+				io-gpios = <PIN_PH 4 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <7>;
+			};
+
+			5V_OUT {
+				io-gpios = <PIN_PE 1 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-high;
+				sort-order = <8>;
+			};
+
+			V_OUT {
+				/delete-property/ gpio-xlate-type;
+				/delete-property/ gpio-pins-per-bank;
+
+				io-gpios = <&wbec_gpio 4 GPIO_ACTIVE_HIGH>;
+				output-high;
+				sort-order = <9>;
+			};
+		};
+
+		hwmon-nodes {
+			cputemp {
+				title = "CPU Temperature";
+				hwmon-node-name = "cpu0_thermal";
+				hwmon-channel = "temp1";
+			};
+
+			pcbtemp {
+				title = "Board Temperature";
+				hwmon-node-name = "iio-hwmon-pcb-temp";
+				hwmon-channel = "temp1";
+			};
+		};
+	};
+
+	iio-hwmon-axp-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_adc 0>;
+	};
+
+	iio-hwmon-axp {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_adc 0>, <&axp_adc 1>, <&axp_adc 2>;
+	};
+
+	iio-hwmon-pcb-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&wbec_adc 5>;
+	};
+
+	/*
+	Because PMIC battery driver must be enabled at boot time,
+	we have to give it  some battery description to
+	override default (or preserved from last boot) register
+	values when it comes to charging voltage and current
+	*/
+	fallback_battery_desc: fallback-battery-desc {
+		compatible = "simple-battery";
+		constant-charge-current-max-microamp = <300000>;
+		constant-charge-voltage-max-microvolt = <4100000>;
+		status = "okay";
+	};
+
+	a1_volt: a1-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 6>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <98700>;
+		status = "okay";
+	};
+
+	a2_volt: a2-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 7>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <98700>;
+	};
+
+	a3_volt: a3-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 8>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <98700>;
+	};
+
+	a4_volt: a4-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 9>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <98700>;
+	};
+
+	vin_volt: vin-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 0>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v33_volt: v33-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 1>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v50_volt: v50-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 2>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_debug_volt: vbus-debug-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 3>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_network_volt: vbus-network-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 4>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+};
+
+/* WBIO I2C */
+&i2c1 {
+	status = "okay";
+};
+
+/* Optional RTC + ATECC */
+&i2c4 {
+	status = "okay";
+	clock-frequency = <10000>;
+
+	rtc_onboard_txco: rtc@32 {
+		compatible = "whwave,sd3078";
+		reg = <0x32>;
+		status = "disabled";
+	};
+};
+
+&i2c4_pins {
+	bias-pull-up;
+};
+
+/* Wiren Board Embedded Controller */
+&spi2 {
+	pinctrl-0 = <&spi2_pb_pins>,
+		    <&spi2_cs0_pb_pin>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	wbec: wbec@0 {
+		spi-max-frequency = <1000000>;
+
+		compatible = "wirenboard,wbec";
+		reg = <0>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wbec-watchdog@0 {
+			compatible = "wirenboard,wbec-watchdog";
+			reg = <0>;
+		};
+
+		wbec-pwrkey@0 {
+			compatible = "wirenboard,wbec-pwrkey";
+			reg = <0>;
+		};
+
+		rtc_onboard: wbec-rtc@0 {
+			compatible = "wirenboard,wbec-rtc";
+			reg = <0>;
+
+			wakeup-source;
+		};
+
+		wbec_gpio: wbec-gpio@0 {
+			compatible = "wirenboard,wbec-gpio";
+			reg = <0>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <5>;
+			gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "EC V OUT";
+		};
+
+		wbec_adc: wbec-adc@0 {
+			compatible = "wirenboard,wbec-adc";
+			reg = <0>;
+			#io-channel-cells = <1>;
+		};
+
+		vin: wbec-power@0 {
+			compatible = "wirenboard,wbec-power";
+			reg = <0>;
+		};
+	};
+};
+
+&pio {
+	/*input-debounce = <1>;*/
+	vcc-pa-supply = <&reg_dcdc1>; //ok
+	// vcc-pb-supply = <&reg_dcdc1>; /* VCC-IO */
+	vcc-pc-supply = <&reg_aldo2>; /* eMMC, SoM wi-fi gpios*/
+	vcc-pd-supply = <&reg_dcdc1>; //ok
+	vcc-pe-supply = <&reg_eldo3>; //ok
+	vcc-pf-supply = <&reg_dcdc1>; //ok
+	vcc-pg-supply = <&reg_dcdc1>; // microSD 3v3!!
+	vcc-ph-supply = <&reg_dcdc1>; // VCC-IO
+	vcc-pi-supply = <&reg_dcdc1>;// VCC-IO
+
+	gpio-line-names =
+		/* PA */
+		"SOM ETH1 RXD3", "SOM ETH1 RXD2", "SOM ETH1 RXD1", "SOM ETH1 RXD0", /*  0 - 3 */
+		"SOM ETH1 TXD3", "SOM ETH1 TXD2", "SOM ETH1 TXD1", "SOM ETH1 TXD0", /*  4 - 7 */
+		"SOM ETH1 RXCK", "SOM ETH1 RXERR", "SOM ETH1 RXDV", "SOM ETH1 MDC", /*  8 - 11 */
+		"SOM ETH1 MDIO", "SOM ETH1 TXEN", "SOM ETH1 TXCK", "SOM ETH1 CRS", /* 12 - 15 */
+		"CAN TX", "CAN RX", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PB */
+		"SOM PMIC SCL", "SOM PMIC SDA", "SIM_SELECT", "BUZZER", /*  0 - 3 */
+		"MOD1 RTS", "SODIMM:111 [NC]", "SODIMM:113 [NC]", "SODIMM:121 [NC]", /*  4 - 7 */
+		"SODIMM:123 [NC]", "RED LED", "GREEN LED", "", /*  8 - 11 */
+		"SODIMM:125 [NC]", "ON PERIPH", "EC CS", "EC CLK", /* 12 - 15 */
+		"EC MOSI", "EC MISO", "WBIO SCL", "WBIO SDA", /* 16 - 19 */
+		"MOD3 RTS", "CAN TXRX ON", "DEBUG UART TX", "DEBUG UART RX", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PC */
+		"MOD4 SPI MOSI", "MOD4 SPI MISO", "MOD4 SPI CLK", "SOM WI-FI ON", /*  0 - 3 */
+		"SOM BT ON", "MICROSD CD", "SOM EMMC CMD", "SOM EMMC CLK", /*  4 - 7 */
+		"SOM EMMC D0", "SOM EMMC D1", "SOM EMMC D2", "SOM EMMC D3", /*  8 - 11 */
+		"SOM EMMC D4", "SOM EMMC D5", "SOM EMMC D6", "SOM EMMC D7", /* 12 - 15 */
+		"SOM WI-FI HOST_WAKE", "SOM BT WAKE", "SOM BT HOST_WAKE", "RS-485-1 RTS", /* 16 - 19 */
+		"MOD2 RTS", "RS-485-2 RTS", "SODIMM:16 [NC]", "MOD4 SPI CS", /* 20 - 23 */
+		"SOM EMMC RST", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PD */
+		"LVDS D0 P", "LVDS D0 N", "LVDS D1 P", "LVDS D1 N", /*  0 - 3 */
+		"LVDS D2 P", "LVDS D2 N", "LVDS DCK P", "LVDS DCK N", /*  4 - 7 */
+		"LVDS D3 P", "LVDS D3 N", "A4 OUT", "A3 OUT", /*  8 - 11 */
+		"A2 OUT", "A1 OUT", "PUSHBUTTON", "SODIMM:170 [NC]", /* 12 - 15 */
+		"SODIMM:172 [NC]", "SODIMM:174 [NC]", "EC SWCLK/BOOT0", "EC RESET", /* 16 - 19 */
+		"USB0 ID", "SODIMM:182 [NC]", "SODIMM:184 [NC]", "[NC]", /* 20 - 23 */
+		"WI-FI ON", "GSM STATUS", "GSM PWRKEY", "GSM ON", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PE */
+		"USB0 ON", "5V_OUT ON", "SODIMM:84 [NC]", "SODIMM:82 [NC]",  /*  0 - 3 */
+		"RS-485-2 TERMINATION", "SODIMM:68 [NC]", "SODIMM:66 [NC]", "SODIMM:64 [NC]", /*  4 - 7 */
+		"SODIMM:62 [NC]", "RS-485-1 TERMINATION", "RS-485-2 FAILSAFE", "RS-485-1 FAILSAFE", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PF */
+		"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD", /*  0 - 3 */
+		"MICROSD D3", "MICROSD D2", "", "", /*  4 - 7 */
+		"", "", "", "", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PG */
+		"SOM WI-FI CMD", "SOM WI-FI CLK", "SOM WI-FI D0", "SOM WI-FI D1", /*  0 - 3 */
+		"SOM WI-FI D2", "SOM WI-FI D3", "SOM BT TX", "SOM BT RX", /*  4 - 7 */
+		"SOM BT RESERVED", "SOM BT RESERVED", "RS-485-2 TX", "RS-485-2 RX", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PH PH0-PH21 interrupts*/
+		"MOD4 TX", "MOD4 RX", "W1", "A3 IN", /*  0 - 3 */
+		"A4 IN", "CAN/UART RX ALT", "A2 IN", "A1 IN", //*  4 - 7 */
+		"SOM ETH0 RXD3", "SOM ETH0 RXD2", "SOM ETH0 RXD1", "SOM ETH0 RXD0", /*  8 - 11 */
+		"SOM ETH0 RST", "SOM ETH1 RST", "SOM ETH0 TXD3", "SOM ETH0 TXD2", /* 12 - 15 */
+		"SOM ETH0 TXD1", "SOM ETH0 TXD0", "SOM ETH0 RXCK", "SOM ETH0 RXERR", /* 16 - 19 */
+		"SOM ETH0 RXDV", "SOM ETH0 MDC", "SOM ETH0 MDIO", "SOM ETH0 TXEN", /* 20 - 23 */
+		"SOM ETH0 TXCK", "SOM ETH0 CRS", "SOM ETH0 COL", "SOM LCD BACKLIGHT ON", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PI PI10-PI19 interrupts*/
+		"W1 UP", "W2 UP", "CR_RTC SCL", "CR_RTC SDA", /*  0 - 3 */
+		"SODIMM: 75 [NC]", "SODIMM: 77 [NC]", "SODIMM: 79 [NC]", "SODIMM: 81 [NC]", /*  4 - 7 */
+		"SODIMM: 83 [NC]", "SODIMM: 85 [NC]", "MOD3 TX", "MOD3 RX", /*  8 - 11 */
+		"MOD2 TX", "MOD2 RX", "MOD4 RTS", "EC INT", /* 12 - 15 */
+		"WBIO INT", "W2", "RS-485-1 TX", "RS-485-1 RX", /* 16 - 19 */
+		"MOD1 TX", "MOD1 RX", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", ""; /* 28 - 31 */
+
+	/* w/o ECOL and ETXERR (used for CAN) and
+	   w/o CRS which for some reason is kept as output by the A40i GMAC,
+	   which, in turn, leads to wrong LED mode conifguration on IP101 phy.
+	 */
+	gmac_mii_pins_reduced: gmac-mii-pins-reduced {
+		pins = "PA0", "PA1", "PA2", "PA3",
+			"PA4", "PA5", "PA6", "PA7",
+			"PA8", "PA9", "PA10", "PA11", "PA12",
+			"PA13", "PA14";
+		drive-strength = <40>;
+
+		function = "gmac";
+	};
+	/* eMMC */
+	mmc2_pins_wo_carddet: mmc2-pins {
+		pins = "PC6", "PC7", "PC8", "PC9",
+			"PC10", "PC11", "PC12", "PC13", "PC14",
+			"PC15", "PC24";
+		function = "mmc2";
+		drive-strength = <40>;
+		bias-pull-up;
+	};
+
+	/* MOD1 */
+	pinctrl_mod1_i2c_gpio: mod1-txrx-i2c-pi-pins {
+		pins = "PI20", "PI21";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod1_txrx_gpio: mod1-txrx-gpio-pi-pins {
+		pins = "PI20", "PI21";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod1_txrx_uart: mod1-txrx-uart-pi-pins {
+		pins = "PI20", "PI21";
+		function = "uart7";
+	};
+
+	pinctrl_mod1_de_gpio: mod1-de-gpio-pb-pin {
+		pins = "PB4";
+		function = "gpio_in";
+	};
+
+	/* MOD2 */
+	pinctrl_mod2_i2c_gpio: mod2-txrx-i2c-pi-pins {
+		pins = "PI12", "PI13";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod2_txrx_gpio: mod2-txrx-gpio-pi-pins {
+		pins = "PI12", "PI13";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod2_txrx_uart: mod2-txrx-uart-pi-pins {
+		pins = "PI12", "PI13";
+		function = "uart6";
+	};
+
+	pinctrl_mod2_de_gpio: mod2-de-gpio-pb-pin {
+		pins = "PC20";
+		function = "gpio_in";
+	};
+
+	/* MOD3 */
+	pinctrl_mod3_i2c_gpio: mod3-txrx-i2c-pi-pins {
+		pins = "PI10", "PI11";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod3_txrx_gpio: mod3-txrx-gpio-pi-pins {
+		pins = "PI10", "PI11";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod3_txrx_uart: mod3-txrx-uart-pi-pins {
+		pins = "PI10", "PI11";
+		function = "uart5";
+	};
+
+	pinctrl_mod3_de_gpio: mod3-de-gpio-pb-pin {
+		pins = "PB20";
+		function = "gpio_in";
+	};
+
+	/* MOD4 */
+	pinctrl_mod4_i2c_gpio: mod4-txrx-i2c-pi-pins {
+		pins = "PH0", "PH1";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod4_txrx_gpio: mod4-txrx-gpio-pi-pins {
+		pins = "PH0", "PH1";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod4_txrx_uart: mod4-txrx-uart-pi-pins {
+		pins = "PH0", "PH1";
+		function = "uart3";
+	};
+
+	pinctrl_mod4_de_gpio: mod4-de-gpio-pb-pin {
+		pins = "PI14";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod4_spi_gpio: mod4-spi-gpio-pc-pins {
+		pins = "PC0", "PC1", "PC2", "PC23";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod4_spi_spi: mod4-spi-spi-pc-pins {
+		pins = "PC0", "PC1", "PC2", "PC23";
+		function = "spi0";
+	};
+
+	/* RS-485-1*/
+	pinctrl_rs485_1_uart_rs485: rs485-1-uart-rs485-pins {
+		pins = "PI18", "PI19";
+		function = "uart2";
+	};
+
+	/* RS-485-2*/
+	pinctrl_rs485_2_uart_rs485: rs485-2-uart-rs485-pins {
+		pins = "PG10", "PG11";
+		function = "uart4";
+	};
+
+	pinctrl_rs485_2_uart_can: rs485-2-uart-can-pins {
+		pins = "PG10", "PH5";
+		function = "uart4";
+	};
+
+	/* W1-W2 */
+	pinctrl_w1_gpio: w1-gpio-pins {
+		pins = "PB13", "PH2";
+		function = "gpio_in";
+	};
+
+	pinctrl_w2_gpio: w2-gpio-pins {
+		pins = "PE3", "PI15";
+		function = "gpio_in";
+	};
+
+	/* PWM */
+	pwm_ch1_pb_pins: pwm-ch1-pb-pins {
+		pins = "PB3";
+		function = "pwm";
+	};
+
+	pwm_ch6_pb_pins: pwm-ch6-pb-pins {
+		pins = "PB9";
+		function = "pwm";
+	};
+
+	pwm_ch7_pb_pins: pwm-ch7-pb-pins {
+		pins = "PB10";
+		function = "pwm";
+	};
+
+	/* WBEC */
+	pinctrl_wbec_i2c_gpio: wbec-i2c-pb-pins {
+		pins = "PB16", "PB17";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	spi2_pb_pins: spi2-pb-pins {
+		pins = "PB15", "PB16", "PB17";
+		function = "spi2";
+	};
+
+	spi2_cs0_pb_pin: spi2-cs0-pb-pin {
+		pins = "PB14";
+		function = "spi2";
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+
+/* Enable USB ports (FS and HS controllers) */
+&ehci0 {
+	status = "okay";
+};
+
+&ehci1 {
+	status = "okay";
+};
+
+&ehci2 {
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	/* wbc-modem is connected to 1st port of usb bus */
+	wbc_modem: wbc-modem@1 {
+		reg = <1>;
+
+		compatible = "wirenboard,wbc-usb";
+		power-type = <2>;
+		status = "disabled";
+
+		/* keeps compatibility in wb of-parsing tools */
+		gpio-xlate-type = "bank_pin";
+		gpio-pins-per-bank = <32>;
+		power-gpios = <PIN_PD 27 GPIO_ACTIVE_HIGH>;
+		pwrkey-gpios = <PIN_PD 26 GPIO_ACTIVE_HIGH>;
+		status-gpios = <PIN_PD 25 GPIO_ACTIVE_LOW>;
+		simselect-gpios = <PIN_PB 2 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+
+&ohci0 {
+	status = "okay";
+};
+
+&ohci1 {
+	status = "okay";
+};
+
+&ohci2 {
+	status = "okay";
+};
+
+&usbphy {
+	usb0_vbus-supply = <&reg_usb0_vbus>;
+	usb1_vbus-supply = <&reg_usb_wifi_3v3>;
+	usb2_vbus-supply = <&reg_dcdc1>;
+
+	usb0_id_det-gpios = <PIN_PD 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+	dr_mode = "otg";
+	wirenboard,mux-on-id-pin;
+
+	status = "okay";
+};
+
+/* Ethernet ports */
+&gmac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac_mii_pins_reduced>;
+	phy-handle = <&phy1>;
+	phy-mode = "mii";
+	phy-supply = <&reg_dcdc1>;
+	status = "okay";
+};
+
+&gmac_mdio {
+	phy1: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+		reset-gpios = <PIN_PH 13 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <10000>;
+		reset-deassert-us = <100000>;
+		icplus,select-rx-error;
+		status = "okay";
+	};
+};
+
+&emac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&emac_ph_pins>;
+	phy-handle = <&phy2>;
+	phy-mode = "mii";
+	phy-supply = <&reg_dcdc1>;
+	status = "okay";
+};
+
+&emac_mdio {
+	status = "okay";
+	phy2: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+		reset-gpios = <PIN_PH 12 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <10000>;
+		reset-deassert-us = <100000>;
+		icplus,select-rx-error;
+		status = "okay";
+	};
+};
+
+/* System power */
+
+&i2c0 {
+	status = "okay";
+
+	axp22x: pmic@34 {
+		compatible = "x-powers,axp221";
+		reg = <0x34>;
+		interrupt-parent = <&nmi_intc>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+#include "axp22x.dtsi"
+
+/* ALDO1: 0.7V~3.3V, 300 mA, default: OFF */
+/* CPU: VCC-TVIN, VCC-TVOUT */
+&reg_aldo1 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "tv";
+};
+
+/* ALDO2: 0.7V~3.3V, 300mA, default: 1.8V */
+/* eMMC VDDQ (optional), VCC-PC*/
+&reg_aldo2 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-init-microvolt = <3300000>;
+	regulator-name = "aldo2";
+};
+
+/* ALDO3: 0.7V~3.3V, 200 mA, default: 3.0 V */
+/* VCC-PLL и AVCC */
+&reg_aldo3 {
+	regulator-always-on;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-init-microvolt = <3000000>;
+	regulator-name = "avcc-pll";
+};
+
+/* DC1SW Switch, 400 mA, 100mOhm, default: OFF */
+&reg_dc1sw {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "vcc-gmac-phy";
+};
+
+/* DCDC1: 1.6V~3.4V, 1400 mA, default: 3.3V
+   VCC-IO процессора
+   ref: eFUSE, microSD, PD, PA, DSI, HDMI, HP
+   eMMC, eth phy
+   3.3V для периферии на основной плате WB
+*/
+&reg_dcdc1 {
+	regulator-always-on;
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "vcc-3v3";
+};
+
+/* DCDC2: 0.6V~1.54V, 2500 mA, default: 1.1 V */
+/* CPU core vdd-cpu */
+&reg_dcdc2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1300000>;
+	regulator-name = "vdd-cpu";
+};
+
+/* CPU vdd-sys */
+/* DCDC3: 0.6V~1.86V, 2500 mA, default: 1.1 V */
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1300000>;
+	regulator-name = "vdd-sys";
+};
+
+/* DCDC4: 0.6V~1.54V, 600mA, default: 1.1 V */
+/* unused */
+
+/* DCDC5: 1.0V~2.55V, 2000 mA, default: 1.5/DC5SET V */
+/* DRAM */
+&reg_dcdc5 {
+	regulator-always-on;
+	regulator-min-microvolt = <1350000>;
+	regulator-max-microvolt = <1350000>;
+	regulator-name = "vcc-dram";
+};
+
+/* DLDO1: 0.7V~3.3V, 400 mA, default: OFF */
+/* in: 5V/4V (PS).
+   microSD reference voltage (internal)
+*/
+&reg_dldo1 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	regulator-name = "vcc-sd-alt";
+	regulator-always-on;
+};
+
+/* ELDO3: 0.7V~3.3V, 200 mA, default: OFF */
+/* ref. VCC-PE */
+&reg_eldo3 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-init-microvolt = <3300000>;
+	regulator-always-on;
+	regulator-name = "vcc-pe";
+};
+
+/* Unused: */
+	/* DLDO2: 0.7V~3.3V, 200 mA, default: OFF */
+	/* DLDO3: 0.7V~3.3V, 200 mA, default: OFF */
+	/* DLDO4: 0.7V~3.3V, 100 mA, default: OFF */
+	/* ELDO1: 0.7V~3.3V, 400 mA, default: OFF */
+	/* ELDO2: 0.7V~3.3V, 200 mA, default: OFF */
+
+
+/* DC5LDO: 0.7V~1.4V, 200 mA, default: 1.1V */
+
+/* microSD */
+&mmc0 {
+	bus-width = <4>;
+	cd-gpios = <PIN_PC 5 GPIO_ACTIVE_LOW>;
+	status = "okay";
+
+	vqmmc-supply = <&vcc_sd>;
+	vmmc-supply = <&vdd_sd_power>;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	max-frequency = <150000000>; /* 200 MHz doesn't work, probably due to signal integrity issues */
+};
+
+
+&mmc2 {
+	pinctrl-0 = <&mmc2_pins_wo_carddet>;
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_aldo2>;
+	bus-width = <8>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+	clock-frequency = <52000000>;
+};
+
+/* Wi-Fi on SoM */
+&mmc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pg_pins>;
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_dcdc1>; //fixme
+	mmc-pwrseq = <&som_wifi_pwrseq>;
+	bus-width = <4>;
+	non-removable;
+	status = "disabled";
+};
+
+/* CAN bus */
+&can0 {
+	pinctrl-0 = <&can_pa_pins>;
+	pinctrl-names = "default";
+
+	status = "disabled";
+};
+
+
+/* Debug UART */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb_pins>;
+	status = "okay";
+};
+
+/* UARTs */
+&uart2 { /* RS-485-1 */
+	pinctrl-0 = <&pinctrl_rs485_1_uart_rs485>;
+	pinctrl-names = "default";
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <PIN_PC 19 0>;
+
+	status = "okay";
+};
+
+&uart4 { /* RS-485-2 */
+	pinctrl-0 = <&pinctrl_rs485_2_uart_rs485>;
+	pinctrl-names = "default";
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <PIN_PC 21 0>;
+
+	status = "disabled";
+};
+
+&uart7 { /* MOD1 */
+	pinctrl-0 = <&uart7_pi_pins>;
+	pinctrl-names = "default";
+
+	cts-override;
+	status = "disabled";
+};
+
+&uart6 { /* MOD2 */
+	pinctrl-0 = <&uart6_pi_pins>;
+	pinctrl-names = "default";
+
+	cts-override;
+	status = "disabled";
+};
+
+&uart5 { /* MOD3 */
+	pinctrl-0 = <&uart5_pi_pins>;
+	pinctrl-names = "default";
+
+	cts-override;
+	status = "disabled";
+};
+
+&uart3 { /* MOD4 */
+	pinctrl-0 = <&uart3_ph_pins>;
+	pinctrl-names = "default";
+	cts-override;
+	status = "disabled";
+};
+
+&usb_otg {
+	dr_mode = "peripheral";
+	status = "okay";
+	maximum-speed = "full-speed";
+};
+
+/* CPU RTC is useless since it doesn't have separate power supply. However we must keep it on to get proper LOSC for the rest of SoC.*/
+&rtc {
+	status = "okay";
+};
+
+&pwm {
+	pinctrl-0 = <&pwm_ch1_pb_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&rtp {
+	status = "okay";
+};
+
+&gpadc {
+	status = "okay";
+};
+
+/*
+Neither MFD core, nor AXP driver doesn't support dynamic device-tree
+modification. So we have to enable the battery driver on boot time
+even if no battery module is installed.
+*/
+&battery_power_supply {
+	status = "okay";
+	monitored-battery = <&fallback_battery_desc>;
+
+	// it's ~40C conservative high temperature limit.
+	// to be overrided by battery overlay
+	x-powers,charge-high-temp-microvolt = <499200>;
+};
+
+// labels used by overlays to control generic peripherals
+ethernet0: &emac {};
+ethernet1: &gmac {};
