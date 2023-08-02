@@ -952,6 +952,15 @@ config CHARGER_BD99954
 	  information and altering charger configurations from the ROHM
 	  BD99954 charger IC.
 
+config WBEC_POWER
+	tristate "Wiren Board Embedded Controller Power Supply Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for power status of
+	  Wiren Board.
+
+	  The driver provides power supply class for the Wiren Board.
+
 config CHARGER_WILCO
 	tristate "Wilco EC based charger for ChromeOS"
 	depends on WILCO_EC
