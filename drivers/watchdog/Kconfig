@@ -416,6 +416,14 @@ config SL28CPLD_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called sl28cpld_wdt.
 
+config WBEC_WATCHDOG
+	tristate "Wiren Board Embedded Controller Watchdog Driver"
+	depends on MFD_WBEC
+	select WATCHDOG_CORE
+	help
+	  This option enables support for the watchdog timer
+	  on the Wiren Board Embedded Controller.
+
 # ALPHA Architecture
 
 # ARM Architecture
