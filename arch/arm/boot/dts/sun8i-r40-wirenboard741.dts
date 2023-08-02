@@ -1,0 +1,7 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard74x.dtsi"
+
+/ {
+	model = "Wiren Board rev. 7.4.1 (A40i)";
+	compatible = "wirenboard,wirenboard-741", "wirenboard,wirenboard-740", "wirenboard,wirenboard-74x", "wirenboard,wirenboard-73x", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-720", "wirenboard,wirenboard-700", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+};
