@@ -1,0 +1,169 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard72x.dtsi"
+#include "sun8i-r40-wirenboard72x-eui-eeprom.dtsi"
+
+/ {
+	i2c_wbec: i2c_wbec {
+		compatible = "i2c-gpio";
+		sda-gpios = <PIN_PB 16 GPIO_ACTIVE_HIGH>; /* sda/mosi */
+		scl-gpios = <PIN_PB 17 GPIO_ACTIVE_HIGH>; /* scl/miso */
+
+		i2c-gpio,delay-us = <2>;	/* ~100 kHz */
+
+		pinctrl-0 = <&pinctrl_wbec_i2c_gpio>;
+		pinctrl-names = "default";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+};
+
+/* Remove vin from 72x because it is interfering with the WBEC GPIOs */
+&vin {
+	status = "disabled";
+};
+
+/* Wiren Board Embedded Controller (watchdog and GPIO support) */
+&pio {
+	gpio-line-names =
+		/* PA */
+		"SOM ETH1 RXD3", "SOM ETH1 RXD2", "SOM ETH1 RXD1", "SOM ETH1 RXD0", /*  0 - 3 */
+		"SOM ETH1 TXD3", "SOM ETH1 TXD2", "SOM ETH1 TXD1", "SOM ETH1 TXD0", /*  4 - 7 */
+		"SOM ETH1 RXCK", "SOM ETH1 RXERR", "SOM ETH1 RXDV", "SOM ETH1 MDC", /*  8 - 11 */
+		"SOM ETH1 MDIO", "SOM ETH1 TXEN", "SOM ETH1 TXCK", "SOM ETH1 CRS", /* 12 - 15 */
+		"CAN TX", "CAN RX", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PB */
+		"SOM PMIC SCL", "SOM PMIC SDA", "SIM_SELECT", "BUZZER", /*  0 - 3 */
+		"MOD1 RTS", "SODIMM:111 [NC]", "SODIMM:113 [NC]", "SODIMM:121 [NC]", /*  4 - 7 */
+		"SODIMM:123 [NC]", "RED LED", "GREEN LED", "", /*  8 - 11 */
+		"SODIMM:125 [NC]", "ON PERIPH", "EC CS", "EC CLK", /* 12 - 15 */
+		"EC MOSI", "EC MISO", "WBIO SCL", "WBIO SDA", /* 16 - 19 */
+		"MOD3 RTS", "CAN TXRX ON", "DEBUG UART TX", "DEBUG UART RX", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PC */
+		"MOD4 SPI MOSI", "MOD4 SPI MISO", "MOD4 SPI CLK", "SOM WI-FI ON", /*  0 - 3 */
+		"SOM BT ON", "MICROSD CD", "SOM EMMC CMD", "SOM EMMC CLK", /*  4 - 7 */
+		"SOM EMMC D0", "SOM EMMC D1", "SOM EMMC D2", "SOM EMMC D3", /*  8 - 11 */
+		"SOM EMMC D4", "SOM EMMC D5", "SOM EMMC D6", "SOM EMMC D7", /* 12 - 15 */
+		"SOM WI-FI HOST_WAKE", "SOM BT WAKE", "SOM BT HOST_WAKE", "RS-485-1 RTS", /* 16 - 19 */
+		"MOD2 RTS", "RS-485-2 RTS", "SODIMM:16 [NC]", "MOD4 SPI CS", /* 20 - 23 */
+		"SOM EMMC RST", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PD */
+		"LVDS D0 P", "LVDS D0 N", "LVDS D1 P", "LVDS D1 N", /*  0 - 3 */
+		"LVDS D2 P", "LVDS D2 N", "LVDS DCK P", "LVDS DCK N", /*  4 - 7 */
+		"LVDS D3 P", "LVDS D3 N", "A4 OUT", "A3 OUT", /*  8 - 11 */
+		"A2 OUT", "A1 OUT", "PUSHBUTTON", "SODIMM:170 [NC]", /* 12 - 15 */
+		"SODIMM:172 [NC]", "SODIMM:174 [NC]", "EC SWCLK/BOOT0", "EC RESET", /* 16 - 19 */
+		"USB0 ID", "SODIMM:182 [NC]", "SODIMM:184 [NC]", "[NC]", /* 20 - 23 */
+		"WI-FI ON", "GSM STATUS", "GSM PWRKEY", "GSM ON", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PE */
+		"USB0 ON", "5V_OUT ON", "SODIMM:84 [NC]", "SODIMM:82 [NC]",  /*  0 - 3 */
+		"RS-485-2 TERMINATION", "SODIMM:68 [NC]", "SODIMM:66 [NC]", "SODIMM:64 [NC]", /*  4 - 7 */
+		"SODIMM:62 [NC]", "RS-485-1 TERMINATION", "RS-485-2 FAILSAFE", "RS-485-1 FAILSAFE", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PF */
+		"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD", /*  0 - 3 */
+		"MICROSD D3", "MICROSD D2", "", "", /*  4 - 7 */
+		"", "", "", "", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PG */
+		"SOM WI-FI CMD", "SOM WI-FI CLK", "SOM WI-FI D0", "SOM WI-FI D1", /*  0 - 3 */
+		"SOM WI-FI D2", "SOM WI-FI D3", "SOM BT TX", "SOM BT RX", /*  4 - 7 */
+		"SOM BT RESERVED", "SOM BT RESERVED", "RS-485-2 TX", "RS-485-2 RX", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PH PH0-PH21 interrupts*/
+		"MOD4 TX", "MOD4 RX", "W1", "A3 IN", /*  0 - 3 */
+		"A4 IN", "CAN/UART RX ALT", "A2 IN", "A1 IN", //*  4 - 7 */
+		"SOM ETH0 RXD3", "SOM ETH0 RXD2", "SOM ETH0 RXD1", "SOM ETH0 RXD0", /*  8 - 11 */
+		"SOM ETH0 RST", "SOM ETH1 RST", "SOM ETH0 TXD3", "SOM ETH0 TXD2", /* 12 - 15 */
+		"SOM ETH0 TXD1", "SOM ETH0 TXD0", "SOM ETH0 RXCK", "SOM ETH0 RXERR", /* 16 - 19 */
+		"SOM ETH0 RXDV", "SOM ETH0 MDC", "SOM ETH0 MDIO", "SOM ETH0 TXEN", /* 20 - 23 */
+		"SOM ETH0 TXCK", "SOM ETH0 CRS", "SOM ETH0 COL", "SOM LCD BACKLIGHT ON", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PI PI10-PI19 interrupts*/
+		"W1 UP", "W2 UP", "CR_RTC SCL", "CR_RTC SDA", /*  0 - 3 */
+		"SODIMM: 75 [NC]", "SODIMM: 77 [NC]", "SODIMM: 79 [NC]", "SODIMM: 81 [NC]", /*  4 - 7 */
+		"SODIMM: 83 [NC]", "SODIMM: 85 [NC]", "MOD3 TX", "MOD3 RX", /*  8 - 11 */
+		"MOD2 TX", "MOD2 RX", "MOD4 RTS", "EC INT", /* 12 - 15 */
+		"WBIO INT", "W2", "RS-485-1 TX", "RS-485-1 RX", /* 16 - 19 */
+		"MOD1 TX", "MOD1 RX", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", ""; /* 28 - 31 */
+
+	pinctrl_wbec_i2c_gpio: wbec-i2c-pb-pins {
+		pins = "PB16", "PB17";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	spi2_pb_pins: spi2-pb-pins {
+		pins = "PB15", "PB16", "PB17";
+		function = "spi2";
+	};
+
+	spi2_cs0_pb_pin: spi2-cs0-pb-pin {
+		pins = "PB14";
+		function = "spi2";
+	};
+
+};
+
+&spi2 {
+	pinctrl-0 = <&spi2_pb_pins>,
+		    <&spi2_cs0_pb_pin>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	wbec: wbec@0 {
+		spi-max-frequency = <1000000>;
+
+		compatible = "wirenboard,wbec";
+		reg = <0>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wbec-watchdog@0 {
+			compatible = "wirenboard,wbec-watchdog";
+			reg = <0>;
+		};
+
+		wbec-pwrkey@0 {
+			compatible = "wirenboard,wbec-pwrkey";
+			reg = <0>;
+		};
+
+		wbec-power@0 {
+			compatible = "wirenboard,wbec-power";
+			reg = <0>;
+		};
+	};
+};
+
+/* ATECC on WB7.4 is on i2c4 */
+&i2c4 {
+	status = "okay";
+	clock-frequency = <10000>;
+};
+
+&i2c4_pins {
+	bias-pull-up;
+};
