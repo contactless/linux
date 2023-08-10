@@ -331,6 +331,18 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
 
 		ret = axp20x_get_batt_current_ua(axp20x_batt, &val1);
 
+		ret = regmap_read(axp20x_batt->regmap, AXP20X_PWR_OP_MODE,
+				  &reg);
+		if (ret)
+			return ret;
+
+		if (reg & AXP20X_PWR_OP_CHARGING) {
+			val->intval = POWER_SUPPLY_STATUS_CHARGING;
+			return 0;
+		}
+
+		ret = axp20x_get_batt_current_ua(axp20x_batt, &val1);
+
 		if (ret)
 			return ret;
 
