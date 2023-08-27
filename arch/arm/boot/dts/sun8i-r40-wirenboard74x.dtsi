@@ -308,9 +308,6 @@
 			};
 
 			V_OUT {
-				/delete-property/ gpio-xlate-type;
-				/delete-property/ gpio-pins-per-bank;
-
 				io-gpios = <&wbec_gpio 4 GPIO_ACTIVE_HIGH>;
 				output-high;
 				sort-order = <9>;
@@ -504,7 +501,7 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			ngpios = <5>;
-			gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "EC V OUT";
+			gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "V_OUT ON";
 		};
 
 		wbec_adc: wbec-adc@0 {
