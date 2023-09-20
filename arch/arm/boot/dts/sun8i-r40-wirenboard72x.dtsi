@@ -859,7 +859,7 @@
 /* microSD */
 &mmc0 {
 	bus-width = <4>;
-	cd-gpios = <PIN_PC 5 GPIO_ACTIVE_LOW>;
+	broken-cd = <1>;
 	status = "okay";
 
 	vqmmc-supply = <&vcc_sd>;
