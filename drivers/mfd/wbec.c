@@ -95,14 +95,14 @@ fwrev_show(struct device *dev,
 	char suffix_str[32] = "";
 
 	ret = regmap_bulk_read(wbec->regmap, WBEC_REG_INFO_FW_VER_MAJOR,
-			version.raw, sizeof(version.raw));
+			version.raw, ARRAY_SIZE(version.raw));
 	if (ret)
 		return ret;
 
 	if (version.suffix > 0)
-		sprintf(suffix_str, "+wb%d", version.suffix);
+		snprintf(suffix_str, sizeof(suffix_str), "+wb%d", version.suffix);
 	else if (version.suffix < 0)
-		sprintf(suffix_str, "-rc%d", -version.suffix);
+		snprintf(suffix_str, sizeof(suffix_str), "-rc%d", -version.suffix);
 
 	return sprintf(buf, "%d.%d.%d%s\n",
 			version.major, version.minor, version.patch, suffix_str);
