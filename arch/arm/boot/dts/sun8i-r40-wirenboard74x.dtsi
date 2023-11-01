@@ -51,6 +51,14 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 
+			// WB7 has problems with some USB drives which are detected incorrectly on boot.
+			// *HCI unbind+bind helps but it's not convenient (especially during normal OS boot).
+			// Suddenly enabling power at boot time fixes this pretty well.
+			// This issue still is not fully understood, maybe some more debugging is needed.
+			//
+			// @lostpoint and @webconn have some 'broken' USB drives if you want to test it later.
+			regulator-boot-on;
+
 			gpio = <PIN_PE 0 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
