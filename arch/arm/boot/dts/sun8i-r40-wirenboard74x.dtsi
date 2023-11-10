@@ -715,12 +715,12 @@
 
 	/* W1-W2 */
 	pinctrl_w1_gpio: w1-gpio-pins {
-		pins = "PB13", "PH2";
+		pins = "PH2", "PI0";
 		function = "gpio_in";
 	};
 
 	pinctrl_w2_gpio: w2-gpio-pins {
-		pins = "PE3", "PI15";
+		pins = "PI17", "PI1";
 		function = "gpio_in";
 	};
 
