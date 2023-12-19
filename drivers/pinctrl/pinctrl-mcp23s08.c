@@ -304,7 +304,7 @@ static int mcp23s08_get(struct gpio_chip *chip, unsigned offset)
 	/* REVISIT reading this clears any IRQ ... */
 	ret = mcp_read(mcp, MCP_GPIO, &status);
 	if (ret < 0)
-		status = 0;
+		status = ret;
 	else {
 		mcp->cached_gpio = status;
 		status = !!(status & (1 << offset));
