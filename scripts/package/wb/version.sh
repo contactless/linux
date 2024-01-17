@@ -35,6 +35,7 @@ setup_kernel_vars() {
 			KERNEL_DEFCONFIG=imx6_wirenboard_initramfs_defconfig
 			BOOTLET_DTB=imx6ul-wirenboard6x-init.dtb
 			BOOTLET_DEPS=linux-image-wb6
+			PROVIDES_BOOTLET_FOR_FITS=y
 			KDEB_WBDESC="Wiren Board 6 (bootlet)"
 			;;
 		wb7)
@@ -52,6 +53,7 @@ setup_kernel_vars() {
 			KERNEL_DEFCONFIG=wirenboard7_initramfs_defconfig
 			BOOTLET_DTB=sun8i-r40-wirenboard72x-initram.dtb
 			BOOTLET_DEPS=linux-image-wb7
+			PROVIDES_BOOTLET_FOR_FITS=y
 			KDEB_WBDESC="Wiren Board 7 (bootlet)"
 			;;
 		wb7x-factory-bootlet)
@@ -60,6 +62,7 @@ setup_kernel_vars() {
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=wirenboard7_initramfs_defconfig
 			BOOTLET_DTB=sun8i-r40-wirenboard72x-factory.dtb
+			PROVIDES_BOOTLET_FOR_FITS=  # used in production, no need to install it on boards
 			BOOTLET_DEPS=
 			KDEB_WBDESC="Wiren Board 7 (factory bootlet)"
 			;;
@@ -92,5 +95,5 @@ setup_kernel_vars() {
 			return 1
 			;;
 	esac
-	export DEBARCH KERNEL_DEFCONFIG KDEB_WBFLAVOUR_DESC CROSS_COMPILE BOOTLET_DTB INITRAMFS_VERSION KDEB_WBDESC BOOTLET_DEPS
+	export DEBARCH KERNEL_DEFCONFIG KDEB_WBFLAVOUR_DESC CROSS_COMPILE BOOTLET_DTB INITRAMFS_VERSION KDEB_WBDESC BOOTLET_DEPS PROVIDES_BOOTLET_FOR_FITS
 }
