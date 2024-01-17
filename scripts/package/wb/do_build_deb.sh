@@ -65,6 +65,16 @@ make_bootlet_deb() {
     local BOOTLET_DIR="$DEBDIR/var/lib/wb-image-update"
     local TARGET_NAME="${KERNEL_FLAVOUR%-bootlet}"
     local PACKAGE_NAME="wb-bootlet-$TARGET_NAME"
+    local EXTRA_ARGS=()
+
+    if [ "$PROVIDES_BOOTLET_FOR_FITS" = "y" ]; then
+        EXTRA_ARGS=("--provides" "wb-bootlet" "--replaces" "wb-bootlet" "--conflicts" "wb-bootlet")
+    fi
+
+    if [ -n "$BOOTLET_DEPS" ]; then
+        EXTRA_ARGS+=("--depends" "$BOOTLET_DEPS")
+    fi
+
     mkdir -p "$BOOTLET_DIR"
 
     cp "$KBUILD_OUTPUT/arch/arm/boot/zImage" "$BOOTLET_DIR/zImage"
@@ -78,10 +88,7 @@ make_bootlet_deb() {
         --url "https://github.com/wirenboard/linux" \
         --deb-no-default-config-files \
         --deb-priority optional \
-        --provides "wb-bootlet" \
-        --replaces "wb-bootlet" \
-        --conflicts "wb-bootlet" \
-        --depends "$BOOTLET_DEPS" \
+        "${EXTRA_ARGS[@]}" \
         -C "$DEBDIR" .
 }
 
