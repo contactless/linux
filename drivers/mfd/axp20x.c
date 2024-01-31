@@ -1015,6 +1015,16 @@ static const struct mfd_cell axp221_cells[] = {
 	},
 };
 
+static const struct mfd_cell axp221_wbmz_pmic_cells[] = {
+	{
+		.name		= "axp22x-adc",
+		.of_compatible	= "x-powers,axp221-adc",
+	}, {
+		.name		= "axp20x-battery-power-supply",
+		.of_compatible	= "x-powers,axp221-battery-power-supply",
+	},
+};
+
 static const struct mfd_cell axp223_cells[] = {
 	{
 		.name		= "axp20x-gpio",
@@ -1286,8 +1296,16 @@ int axp20x_match_device(struct axp20x_dev *axp20x)
 		axp20x->regmap_irq_chip = &axp20x_regmap_irq_chip;
 		break;
 	case AXP221_ID:
-		axp20x->nr_cells = ARRAY_SIZE(axp221_cells);
-		axp20x->cells = axp221_cells;
+		if (of_property_read_bool(axp20x->dev->of_node,
+					  "wirenboard,wbmz-pmic")) {
+			axp20x->nr_cells = ARRAY_SIZE(axp221_wbmz_pmic_cells);
+			axp20x->cells = axp221_wbmz_pmic_cells;
+			nr_cells_no_irq = ARRAY_SIZE(axp221_wbmz_pmic_cells);
+			cells_no_irq = axp221_wbmz_pmic_cells;
+		} else {
+			axp20x->nr_cells = ARRAY_SIZE(axp221_cells);
+			axp20x->cells = axp221_cells;
+		}
 		axp20x->regmap_cfg = &axp22x_regmap_config;
 		axp20x->regmap_irq_chip = &axp22x_regmap_irq_chip;
 		break;
