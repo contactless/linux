@@ -169,6 +169,7 @@ struct uart_8250_port {
 	struct delayed_work overrun_backoff;
 	u32 overrun_backoff_time_ms;
 	bool rx_disabled;
+	bool skip_break_after_rs485;
 };
 
 static inline struct uart_8250_port *up_to_u8250p(struct uart_port *up)
