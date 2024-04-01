@@ -1432,6 +1432,7 @@ void serial8250_em485_stop_tx(struct uart_8250_port *p, bool toggle_ier)
 
 		if (toggle_ier) {
 			p->rx_disabled = false;
+			p->skip_break_after_rs485 = true;
 			p->ier |= UART_IER_RLSI | UART_IER_RDI;
 			serial_port_out(&p->port, UART_IER, p->ier);
 		}
@@ -1738,6 +1739,11 @@ void serial8250_read_char(struct uart_8250_port *up, u16 lsr)
 
 	lsr |= up->lsr_saved_flags;
 	up->lsr_saved_flags = 0;
+
+	if (unlikely(up->skip_break_after_rs485 && (lsr & UART_LSR_BI) && !(lsr & UART_LSR_DR))) {
+		up->skip_break_after_rs485 = false;
+		return;
+	}
 
 	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
 		if (lsr & UART_LSR_BI) {
