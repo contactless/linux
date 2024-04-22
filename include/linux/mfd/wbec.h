@@ -22,6 +22,7 @@
 #define WBEC_REG_INFO_FW_VER_PATCH                          0x04
 #define WBEC_REG_INFO_FW_VER_SUFFIX                         0x05
 #define WBEC_REG_INFO_POWERON_REASON                        0x06
+#define WBEC_REG_INFO_UID                                   0x07
 
 /* Region RTC_TIME: RW */
 #define WBEC_REG_RTC_TIME_SECS_MINS                         0x10
