@@ -153,17 +153,38 @@ poweron_reason_str_show(struct device *dev,
 	return sprintf(buf, "%s\n", wbec_poweron_reason[reason]);
 }
 
+static ssize_t
+uid_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct wbec *wbec = dev_get_drvdata(dev);
+	int i, ret;
+	char *buf_start = buf;
+	u8 uid[12];
+
+	ret = regmap_bulk_read(wbec->regmap, WBEC_REG_INFO_UID, uid, 6);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < ARRAY_SIZE(uid); i++)
+		buf += sprintf(buf, "%02x", uid[i]);
+
+	buf += sprintf(buf, "\n");
+
+	return buf - buf_start;
+}
 
 static DEVICE_ATTR_RO(fwrev);
 static DEVICE_ATTR_RO(hwrev);
 static DEVICE_ATTR_RO(poweron_reason);
 static DEVICE_ATTR_RO(poweron_reason_str);
+static DEVICE_ATTR_RO(uid);
 
 static struct attribute *wbec_sysfs_entries[] = {
 	&dev_attr_fwrev.attr,
 	&dev_attr_hwrev.attr,
 	&dev_attr_poweron_reason.attr,
 	&dev_attr_poweron_reason_str.attr,
+	&dev_attr_uid.attr,
 	NULL,
 };
 
