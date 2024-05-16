@@ -1095,7 +1095,7 @@
 	usb0_vbus-supply = <&reg_usb_vbus>;
 	usb1_vbus-supply = <&reg_wifi_on>;
 
-	usb0_id_det-gpios = <&pio PG 18 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+	usb0_id_det-gpios = <&pio PG 18 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
 	wirenboard,mux-on-id-pin;
 
 	dr_mode = "otg";
