@@ -520,6 +520,8 @@ static enum hrtimer_restart serial8250_em485_handle_stop_tx(struct hrtimer *t);
 void serial8250_clear_and_reinit_fifos(struct uart_8250_port *p)
 {
 	serial8250_clear_fifos(p);
+	/* One byte could be still present in the RX register after clearing the FIFOs */
+	serial_in(p, UART_RX);
 	serial_out(p, UART_FCR, p->fcr);
 }
 EXPORT_SYMBOL_GPL(serial8250_clear_and_reinit_fifos);
