@@ -381,7 +381,7 @@
 			interrupt-controller;
 			#interrupt-cells = <1>;
 
-			status = "disabled";
+			status = "okay";
 
 			axp_wbmz5_adc: adc {
 				compatible = "x-powers,axp221-adc";
