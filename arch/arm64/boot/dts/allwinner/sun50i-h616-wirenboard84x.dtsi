@@ -464,6 +464,140 @@
 			status = "okay";
 		};
 	};
+
+	thermal-zones {
+	/*
+		target minimum lifetime is 100 000 hours or ~11.5 years.
+		As per T517 chip lifetime evaluation guide, it corresponds to
+		junction temperature of:
+			125C @ 0.900V (note it's also absolute maximum Tj)
+			115С @ 0.950V (not in the source, intrapolated)
+			105C @ 1.000V
+			95C  @ 1.050V
+			85C  @ 1.100V (not in the source, extrapolated)
+
+		Taking into account that the temperature sensor accuracy is
+		±3°C from 0°C to +100°C, ±5°C from -25°C to +125°C Tj, max allowed
+		junction temperature should be:
+			120C @ 0.900V
+			110C @ 0.950V
+			100C @ 1.000V (lower voltage to below 1.0V once hit 100C)
+			92C  @ 1.050V (lower voltage to below 1.05V once hit 92C)
+			82C  @ 1.100V (lower voltage to below 1.1V once hit 82C)
+	*/
+		cpu-thermal {
+			sustainable-power = <1100>;
+
+			k_po = <45>;
+			k_pu = <90>;
+			k_i = <0>;
+			/delete-node/ trips;
+			/delete-node/ cooling-maps;
+
+			trips {
+				cpu_max_for_1100mv: cpu-trip-0 {
+					temperature = <82000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+				cpu_max_for_1050mv: cpu-trip-1 {
+					temperature = <92000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+				cpu_max_for_1000mv: cpu-trip-2 {
+					temperature = <100000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+				cpu_max_for_950mv: cpu-trip-3 {
+					temperature = <110000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+
+				cpu_critical: cpu-trip-4 {
+					/*
+						120C is the maximum recommended Tj,
+						temperature sensor accuracy is +/-5C @ Tj>100C
+						so we should not exceed 115C just in case
+					*/
+					temperature = <115000>;
+					type = "critical";
+					hysteresis = <0>;
+				};
+			};
+			cooling-maps {
+				/*
+					The OPP voltages depends on revision and speed grade.
+				    Anyway:
+					2: 1200 MHz, 1.02V - 1.10V, 1.05V on ours
+					3: 1104 MHz, 1.00V (use it to go lower than 1.05V)
+					4: 1008 MHz, 0.94V - 1.02V, 0.95V on ours
+					5:  936 MHz, 0.90V (lowest voltage, allowed at any Tj)
+					6:  720 MHz, 0.90V
+				*/
+
+				/*
+					The first two maps are to limit the voltage.
+				    That's why we don't allow lower frequencies on the cooling device.
+				*/
+				map0 {
+					trip = <&cpu_max_for_1100mv>;
+					cooling-device = <&cpu0 2 2>,
+									 <&cpu1 2 2>,
+									 <&cpu2 2 2>,
+									 <&cpu3 2 2>;
+				};
+
+				map1 {
+					trip = <&cpu_max_for_1050mv>;
+					cooling-device = <&cpu0 3 3>,
+									 <&cpu1 3 3>,
+									 <&cpu2 3 3>,
+									 <&cpu3 3 3>;
+				};
+
+				/*
+					This is our target temperature point.
+					We nevertheless limit the frequency to 480 MHz, so the performace
+					is not too low.
+				*/
+				map2 {
+					trip = <&cpu_max_for_1000mv>;
+					cooling-device = <&cpu0 4 7>,
+									 <&cpu1 4 7>,
+									 <&cpu2 4 7>,
+									 <&cpu3 4 7>;
+				};
+
+				/*
+					At this point we should do everything to maintain the temperature.
+				*/
+				map3 {
+					trip = <&cpu_max_for_950mv>;
+					cooling-device = <&cpu0 5 THERMAL_NO_LIMIT>,
+									 <&cpu1 5 THERMAL_NO_LIMIT>,
+									 <&cpu2 5 THERMAL_NO_LIMIT>,
+									 <&cpu3 5 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+};
+
+// override GPU, VE and DDR critical temperatures
+&gpu_temp_critical {
+	temperature = <115000>;
+};
+&ve_temp_critical {
+	temperature = <115000>;
+};
+&ddr_temp_critical {
+	temperature = <115000>;
 };
 
 &spi1 {
