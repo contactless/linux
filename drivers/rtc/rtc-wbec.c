@@ -238,6 +238,7 @@ static int wbec_rtc_probe(struct platform_device *pdev)
 		return PTR_ERR(wbec_rtc->rtc);
 
 	wbec_rtc->rtc->ops = &wbec_rtc_ops;
+	clear_bit(RTC_FEATURE_UPDATE_INTERRUPT, wbec_rtc->rtc->features);
 
 	device_init_wakeup(&pdev->dev, true);
 
