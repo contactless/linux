@@ -280,15 +280,10 @@ static inline void wbec_clean_debugfs(struct wbec *wbec)
 }
 #endif
 
-static struct wbec *wbec_pm;
-
-static void wbec_pm_power_off(void)
+static int wbec_power_off(struct sys_off_data *data)
 {
 	int ret;
-	struct wbec *wbec = wbec_pm;
-
-	if (!wbec)
-		return;
+	struct wbec *wbec = data->cb_data;
 
 	ret = regmap_write(wbec->regmap, WBEC_REG_POWER_CTRL, WBEC_REG_POWER_CTRL_OFF_MSK);
 	if (ret)
@@ -297,15 +292,14 @@ static void wbec_pm_power_off(void)
 	/* Give capacitors etc. time to drain to avoid kernel panic msg. */
 	msleep(WBEC_POWER_RESET_DELAY_MS);
 	dev_err(wbec->dev, "Device not actually shutdown. Check EC and FETs!\n");
+
+	return NOTIFY_DONE;
 }
 
-static int wbec_restart_notify(struct notifier_block *this, unsigned long mode, void *cmd)
+static int wbec_restart(struct sys_off_data *data)
 {
-	struct wbec *wbec = wbec_pm;
 	int ret;
-
-	if (!wbec)
-		return NOTIFY_STOP;
+	struct wbec *wbec = data->cb_data;
 
 	ret = regmap_write(wbec->regmap, WBEC_REG_POWER_CTRL, WBEC_REG_POWER_CTRL_REBOOT_MSK);
 	if (ret)
@@ -317,11 +311,6 @@ static int wbec_restart_notify(struct notifier_block *this, unsigned long mode, 
 
 	return NOTIFY_DONE;
 }
-
-static struct notifier_block wbec_restart_handler = {
-	.notifier_call = wbec_restart_notify,
-	.priority = 255,
-};
 
 static int wbec_probe(struct spi_device *spi)
 {
@@ -372,12 +361,15 @@ static int wbec_probe(struct spi_device *spi)
 		return ret;
 	}
 
-	wbec_pm = wbec;
-	pm_power_off = wbec_pm_power_off;
+	devm_register_sys_off_handler(wbec->dev,
+		SYS_OFF_MODE_POWER_OFF,
+		SYS_OFF_PRIO_FIRMWARE,
+		wbec_power_off, wbec);
 
-	ret = register_restart_handler(&wbec_restart_handler);
-	if (ret)
-		dev_warn(&spi->dev, "failed to register restart handler\n");
+	devm_register_sys_off_handler(wbec->dev,
+		SYS_OFF_MODE_RESTART,
+		SYS_OFF_PRIO_FIRMWARE,
+		wbec_restart, wbec);
 
 	wbec_setup_debugfs(wbec);
 
@@ -389,14 +381,6 @@ static int wbec_probe(struct spi_device *spi)
 static void wbec_remove(struct spi_device *spi)
 {
 	struct wbec *wbec = spi_get_drvdata(spi);
-	/**
-	 * pm_power_off may point to a function from another module.
-	 * Check if the pointer is set by us and only then overwrite it.
-	 */
-	if (pm_power_off == wbec_pm_power_off) {
-		pm_power_off = NULL;
-		unregister_restart_handler(&wbec_restart_handler);
-	}
 
 	sysfs_remove_group(&wbec->dev->kobj, &wbec_attr_group);
 	wbec_clean_debugfs(wbec);
