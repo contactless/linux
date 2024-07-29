@@ -764,7 +764,7 @@ static int sun8i_dwmac_reset(struct stmmac_priv *priv)
 				 !(v & 0x01), 100, 100000);
 
 	if (err) {
-		dev_err(priv->device, "EMAC reset timeout\n");
+		dev_err(priv->device, "EMAC reset timeout (may be ignored in RMII mode)\n");
 		return err;
 	}
 	return 0;
@@ -1270,7 +1270,13 @@ static int sun8i_dwmac_probe(struct platform_device *pdev)
 		}
 	} else {
 		ret = sun8i_dwmac_reset(priv);
-		if (ret)
+
+		/* Reset may fail on some boards with external PHYs,
+		 * when EMAC does not receive one of the clock signals (e.g. RMII_TXC).
+		 * In this case, we should not fail the probe, but just print a warning.
+		 */
+		if (ret && !of_property_read_bool(pdev->dev.of_node,
+						  "allwinner,ignore-emac-reset-failure"))
 			goto dwmac_remove;
 	}
 
