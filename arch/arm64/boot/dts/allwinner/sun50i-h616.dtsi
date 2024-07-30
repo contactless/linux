@@ -690,6 +690,17 @@
 			resets = <&ccu RST_BUS_AUDIO_CODEC>;
 			dmas = <&dma 6>;
 			dma-names = "tx";
+
+		emac1: ethernet@5030000 {
+			compatible = "allwinner,sun50i-t507-emac1";
+			reg = <0x05030000 0x10000>;
+			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			clocks = <&ccu CLK_BUS_EMAC1>;
+			clock-names = "stmmaceth";
+			resets = <&ccu RST_BUS_EMAC1>;
+			reset-names = "stmmaceth";
+			syscon = <&syscon>;
 			status = "disabled";
 		};
 
