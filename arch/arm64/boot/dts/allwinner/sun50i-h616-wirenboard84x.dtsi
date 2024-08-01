@@ -1,0 +1,1152 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4
+/*
+ * Copyright (C) 2023 Wiren Board
+ */
+
+/dts-v1/;
+
+#include "sun50i-h616.dtsi"
+#include "sun50i-h616-cpu-opp.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/leds/common.h>
+
+#define PA 0
+#define PB 1
+#define PC 2
+#define PD 3
+#define PE 4
+#define PF 5
+#define PG 6
+#define PH 7
+#define PI 8
+
+/ {
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		mmc0 = &mmc2;
+		mmc1 = &mmc0;
+		mdio-gpio0 = &soft_mdio0;
+		mdio-gpio1 = &soft_mdio1;
+		ethernet0 = &emac0;
+		ethernet1 = &emac1;
+		watchdog0 = &watchdog;  // internal
+		watchdog1 = &wbec_watchdog;
+		i2c0 = &r_i2c;  // PMIC
+		i2c1 = &i2c3;  // WBIO
+		i2c2 = &i2c_atecc_rtc;  // ATECC must be on i2c2 for compatibility
+		i2c3 = &i2c_wbmz;
+		rtc0 = &rtc_onboard;
+		rtc1 = &rtc;
+		rtc2 = &rtc_onboard_txco;
+		wbc_modem = &wbc_modem;
+		rtc_onboard = &rtc_onboard;
+		rtc_onboard_txco = &rtc_onboard_txco;
+	};
+
+	wirenboard {
+		adc-type = <3>;
+		pwm-buzzer = <1>;
+
+		analog-inputs {
+			/* we don't use standard 'io-channels = <&adc1 N>' here because
+			   there is seemingly no way to associate iio channel index (N
+			   in above example) with channel name as in sysfs path
+			*/
+			A1 {
+				iio-device = <&a1_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <0>;
+			};
+
+			A2 {
+				iio-device = <&a2_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <1>;
+			};
+
+			A3 {
+				iio-device = <&a3_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			A4 {
+				iio-device = <&a4_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			Vin {
+				iio-device = <&vin_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <3>;
+			};
+
+			V3_3 {
+				iio-device = <&v33_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <4>;
+			};
+
+			V5_0 {
+				iio-device = <&v50_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <5>;
+			};
+
+			Vbus_debug {
+				iio-device = <&vbus_debug_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <6>;
+			};
+
+			Vbus_network {
+				iio-device = <&vbus_network_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <7>;
+			};
+		};
+
+		gpios {
+			A1_OUT {
+				io-gpios = <&pio PE 5 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <0>;
+			};
+
+			A2_OUT {
+				io-gpios = <&pio PD 23 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <1>;
+			};
+
+			A3_OUT {
+				io-gpios = <&pio PG 9 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <2>;
+			};
+
+			A4_OUT {
+				io-gpios = <&pio PG 11 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <3>;
+			};
+
+			A1_IN {
+				io-gpios = <&pio PH 9 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <4>;
+			};
+
+			A2_IN {
+				io-gpios = <&pio PH 4 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <5>;
+			};
+
+			A3_IN {
+				io-gpios = <&pio PD 25 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <6>;
+			};
+
+			A4_IN {
+				io-gpios = <&pio PD 20 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <7>;
+			};
+
+			5V_OUT {
+				io-gpios = <&pio PE 9 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-high;
+				sort-order = <8>;
+			};
+
+			V_OUT {
+				io-gpios = <&wbec_gpio 4 GPIO_ACTIVE_HIGH>;
+				output-high;
+				sort-order = <9>;
+			};
+		};
+
+		hwmon-nodes {
+			cputemp {
+				title = "CPU Temperature";
+				hwmon-node-name = "cpu_thermal";
+				hwmon-channel = "temp1";
+			};
+
+			pcbtemp {
+				title = "Board Temperature";
+				hwmon-node-name = "iio-hwmon-pcb-temp";
+				hwmon-channel = "temp1";
+			};
+		};
+	};
+
+	iio-hwmon-axp-wbmz5-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_wbmz5_adc 0>;
+	};
+
+	iio-hwmon-axp-wbmz5 {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_wbmz5_adc 0>, <&axp_wbmz5_adc 1>, <&axp_wbmz5_adc 2>;
+	};
+
+	iio-hwmon-pcb-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&wbec_adc 5>;
+	};
+
+	vin_volt: vin-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 0>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v33_volt: v33-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 1>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v50_volt: v50-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 2>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_debug_volt: vbus-debug-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 3>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_network_volt: vbus-network-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 4>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	leds-gpio {
+		compatible = "gpio-leds";
+
+		green {
+			label = "green";
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pio PD 27 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			active-low;
+			linux,default-trigger = "default-off";
+		};
+
+		red {
+			label = "red";
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&pio PA 12 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_usb_vbus: regulator@1 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 4 GPIO_ACTIVE_HIGH>;
+			regulator-name = "usb-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+		};
+
+		reg_wifi_on: regulator@2 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 15 GPIO_ACTIVE_LOW>;
+			regulator-name = "wifi-on";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		reg_periph_on: regulator@4 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PG 13 GPIO_ACTIVE_HIGH>;
+			regulator-name = "periph-on";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+			regulator-always-on;  // FIXME: ehci driver does not enable it on boot
+		};
+
+		vdd_sd_power: regulator@5 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 16 GPIO_ACTIVE_LOW>;
+			regulator-name = "vdd-sd-power";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+	};
+
+	/*
+	Because PMIC battery driver must be enabled at boot time,
+	we have to give it  some battery description to
+	override default (or preserved from last boot) register
+	values when it comes to charging voltage and current
+	*/
+	fallback_battery_desc: fallback-battery-desc {
+		compatible = "simple-battery";
+		constant-charge-current-max-microamp = <600000>;
+		voltage-min-design-microvolt = <2900000>;
+		constant-charge-voltage-max-microvolt = <4100000>;
+		charge-full-design-microamp-hours = <2600000>;
+		status = "okay";
+	};
+
+	i2c_wbmz: i2c_wbmz {
+		compatible = "i2c-gpio";
+
+		sda-gpios = <&pio PD 13 GPIO_ACTIVE_HIGH>;
+		scl-gpios = <&pio PC 12 GPIO_ACTIVE_LOW>;  // connected via transistor thus inverting the signal
+		i2c-gpio,delay-us = <32>;  // ~30 kHz long period to compensate for slow fronts
+		i2c-gpio,scl-output-only;
+		i2c-gpio,scl-has-no-pullup;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		axp22x_wbmz5: pmic@34 {
+			compatible = "x-powers,axp221";
+			reg = <0x34>;
+
+			wirenboard,wbmz-pmic;  // keeps only ADC and battery sysfs nodes to fix conflict with main PMIC
+
+			interrupt-controller;
+			#interrupt-cells = <1>;
+
+			status = "disabled";
+
+			axp_wbmz5_adc: adc {
+				compatible = "x-powers,axp221-adc";
+				#io-channel-cells = <1>;
+			};
+
+			battery_power_supply: battery-power-supply {
+				compatible = "x-powers,axp221-battery-power-supply";
+				status = "okay";
+				monitored-battery = <&fallback_battery_desc>;
+
+				// it's ~40C conservative high temperature limit.
+				// to be overrided by battery overlay
+				x-powers,charge-high-temp-microvolt = <499200>;
+			};
+		};
+	};
+
+	/* ATECC + optional TCXO RTC */
+	i2c_atecc_rtc: i2c_atecc_rtc {
+		compatible = "i2c-gpio";
+
+		sda-gpios = <&pio PE 19 GPIO_ACTIVE_HIGH>;
+		scl-gpios = <&pio PE 0 GPIO_ACTIVE_HIGH>;
+		i2c-gpio,delay-us = <2>;  // ~100 kHz
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		rtc_onboard_txco: rtc@32 {
+			compatible = "whwave,sd3078";
+			reg = <0x32>;
+			status = "disabled";
+		};
+	};
+
+	i2c_wbec: i2c_wbec {
+		compatible = "i2c-gpio";
+		sda-gpios = <&pio PH 7 GPIO_ACTIVE_HIGH>; /* sda/mosi */
+		scl-gpios = <&pio PH 8 GPIO_ACTIVE_HIGH>; /* scl/miso */
+
+		i2c-gpio,delay-us = <2>;	/* ~100 kHz */
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	onewire_w1: onewire_w1 {
+		compatible = "w1-gpio";
+		gpios = <&pio PD 24 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <&pio PG 8 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	onewire_w2: onewire_w2 {
+		compatible = "w1-gpio";
+		gpios = <&pio PE 11 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <&pio PE 21 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	mod1_dummy: mod1_dummy {
+		// only to provide wb-hwconf-manager compatibility
+		status = "disabled";
+	};
+
+	soc {
+		pwm: pwm@300A000 {
+			pinctrl-0 = <&pwm_ch1_pg_pins>;
+			pinctrl-names = "default";
+
+			compatible = "allwinner,sun50i-t507-pwm";
+			reg = <0x300A000 0x400>;
+			clocks = <&ccu CLK_BUS_PWM>, <&ccu CLK_APB1>, <&osc24M>;
+			clock-names = "bus", "apb0", "hosc";
+			resets = <&ccu RST_BUS_PWM>;
+			#pwm-cells = <0x3>;
+			status = "okay";
+		};
+	};
+};
+
+&spi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_pins>, <&spi1_cs0_pin>;
+	status = "okay";
+
+	wbec: wbec@0 {
+		spi-max-frequency = <1000000>;
+
+		compatible = "wirenboard,wbec";
+		reg = <0>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wbec_watchdog: wbec-watchdog@0 {
+			compatible = "wirenboard,wbec-watchdog";
+			reg = <0>;
+		};
+
+		wbec-pwrkey@0 {
+			compatible = "wirenboard,wbec-pwrkey";
+			reg = <0>;
+		};
+
+		rtc_onboard: wbec-rtc@0 {
+			compatible = "wirenboard,wbec-rtc";
+			reg = <0>;
+
+			wakeup-source;
+		};
+
+		wbec_gpio: wbec-gpio@0 {
+			compatible = "wirenboard,wbec-gpio";
+			reg = <0>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <5>;
+			gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "V_OUT ON";
+		};
+
+		wbec_adc: wbec-adc@0 {
+			compatible = "wirenboard,wbec-adc";
+			reg = <0>;
+			#io-channel-cells = <1>;
+		};
+
+		vin: wbec-power@0 {
+			compatible = "wirenboard,wbec-power";
+			reg = <0>;
+		};
+	};
+};
+
+/* WBIO I2C */
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pa_pins>;
+
+	status = "okay";
+};
+
+&pio {
+	gpio-line-names =
+	/* PA */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "WBIO SCL", "WBIO SDA",  /* 8-11 */
+	"RED LED", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PB */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PC */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"BAT SCK", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PD */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "MOD3 RTS", "MOD1 RX",  /* 8-11 */
+	"CAN TXRX ON", "BAT SDA", "MOD4 RX", "RS-485-2 RTS",  /* 12-15 */
+	"RS-485-1 RTS", "RS-485-1 FAILSAFE", "RS-485-2 FAILSAFE", "RS-485-1 TERMINATION",  /* 16-19 */
+	"A4 IN", "", "", "A2 OUT",  /* 20-23 */
+	"W1", "A3 IN", "MOD4 TX", "GREEN LED",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PE */
+	"RTC SCL", "", "SIM_SELECT", "",  /* 0-3 */
+	"USB0 ON", "A1 OUT", "MOD4 RTS", "EC INT",  /* 4-7 */
+	"", "5V_OUT ON", "MOD1 TX", "W2",  /* 8-11 */
+	"GSM STATUS", "GSM ON", "CAN RX", "WI-FI ON",  /* 12-15 */
+	"MICROSD POWER", "", "EC RESET", "RTC SDA",  /* 16-19 */
+	"WBIO INT", "W2 UP", "EC SWCLK/BOOT0", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PF */
+	"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD",  /* 0-3 */
+	"MICROSD D3", "MICROSD D2", "MICROSD CD", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PG */
+	"", "SOM SPI MISO", "", "",  /* 0-3 */
+	"", "", "RS-485-2 TX", "RS-485-2 RX",  /* 4-7 */
+	"W1 UP", "A3 OUT", "", "A4 OUT",  /* 8-11 */
+	"RS-485-2 TERMINATION", "ON PERIPH", "GSM PWRKEY", "RS-485-1 TX",  /* 12-15 */
+	"RS-485-1 RX", "MOD1 RTS", "USB0 ID", "BUZZER",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PH */
+	"DEBUG UART TX", "DEBUG UART RX", "MOD3 TX", "MOD3 RX",  /* 0-3 */
+	"A2 IN", "EC CS", "EC CLK", "EC MOSI",  /* 4-7 */
+	"EC MISO", "A1 IN", "PUSHBUTTON", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PI */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "CAN TX",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "MOD2 TX", "MOD2 RX", "MOD2 RTS",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "";  /* 28-31 */
+
+	pwm_ch5_pa_pins: pwm_ch5_pa_pins {
+		pins = "PA12";
+		function = "pwm5";
+		drive-strength = <40>;
+	};
+
+	pwm_ch1_pg_pins: pwm_ch1_pg_pins {
+		pins = "PG19";
+		function = "pwm1";
+		drive-strength = <40>;
+	};
+
+	/* RS-485-1 */
+	pinctrl_rs485_1_uart_rs485: rs485-1-uart-rs485-pins {
+		pins = "PG15", "PG16";
+		function = "uart2";
+	};
+
+	/* RS-485-2 */
+	pinctrl_rs485_2_uart_rs485: rs485-2-uart-rs485-pins {
+		pins = "PG6", "PG7";
+		function = "uart1";
+	};
+
+	/* W1-W2 */
+	pinctrl_w1_gpio: w1-gpio-pins {
+		pins = "PD24", "PG8";
+		function = "gpio_in";
+	};
+
+	pinctrl_w2_gpio: w2-gpio-pins {
+		pins = "PE11", "PE21";
+		function = "gpio_in";
+	};
+
+	/* MOD2 */
+	pinctrl_mod2_i2c_gpio: mod2-txrx-i2c-pins {
+		pins = "PI13", "PI14";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod2_txrx_gpio: mod2-txrx-gpio-pins {
+		pins = "PI13", "PI14";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod2_txrx_uart: mod2-txrx-uart-pins {
+		pins = "PI13", "PI14";
+		function = "uart4";
+	};
+
+	pinctrl_mod2_de_gpio: mod2-de-gpio-pins {
+		pins = "PI15";
+		function = "gpio_in";
+	};
+
+	/* MOD3 */
+	pinctrl_mod3_i2c_gpio: mod3-txrx-i2c-pins {
+		pins = "PH2", "PH3";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod3_txrx_gpio: mod3-txrx-gpio-pins {
+		pins = "PH2", "PH3";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod3_txrx_uart: mod3-txrx-uart-pins {
+		pins = "PH2", "PH3";
+		function = "uart5";
+	};
+
+	pinctrl_mod3_de_gpio: mod3-de-gpio-pins {
+		pins = "PD10";
+		function = "gpio_in";
+	};
+
+	pinctrl_wbec_i2c_gpio: wbec-i2c-pb-pins {
+		pins = "PH7", "PH8";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+};
+
+/* Debug UART */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_ph_pins>;
+	status = "okay";
+};
+
+/* UARTs */
+&uart1 { /* RS485-2 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_rs485_2_uart_rs485>;
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&pio PD 15 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+&uart2 { /* RS485-1 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_rs485_1_uart_rs485>;
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&pio PD 16 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+/* UART3 pins are used for Ethernet */
+
+/* MOD1 is a software UART on PE10 (TX), PD11 (RX) */
+
+&uart4 { /* MOD2 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod2_txrx_uart>;
+
+	cts-override;
+	status = "disabled";
+};
+
+&uart5 { /* MOD3 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
+
+	cts-override;
+	status = "disabled";
+};
+
+/* MOD4 is on PD26 (TX), PD14 (RX), but no actual UART is there */
+
+&r_i2c {
+	status = "okay";
+
+	pmu0: pmu@36{
+		compatible = "x-powers,axp15060";
+		reg = <0x36>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		wakeup-source;
+		overtemp_shutdown = <1>;
+		overtemp_value = <145>;
+
+		regulator0: regulators{
+			reg_dcdc1: dcdc1 {
+				regulator-name = "dcdc1";
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3400000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc2: dcdc2 {
+				regulator-name = "dcdc2";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-ramp-delay = <6001>; /* FIXME */
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc3: dcdc3 {
+				regulator-name = "dcdc3";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc4: dcdc4 {
+				regulator-name = "dcdc4";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-enable-ramp-delay = <1000>;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc5: dcdc5 {
+				regulator-name = "dcdc5";
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <1840000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc6: dcdc6 {
+				regulator-name = "dcdc6";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_aldo1: aldo1 {
+				regulator-name = "aldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo2: aldo2 {
+				regulator-name = "aldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo3: aldo3 {
+				regulator-name = "aldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_aldo4: aldo4 {
+				regulator-name = "aldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo5: aldo5 {
+				regulator-name = "aldo5";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo1: bldo1 {
+				regulator-name = "bldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;  // FIXME should be enabled by gpiod
+			};
+
+			reg_bldo2: bldo2 {
+				regulator-name = "bldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo3: bldo3 {
+				regulator-name = "bldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo4: bldo4 {
+				regulator-name = "bldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo5: bldo5 {
+				regulator-name = "bldo5";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo1: cldo1 {
+				regulator-name = "cldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo2: cldo2 {
+				regulator-name = "cldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo3: cldo3 {
+				regulator-name = "cldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo4: cldo4 {
+				regulator-name = "cldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <4200000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cpusldo: cpusldo {
+				regulator-name = "cpusldo";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1400000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_sw: sw {
+				regulator-name = "sw";
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+&pio {
+	vcc-pa-supply = <&reg_dcdc1>;
+	vcc-pc-supply = <&reg_aldo1>;
+	vcc-pd-supply = <&reg_dcdc1>, <&reg_bldo1>;
+	vcc-pe-supply = <&reg_dcdc1>;
+	vcc-pg-supply = <&reg_dcdc1>;
+	vcc-pi-supply = <&reg_dcdc1>;
+};
+
+&mmc0 {
+	bus-width = <4>;
+	cd-gpios = <&pio PF 6 GPIO_ACTIVE_LOW>;
+	status = "okay";
+	vmmc-supply = <&reg_dcdc1>, <&vdd_sd_power>;
+};
+
+&mmc2 {
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_aldo1>;
+	bus-width = <8>;
+	non-removable;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	no-sdio;
+	no-sd;
+	cap-mmc-highspeed;
+	status = "okay";
+};
+
+&reg_dcdc5 {
+	regulator-name = "vcc-dram";
+	regulator-always-on;
+};
+
+&pio {
+	ext_emac0_rmii_pins: emac0-rmii-pins {
+		pins = "PI2", "PI3", "PI5", "PI6",
+			"PI9", "PI10", "PI11", "PI12";
+		function = "emac0";
+		drive-strength = <40>;
+	};
+
+	ext_emac1_rmii_pins: emac1-rmii-pins {
+		pins = "PA0", "PA1", "PA2", "PA3", "PA4",
+			"PA5", "PA6", "PA7";
+		function = "emac1";
+		drive-strength = <40>;
+	};
+
+	ephy_25m_out_pins: ephy-25m-out-pins {
+		pins = "PI16";
+		function = "emac0";
+		drive-strength = <40>;
+	};
+
+	i2c3_pa_pins: i2c3-pa-pins {
+		pins = "PA10", "PA11";
+		function = "i2c3";
+		drive-strength = <40>;
+	};
+};
+
+/ {
+	external_ethernet_phys: external-ethernet-phys {
+		compatible = "simple-pm-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		clocks = <&ccu CLK_EMAC_25M>;
+		clock-names = "emac-25m";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&ephy_25m_out_pins>;
+
+		soft_mdio0: soft-mdio0 {
+			compatible = "virtual,mdio-gpio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			gpios = <&pio PI 1 GPIO_ACTIVE_HIGH>,  /* MDC */
+					<&pio PI 0 GPIO_ACTIVE_HIGH>;  /* MDIO */
+
+			reset-gpios = <&pio PI 4 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <50000>;
+
+			ext_rmii_phy0: ethernet-phy {
+				compatible = "ethernet-phy-ieee802.3-c22";
+			};
+		};
+
+		soft_mdio1: soft-mdio1 {
+			compatible = "virtual,mdio-gpio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			gpios = <&pio PA 8 GPIO_ACTIVE_HIGH>,  /* MDC */
+					<&pio PA 9 GPIO_ACTIVE_HIGH>;  /* MDIO */
+
+			reset-gpios = <&pio PI 8 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <50000>;
+
+			ext_rmii_phy1: ethernet-phy {
+				compatible = "ethernet-phy-ieee802.3-c22";
+			};
+		};
+	};
+};
+
+&emac0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ext_emac0_rmii_pins>;
+	phy-mode = "rmii";
+	phy-handle = <&ext_rmii_phy0>;
+	allwinner,rx-delay-ps = <3100>;
+	allwinner,tx-delay-ps = <700>;
+	allwinner,ignore-emac-reset-failure;
+	status = "okay";
+};
+
+&emac1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ext_emac1_rmii_pins>;
+	phy-mode = "rmii";
+	phy-handle = <&ext_rmii_phy1>;
+	allwinner,rx-delay-ps = <3100>;
+	allwinner,tx-delay-ps = <700>;
+	allwinner,ignore-emac-reset-failure;
+	status = "okay";
+};
+
+// USB
+
+&usbphy {
+	usb0_vbus-supply = <&reg_usb_vbus>;
+	usb1_vbus-supply = <&reg_wifi_on>;
+
+	usb0_id_det-gpios = <&pio PG 18 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+	wirenboard,mux-on-id-pin;
+
+	dr_mode = "otg";
+
+	status = "okay";
+};
+
+&ohci0 {
+	status = "okay";
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&usbotg {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&ohci1 {
+	status = "okay";
+};
+
+&ehci1 {
+	status = "okay";
+};
+
+&ohci2 {
+	status = "okay";
+};
+
+&ehci2 {
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	/* wbc-modem is connected to 1st port of usb bus */
+	wbc_modem: wbc-modem@1 {
+		reg = <1>;
+
+		compatible = "wirenboard,wbc-usb";
+		power-type = <2>;
+		status = "disabled";
+
+		/* keeps compatibility in wb of-parsing tools */
+		gpio-xlate-type = "bank_pin";
+		gpio-pins-per-bank = <32>;
+		power-gpios = <&pio PE 13 GPIO_ACTIVE_HIGH>;
+		pwrkey-gpios = <&pio PG 14 GPIO_ACTIVE_HIGH>;
+		status-gpios = <&pio PE 12 GPIO_ACTIVE_LOW>;
+		simselect-gpios = <&pio PE 2 GPIO_ACTIVE_HIGH>;
+	};
+};
