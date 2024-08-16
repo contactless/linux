@@ -1,0 +1,44 @@
+/dts-v1/;
+#include "sun50i-h616-wirenboard85x.dtsi"
+
+/ {
+	model = "Wiren Board rev. 8.5.1 (T507)";
+	compatible = "wirenboard,wirenboard-851", "wirenboard,wirenboard-85x", "wirenboard,wirenboard-8xx", "allwinner,sun50i-h616";
+
+	a1_volt: a1-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 6>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <110000>;
+		status = "okay";
+	};
+
+	a2_volt: a2-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 7>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <110000>;
+	};
+
+	a3_volt: a3-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 8>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <110000>;
+	};
+
+	a4_volt: a4-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 9>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <10000>;
+		full-ohms = <110000>;
+	};
+};
