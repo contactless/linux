@@ -1,0 +1,1307 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4
+/*
+ * Copyright (C) 2024 Wiren Board
+ */
+
+/dts-v1/;
+
+#include "sun50i-h616.dtsi"
+#include "sun50i-h616-cpu-opp.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/leds/common.h>
+
+#define PA 0
+#define PB 1
+#define PC 2
+#define PD 3
+#define PE 4
+#define PF 5
+#define PG 6
+#define PH 7
+#define PI 8
+
+/ {
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		mmc0 = &mmc2;
+		mmc1 = &mmc0;
+		mdio-gpio0 = &soft_mdio0;
+		mdio-gpio1 = &soft_mdio1;
+		ethernet0 = &emac0;
+		ethernet1 = &emac1;
+		watchdog0 = &watchdog;  // internal
+		watchdog1 = &wbec_watchdog;
+		i2c0 = &r_i2c;  // PMIC
+		i2c1 = &i2c3;  // WBIO
+		i2c2 = &i2c_atecc_rtc;  // ATECC must be on i2c2 for compatibility
+		i2c3 = &i2c_wbmz;
+		rtc0 = &rtc_onboard;
+		rtc1 = &rtc;
+		rtc2 = &rtc_onboard_txco;
+		wbc_modem = &wbc_modem;
+		rtc_onboard = &rtc_onboard;
+		rtc_onboard_txco = &rtc_onboard_txco;
+	};
+
+	wirenboard {
+		adc-type = <3>;
+		pwm-buzzer = <1>;
+
+		analog-inputs {
+			/* we don't use standard 'io-channels = <&adc1 N>' here because
+			   there is seemingly no way to associate iio channel index (N
+			   in above example) with channel name as in sysfs path
+			*/
+			A1 {
+				iio-device = <&a1_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <0>;
+			};
+
+			A2 {
+				iio-device = <&a2_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <1>;
+			};
+
+			A3 {
+				iio-device = <&a3_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			A4 {
+				iio-device = <&a4_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <2>;
+			};
+
+			Vin {
+				iio-device = <&vin_volt>;
+				decimal-places = <1>;
+				averaging-window = <1>;
+				sort-order = <3>;
+			};
+
+			V3_3 {
+				iio-device = <&v33_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <4>;
+			};
+
+			V5_0 {
+				iio-device = <&v50_volt>;
+				decimal-places = <3>;
+				averaging-window = <1>;
+				sort-order = <5>;
+			};
+
+			Vbus_debug {
+				iio-device = <&vbus_debug_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <6>;
+			};
+
+			Vbus_network {
+				iio-device = <&vbus_network_volt>;
+				decimal-places = <2>;
+				averaging-window = <1>;
+				sort-order = <7>;
+			};
+		};
+
+		gpios {
+			A1_OUT {
+				io-gpios = <&pio PE 5 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <0>;
+			};
+
+			A2_OUT {
+				io-gpios = <&pio PD 23 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <1>;
+			};
+
+			A3_OUT {
+				io-gpios = <&pio PG 9 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <2>;
+			};
+
+			A4_OUT {
+				io-gpios = <&pio PG 11 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-low;
+				sort-order = <3>;
+			};
+
+			A1_IN {
+				io-gpios = <&pio PH 9 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <4>;
+			};
+
+			A2_IN {
+				io-gpios = <&pio PH 4 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <5>;
+			};
+
+			A3_IN {
+				io-gpios = <&pio PD 25 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <6>;
+			};
+
+			A4_IN {
+				io-gpios = <&pio PD 20 GPIO_ACTIVE_LOW>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				input;
+				sort-order = <7>;
+			};
+
+			5V_OUT {
+				io-gpios = <&pio PG 13 GPIO_ACTIVE_HIGH>;
+				gpio-xlate-type = "bank_pin";
+				gpio-pins-per-bank = <32>;
+				output-high;
+				sort-order = <8>;
+			};
+
+			V_OUT {
+				io-gpios = <&wbec_gpio 4 GPIO_ACTIVE_HIGH>;
+				output-high;
+				sort-order = <9>;
+			};
+		};
+
+		hwmon-nodes {
+			cputemp {
+				title = "CPU Temperature";
+				hwmon-node-name = "cpu_thermal";
+				hwmon-channel = "temp1";
+			};
+
+			pcbtemp {
+				title = "Board Temperature";
+				hwmon-node-name = "iio-hwmon-pcb-temp";
+				hwmon-channel = "temp1";
+			};
+		};
+	};
+
+	iio-hwmon-axp-wbmz5-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_wbmz5_adc 0>;
+	};
+
+	iio-hwmon-axp-wbmz5 {
+		compatible = "iio-hwmon";
+		io-channels = <&axp_wbmz5_adc 0>, <&axp_wbmz5_adc 1>, <&axp_wbmz5_adc 2>;
+	};
+
+	iio-hwmon-pcb-temp {
+		compatible = "iio-hwmon";
+		io-channels = <&wbec_adc 5>;
+	};
+
+	vin_volt: vin-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 0>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v33_volt: v33-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 1>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	v50_volt: v50-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 2>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_debug_volt: vbus-debug-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 3>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	vbus_network_volt: vbus-network-volt {
+		compatible = "voltage-divider";
+		io-channels = <&wbec_adc 4>;
+		#io-channel-cells = <1>;
+
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+
+	leds-gpio {
+		compatible = "gpio-leds";
+
+		green {
+			label = "green";
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pio PD 27 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			active-low;
+			linux,default-trigger = "default-off";
+		};
+
+		red {
+			label = "red";
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&pio PA 12 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_usb_vbus: regulator@1 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 9 GPIO_ACTIVE_HIGH>;
+			regulator-name = "usb-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+		};
+
+		reg_wifi_on: regulator@2 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 15 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			regulator-name = "wifi-on";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		reg_periph_on: regulator@4 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PG 12 GPIO_ACTIVE_HIGH>;
+			regulator-name = "periph-on";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+			regulator-always-on;  // FIXME: ehci driver does not enable it on boot
+		};
+
+		vdd_sd_power: regulator@5 {
+			compatible = "regulator-fixed";
+			gpio = <&pio PE 16 GPIO_ACTIVE_LOW>;
+			regulator-name = "vdd-sd-power";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+	};
+
+	/*
+	Because PMIC battery driver must be enabled at boot time,
+	we have to give it  some battery description to
+	override default (or preserved from last boot) register
+	values when it comes to charging voltage and current
+	*/
+	fallback_battery_desc: fallback-battery-desc {
+		compatible = "simple-battery";
+		constant-charge-current-max-microamp = <600000>;
+		voltage-min-design-microvolt = <2900000>;
+		constant-charge-voltage-max-microvolt = <4100000>;
+		charge-full-design-microamp-hours = <2600000>;
+		status = "okay";
+	};
+
+	i2c_wbmz: i2c_wbmz {
+		compatible = "i2c-gpio";
+
+		sda-gpios = <&pio PD 13 GPIO_ACTIVE_HIGH>;
+		scl-gpios = <&pio PC 12 GPIO_ACTIVE_LOW>;  // connected via transistor thus inverting the signal
+		i2c-gpio,delay-us = <32>;  // ~30 kHz long period to compensate for slow fronts
+		i2c-gpio,scl-output-only;
+		i2c-gpio,scl-has-no-pullup;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		axp22x_wbmz5: pmic@34 {
+			compatible = "x-powers,axp221";
+			reg = <0x34>;
+
+			wirenboard,wbmz-pmic;  // keeps only ADC and battery sysfs nodes to fix conflict with main PMIC
+
+			interrupt-controller;
+			#interrupt-cells = <1>;
+
+			status = "okay";
+
+			axp_wbmz5_adc: adc {
+				compatible = "x-powers,axp221-adc";
+				#io-channel-cells = <1>;
+			};
+
+			battery_power_supply: battery-power-supply {
+				compatible = "x-powers,axp221-battery-power-supply";
+				status = "okay";
+				monitored-battery = <&fallback_battery_desc>;
+
+				// it's ~40C conservative high temperature limit.
+				// to be overrided by battery overlay
+				x-powers,charge-high-temp-microvolt = <499200>;
+			};
+		};
+	};
+
+	/* ATECC + optional TCXO RTC */
+	i2c_atecc_rtc: i2c_atecc_rtc {
+		compatible = "i2c-gpio";
+
+		sda-gpios = <&pio PE 19 GPIO_ACTIVE_HIGH>;
+		scl-gpios = <&pio PE 0 GPIO_ACTIVE_HIGH>;
+		i2c-gpio,delay-us = <2>;  // ~100 kHz
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		rtc_onboard_txco: rtc@32 {
+			compatible = "whwave,sd3078";
+			reg = <0x32>;
+			status = "disabled";
+		};
+	};
+
+	i2c_wbec: i2c_wbec {
+		compatible = "i2c-gpio";
+		sda-gpios = <&pio PH 7 GPIO_ACTIVE_HIGH>; /* sda/mosi */
+		scl-gpios = <&pio PH 8 GPIO_ACTIVE_HIGH>; /* scl/miso */
+
+		i2c-gpio,delay-us = <2>;	/* ~100 kHz */
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	onewire_w1: onewire_w1 {
+		compatible = "w1-gpio";
+		gpios = <&pio PD 12 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <&pio PG 8 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	onewire_w2: onewire_w2 {
+		compatible = "w1-gpio";
+		gpios = <&pio PD 24 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pu-gpios = <&pio PE 21 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	mod1_dummy: mod1_dummy {
+		// only to provide wb-hwconf-manager compatibility
+		status = "disabled";
+	};
+
+	soc {
+		dma: dma-controller@3002000 {
+			compatible = "allwinner,sun50i-h6-dma";
+			reg = <0x3002000 0x1000>;
+			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_DMA>, <&ccu CLK_MBUS_DMA>;
+			clock-names = "ahb", "mbus";
+			dma-channels = <16>;
+			dma-requests = <32>;
+			resets = <&ccu RST_BUS_DMA>;
+			#dma-cells = <1>;
+		};
+
+		pwm: pwm@300A000 {
+			pinctrl-0 = <&pwm_ch1_pg_pins>;
+			pinctrl-names = "default";
+
+			compatible = "allwinner,sun50i-t507-pwm";
+			reg = <0x300A000 0x400>;
+			clocks = <&ccu CLK_BUS_PWM>, <&ccu CLK_APB1>, <&osc24M>;
+			clock-names = "bus", "apb0", "hosc";
+			resets = <&ccu RST_BUS_PWM>;
+			#pwm-cells = <0x3>;
+			status = "okay";
+		};
+	};
+
+	thermal-zones {
+	/*
+		target minimum lifetime is 100 000 hours or ~11.5 years.
+		As per T517 chip lifetime evaluation guide, it corresponds to
+		junction temperature of:
+			125C @ 0.900V (note it's also absolute maximum Tj)
+			115С @ 0.950V (not in the source, intrapolated)
+			105C @ 1.000V
+			95C  @ 1.050V
+			85C  @ 1.100V (not in the source, extrapolated)
+
+		Taking into account that the temperature sensor accuracy is
+		±3°C from 0°C to +100°C, ±5°C from -25°C to +125°C Tj, max allowed
+		junction temperature should be:
+			120C @ 0.900V
+			110C @ 0.950V
+			100C @ 1.000V (lower voltage to below 1.0V once hit 100C)
+			92C  @ 1.050V (lower voltage to below 1.05V once hit 92C)
+			82C  @ 1.100V (lower voltage to below 1.1V once hit 82C)
+	*/
+		cpu-thermal {
+			sustainable-power = <1100>;
+
+			k_po = <45>;
+			k_pu = <90>;
+			k_i = <0>;
+			/delete-node/ trips;
+			/delete-node/ cooling-maps;
+
+			trips {
+				cpu_max_for_1100mv: cpu-trip-0 {
+					temperature = <82000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+				cpu_max_for_1050mv: cpu-trip-1 {
+					temperature = <92000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+				cpu_max_for_1000mv: cpu-trip-2 {
+					temperature = <100000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+				cpu_max_for_950mv: cpu-trip-3 {
+					temperature = <110000>;
+					type = "passive";
+					hysteresis = <500>;
+				};
+
+
+				cpu_critical: cpu-trip-4 {
+					/*
+						120C is the maximum recommended Tj,
+						temperature sensor accuracy is +/-5C @ Tj>100C
+						so we should not exceed 115C just in case
+					*/
+					temperature = <115000>;
+					type = "critical";
+					hysteresis = <0>;
+				};
+			};
+			cooling-maps {
+				/*
+					The OPP voltages depends on revision and speed grade.
+					Anyway:
+					2: 1200 MHz, 1.02V - 1.10V, 1.05V on ours
+					3: 1104 MHz, 1.00V (use it to go lower than 1.05V)
+					4: 1008 MHz, 0.94V - 1.02V, 0.95V on ours
+					5:  936 MHz, 0.90V (lowest voltage, allowed at any Tj)
+					6:  720 MHz, 0.90V
+				*/
+
+				/*
+					The first two maps are to limit the voltage.
+					That's why we don't allow lower frequencies on the cooling device.
+				*/
+				map0 {
+					trip = <&cpu_max_for_1100mv>;
+					cooling-device = <&cpu0 2 2>,
+									 <&cpu1 2 2>,
+									 <&cpu2 2 2>,
+									 <&cpu3 2 2>;
+				};
+
+				map1 {
+					trip = <&cpu_max_for_1050mv>;
+					cooling-device = <&cpu0 3 3>,
+									 <&cpu1 3 3>,
+									 <&cpu2 3 3>,
+									 <&cpu3 3 3>;
+				};
+
+				/*
+					This is our target temperature point.
+					We nevertheless limit the frequency to 480 MHz, so the performace
+					is not too low.
+				*/
+				map2 {
+					trip = <&cpu_max_for_1000mv>;
+					cooling-device = <&cpu0 4 7>,
+									 <&cpu1 4 7>,
+									 <&cpu2 4 7>,
+									 <&cpu3 4 7>;
+				};
+
+				/*
+					At this point we should do everything to maintain the temperature.
+				*/
+				map3 {
+					trip = <&cpu_max_for_950mv>;
+					cooling-device = <&cpu0 5 THERMAL_NO_LIMIT>,
+									 <&cpu1 5 THERMAL_NO_LIMIT>,
+									 <&cpu2 5 THERMAL_NO_LIMIT>,
+									 <&cpu3 5 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+};
+
+// override GPU, VE and DDR critical temperatures
+&gpu_temp_critical {
+	temperature = <115000>;
+};
+&ve_temp_critical {
+	temperature = <115000>;
+};
+&ddr_temp_critical {
+	temperature = <115000>;
+};
+
+&spi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_pins>, <&spi1_cs0_pin>;
+	status = "okay";
+
+	wbec: wbec@0 {
+		spi-max-frequency = <1000000>;
+
+		compatible = "wirenboard,wbec";
+		reg = <0>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wbec_watchdog: wbec-watchdog@0 {
+			compatible = "wirenboard,wbec-watchdog";
+			reg = <0>;
+		};
+
+		wbec-pwrkey@0 {
+			compatible = "wirenboard,wbec-pwrkey";
+			reg = <0>;
+		};
+
+		rtc_onboard: wbec-rtc@0 {
+			compatible = "wirenboard,wbec-rtc";
+			reg = <0>;
+
+			wakeup-source;
+		};
+
+		wbec_gpio: wbec-gpio@0 {
+			compatible = "wirenboard,wbec-gpio";
+			reg = <0>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <5>;
+			gpio-line-names = "EC A1", "EC A2", "EC A3", "EC A4", "V_OUT ON";
+		};
+
+		wbec_adc: wbec-adc@0 {
+			compatible = "wirenboard,wbec-adc";
+			reg = <0>;
+			#io-channel-cells = <1>;
+		};
+
+		vin: wbec-power@0 {
+			compatible = "wirenboard,wbec-power";
+			reg = <0>;
+		};
+	};
+};
+
+/* WBIO I2C */
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pa_pins>;
+
+	status = "okay";
+};
+
+
+&pio {
+	gpio-line-names =
+	/* PA */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "WBIO SCL", "WBIO SDA",  /* 8-11 */
+	"RED LED", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PB */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PC */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"BAT SCK", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PD */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "",  /* 4-7 */
+	"", "", "MOD4 RTS", "",  /* 8-11 */
+	"W1", "BAT SDA", "", "RS-485-2 RTS",  /* 12-15 */
+	"RS-485-1 RTS", "RS-485-1 FAILSAFE", "RS-485-2 FAILSAFE", "RS-485-1 TERMINATION",  /* 16-19 */
+	"A4 IN", "RS-485-2 TERMINATION", "", "A2 OUT",  /* 20-23 */
+	"W2", "A3 IN", "", "GREEN LED",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PE */
+	"RTC SCL", "", "SIM_SELECT", "",  /* 0-3 */
+	"GSM ON", "A1 OUT", "", "EC INT",  /* 4-7 */
+	"", "USB0 ON", "", "",  /* 8-11 */
+	"GSM STATUS", "", "CAN RX", "WI-FI ON",  /* 12-15 */
+	"MICROSD POWER", "", "EC RESET", "RTC SDA",  /* 16-19 */
+	"WBIO INT", "W2 UP", "EC SWCLK/BOOT0", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PF */
+	"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD",  /* 0-3 */
+	"MICROSD D3", "MICROSD D2", "MICROSD CD", "",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PG */
+	"", "SOM SPI MISO", "", "",  /* 0-3 */
+	"", "", "RS-485-2 TX", "RS-485-2 RX",  /* 4-7 */
+	"W1 UP", "A3 OUT", "X32FKOUT", "A4 OUT",  /* 8-11 */
+	"ON PERIPH", "5V_OUT ON", "GSM PWRKEY", "RS-485-1 TX",  /* 12-15 */
+	"RS-485-1 RX", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PH */
+	"DEBUG UART TX", "DEBUG UART RX", "MOD4 TX", "MOD4 RX",  /* 0-3 */
+	"A2 IN", "EC CS", "EC CLK", "EC MOSI",  /* 4-7 */
+	"EC MISO", "A1 IN", "PUSHBUTTON", "",  /* 8-11 */
+	"", "", "", "",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "",  /* 28-31 */
+	/* PI */
+	"", "", "", "",  /* 0-3 */
+	"", "", "", "CAN TX",  /* 4-7 */
+	"", "", "", "",  /* 8-11 */
+	"", "MOD3 TX", "MOD3 RX", "MOD3 RTS",  /* 12-15 */
+	"", "", "", "",  /* 16-19 */
+	"", "", "", "",  /* 20-23 */
+	"", "", "", "",  /* 24-27 */
+	"", "", "", "";  /* 28-31 */
+
+	pwm_ch5_pa_pins: pwm_ch5_pa_pins {
+		pins = "PA12";
+		function = "pwm5";
+		drive-strength = <40>;
+	};
+
+	pwm_ch1_pg_pins: pwm_ch1_pg_pins {
+		pins = "PG19";
+		function = "pwm1";
+		drive-strength = <40>;
+	};
+
+	/* RS-485-1 */
+	pinctrl_rs485_1_uart_rs485: rs485-1-uart-rs485-pins {
+		pins = "PG15", "PG16";
+		function = "uart2";
+	};
+
+	/* RS-485-2 */
+	pinctrl_rs485_2_uart_rs485: rs485-2-uart-rs485-pins {
+		pins = "PG6", "PG7";
+		function = "uart1";
+	};
+
+	/* W1-W2 */
+	pinctrl_w1_gpio: w1-gpio-pins {
+		pins = "PD24", "PG8";
+		function = "gpio_in";
+	};
+
+	pinctrl_w2_gpio: w2-gpio-pins {
+		pins = "PE11", "PE21";
+		function = "gpio_in";
+	};
+
+	/* MOD1 is provided by WB EC */
+
+	/* MOD2 is provided by WB EC */
+
+	/* MOD3 */
+	pinctrl_mod3_i2c_gpio: mod3-txrx-i2c-pins {
+		pins = "PI13", "PI14";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod3_txrx_gpio: mod3-txrx-gpio-pins {
+		pins = "PI13", "PI14";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod3_txrx_uart: mod3-txrx-uart-pins {
+		pins = "PI13", "PI14";
+		function = "uart4";
+	};
+
+	pinctrl_mod3_de_gpio: mod3-de-gpio-pins {
+		pins = "PI15";
+		function = "gpio_in";
+	};
+
+	/* MOD4 */
+	pinctrl_mod4_i2c_gpio: mod4-txrx-i2c-pins {
+		pins = "PH2", "PH3";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+
+	pinctrl_mod4_txrx_gpio: mod4-txrx-gpio-pins {
+		pins = "PH2", "PH3";
+		function = "gpio_in";
+	};
+
+	pinctrl_mod4_txrx_uart: mod4-txrx-uart-pins {
+		pins = "PH2", "PH3";
+		function = "uart5";
+	};
+
+	pinctrl_mod4_de_gpio: mod4-de-gpio-pins {
+		pins = "PD10";
+		function = "gpio_in";
+	};
+
+	pinctrl_wbec_i2c_gpio: wbec-i2c-pb-pins {
+		pins = "PH7", "PH8";
+		function = "gpio_in";
+		bias-pull-up;
+	};
+};
+
+/* Debug UART */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_ph_pins>;
+	status = "okay";
+};
+
+/* UARTs */
+&uart1 { /* RS485-2 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_rs485_2_uart_rs485>;
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&pio PD 15 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+&uart2 { /* RS485-1 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_rs485_1_uart_rs485>;
+
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&pio PD 16 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+/* UART3 pins are used for Ethernet */
+
+&uart4 { /* MOD3 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
+
+	cts-override;
+	status = "disabled";
+};
+
+&uart5 { /* MOD4 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod4_txrx_uart>;
+
+	cts-override;
+	status = "disabled";
+};
+
+&r_i2c {
+	status = "okay";
+
+	pmu0: pmu@36{
+		compatible = "x-powers,axp15060";
+		reg = <0x36>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		wakeup-source;
+		overtemp_shutdown = <1>;
+		overtemp_value = <145>;
+
+		regulators{
+			reg_dcdc1: dcdc1 {
+				regulator-name = "dcdc1";
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc2: dcdc2 {
+				regulator-name = "dcdc2";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-ramp-delay = <6001>; /* FIXME */
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc3: dcdc3 {
+				regulator-name = "dcdc3";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc4: dcdc4 {
+				regulator-name = "dcdc4";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-enable-ramp-delay = <1000>;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc5: dcdc5 {
+				regulator-name = "dcdc5";
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <1840000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_dcdc6: dcdc6 {
+				regulator-name = "dcdc6";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				under_voltage_shutdown = <1>;
+			};
+
+			reg_aldo1: aldo1 {
+				regulator-name = "aldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo2: aldo2 {
+				regulator-name = "aldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo3: aldo3 {
+				regulator-name = "aldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_aldo4: aldo4 {
+				regulator-name = "aldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;
+			};
+
+			reg_aldo5: aldo5 {
+				regulator-name = "aldo5";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo1: bldo1 {
+				regulator-name = "bldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+				regulator-always-on;  // FIXME should be enabled by gpiod
+			};
+
+			reg_bldo2: bldo2 {
+				regulator-name = "bldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo3: bldo3 {
+				regulator-name = "bldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo4: bldo4 {
+				regulator-name = "bldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_bldo5: bldo5 {
+				regulator-name = "bldo5";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo1: cldo1 {
+				regulator-name = "cldo1";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo2: cldo2 {
+				regulator-name = "cldo2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo3: cldo3 {
+				regulator-name = "cldo3";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cldo4: cldo4 {
+				regulator-name = "cldo4";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <4200000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_cpusldo: cpusldo {
+				regulator-name = "cpusldo";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1400000>;
+				regulator-step-delay-us = <25>;
+				regulator-final-delay-us = <50>;
+			};
+
+			reg_sw: sw {
+				regulator-name = "sw";
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+&pio {
+	vcc-pa-supply = <&reg_dcdc1>;
+	vcc-pc-supply = <&reg_aldo1>;
+	vcc-pd-supply = <&reg_dcdc1>, <&reg_bldo1>;
+	vcc-pe-supply = <&reg_dcdc1>;
+	vcc-pg-supply = <&reg_dcdc1>;
+	vcc-pi-supply = <&reg_dcdc1>;
+};
+
+&mmc0 {
+	bus-width = <4>;
+	cd-gpios = <&pio PF 6 GPIO_ACTIVE_LOW>;
+	status = "okay";
+	vmmc-supply = <&reg_dcdc1>, <&vdd_sd_power>;
+};
+
+&mmc2 {
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_aldo1>;
+	bus-width = <8>;
+	non-removable;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	no-sdio;
+	no-sd;
+	cap-mmc-highspeed;
+	status = "okay";
+};
+
+&reg_dcdc5 {
+	regulator-name = "vcc-dram";
+	regulator-always-on;
+};
+
+&pio {
+	ext_emac0_rmii_pins: emac0-rmii-pins {
+		pins = "PI2", "PI3", "PI5", "PI6",
+			"PI9", "PI10", "PI11", "PI12";
+		function = "emac0";
+		drive-strength = <40>;
+	};
+
+	ext_emac1_rmii_pins: emac1-rmii-pins {
+		pins = "PA0", "PA1", "PA2", "PA3", "PA4",
+			"PA5", "PA6", "PA7";
+		function = "emac1";
+		drive-strength = <40>;
+	};
+
+	ephy_25m_out_pins: ephy-25m-out-pins {
+		pins = "PI16";
+		function = "emac0";
+		drive-strength = <40>;
+	};
+
+	i2c3_pa_pins: i2c3-pa-pins {
+		pins = "PA10", "PA11";
+		function = "i2c3";
+		drive-strength = <40>;
+	};
+};
+
+/ {
+	external_ethernet_phys: external-ethernet-phys {
+		compatible = "simple-pm-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		clocks = <&ccu CLK_EMAC_25M>;
+		clock-names = "emac-25m";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&ephy_25m_out_pins>;
+
+		soft_mdio0: soft-mdio0 {
+			compatible = "virtual,mdio-gpio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			gpios = <&pio PI 1 GPIO_ACTIVE_HIGH>,  /* MDC */
+					<&pio PI 0 GPIO_ACTIVE_HIGH>;  /* MDIO */
+
+			reset-gpios = <&pio PI 4 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <50000>;
+
+			ext_rmii_phy0: ethernet-phy {
+				compatible = "ethernet-phy-ieee802.3-c22";
+			};
+		};
+
+		soft_mdio1: soft-mdio1 {
+			compatible = "virtual,mdio-gpio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			gpios = <&pio PA 8 GPIO_ACTIVE_HIGH>,  /* MDC */
+					<&pio PA 9 GPIO_ACTIVE_HIGH>;  /* MDIO */
+
+			reset-gpios = <&pio PI 8 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <50000>;
+
+			ext_rmii_phy1: ethernet-phy {
+				compatible = "ethernet-phy-ieee802.3-c22";
+			};
+		};
+	};
+};
+
+&emac0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ext_emac0_rmii_pins>;
+	phy-mode = "rmii";
+	phy-handle = <&ext_rmii_phy0>;
+	allwinner,rx-delay-ps = <3100>;
+	allwinner,tx-delay-ps = <700>;
+	allwinner,ignore-emac-reset-failure;
+	clocks = <&ccu CLK_BUS_EMAC0>, <&ccu CLK_EMAC_25M>;
+	clock-names = "stmmaceth", "pclk";
+	status = "okay";
+};
+
+&emac1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ext_emac1_rmii_pins>;
+	phy-mode = "rmii";
+	phy-handle = <&ext_rmii_phy1>;
+	allwinner,rx-delay-ps = <3100>;
+	allwinner,tx-delay-ps = <700>;
+	allwinner,ignore-emac-reset-failure;
+	clocks = <&ccu CLK_BUS_EMAC1>, <&ccu CLK_EMAC_25M>;
+	clock-names = "stmmaceth", "pclk";
+	status = "okay";
+};
+
+// USB
+
+&usbphy {
+	usb1_vbus-supply = <&reg_wifi_on>;
+	usb3_vbus-supply = <&reg_usb_vbus>;
+	dr_mode = "otg";
+	status = "okay";
+};
+
+&ohci0 {
+	status = "okay";
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&usbotg {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&ohci1 {
+	status = "okay";
+};
+
+&ehci1 {
+	status = "okay";
+};
+
+&ohci2 {
+	status = "okay";
+};
+
+&ehci2 {
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	/* wbc-modem is connected to 1st port of usb bus */
+	wbc_modem: wbc-modem@1 {
+		reg = <1>;
+
+		compatible = "wirenboard,wbc-usb";
+		power-type = <2>;
+		status = "disabled";
+
+		/* keeps compatibility in wb of-parsing tools */
+		gpio-xlate-type = "bank_pin";
+		gpio-pins-per-bank = <32>;
+		power-gpios = <&pio PE 4 GPIO_ACTIVE_HIGH>;
+		pwrkey-gpios = <&pio PG 14 GPIO_ACTIVE_HIGH>;
+		status-gpios = <&pio PE 12 GPIO_ACTIVE_LOW>;
+		simselect-gpios = <&pio PE 2 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&ohci3 {
+	status = "okay";
+};
+
+&ehci3 {
+	status = "okay";
+};
