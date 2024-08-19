@@ -1209,6 +1209,8 @@
 	allwinner,rx-delay-ps = <3100>;
 	allwinner,tx-delay-ps = <700>;
 	allwinner,ignore-emac-reset-failure;
+	clocks = <&ccu CLK_BUS_EMAC0>, <&ccu CLK_EMAC_25M>;
+	clock-names = "stmmaceth", "pclk";
 	status = "okay";
 };
 
@@ -1220,6 +1222,8 @@
 	allwinner,rx-delay-ps = <3100>;
 	allwinner,tx-delay-ps = <700>;
 	allwinner,ignore-emac-reset-failure;
+	clocks = <&ccu CLK_BUS_EMAC1>, <&ccu CLK_EMAC_25M>;
+	clock-names = "stmmaceth", "pclk";
 	status = "okay";
 };
 
