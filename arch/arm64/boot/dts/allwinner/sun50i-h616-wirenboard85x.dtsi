@@ -51,7 +51,7 @@
 
 	wirenboard {
 		adc-type = <3>;
-		pwm-buzzer = <1>;
+		pwm-buzzer = <0>;
 
 		analog-inputs {
 			/* we don't use standard 'io-channels = <&adc1 N>' here because
@@ -595,6 +595,12 @@
 		vin: wbec-power@0 {
 			compatible = "wirenboard,wbec-power";
 			reg = <0>;
+		};
+
+		wbec_pwm: pwm@0 {
+			compatible = "wirenboard,wbec-pwm";
+			reg = <0>;
+			#pwm-cells = <3>;
 		};
 	};
 };
