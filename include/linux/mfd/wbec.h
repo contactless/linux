@@ -85,7 +85,28 @@
 /* Region PWR_STATUS: RO */
 #define WBEC_REG_PWR_STATUS                                 0xC0
    #define WBEC_REG_PWR_STATUS_POWERED_FROM_WBMZ_MSK        BIT(0)
+   #define WBEC_REG_PWR_STATUS_WBMZ_STEPUP_EN_MSK           BIT(1)
+   #define WBEC_REG_PWR_STATUS_WBMZ_CHARGE_EN_MSK           BIT(2)
+   #define WBEC_REG_PWR_STATUS_WBMZ_BATTERY_PRESENT_MSK     BIT(3)
+   #define WBEC_REG_PWR_STATUS_WBMZ_SUPERCAP_PRESENT_MSK    BIT(4)
+   #define WBEC_REG_PWR_STATUS_WBMZ_IS_CHARGING_MSK         BIT(5)
+   #define WBEC_REG_PWR_STATUS_WBMZ_IS_BATT_DEAD_MSK        BIT(6)
+   #define WBEC_REG_PWR_STATUS_WBMZ_IS_BATT_INSERTED_MSK    BIT(7)
+#define WBEC_REG_PWR_WBMZ_FULL_DESIGN_CAPACITY              0xC1
+#define WBEC_REG_PWR_WBMZ_VOLTAGE_MIN_DESIGN                0xC2
+#define WBEC_REG_PWR_WBMZ_VOLTAGE_MAX_DESIGN                0xC3
+#define WBEC_REG_PWR_WBMZ_MAX_CHARGE_CURRENT                0xC4
+#define WBEC_REG_PWR_WBMZ_VOLTAGE                           0xC5
+#define WBEC_REG_PWR_WBMZ_CHARGING_CURRENT                  0xC6
+#define WBEC_REG_PWR_WBMZ_DISCHARGING_CURRENT               0xC7
+#define WBEC_REG_PWR_WBMZ_CAPACITY_PERCENT                  0xC8
+#define WBEC_REG_PWR_WBMZ_TEMPERATURE                       0xC9
 
+/* Region BUZZER_CTRL: RW */
+#define WBEC_REG_BUZZER_FREQ                                0xD0
+#define WBEC_REG_BUZZER_DUTY                                0xD1
+#define WBEC_REG_BUZZER_CTRL                                0xD2
+   #define WBEC_REG_BUZZER_CTRL_ENABLED_MSK                 BIT(0)
 
 struct wbec {
 	struct device *dev;
