@@ -597,6 +597,11 @@
 			reg = <0>;
 		};
 
+		wbec_battery: wbec-battery@0 {
+			compatible = "wirenboard,wbec-battery";
+			reg = <0>;
+		};
+
 		wbec_pwm: pwm@0 {
 			compatible = "wirenboard,wbec-pwm";
 			reg = <0>;
