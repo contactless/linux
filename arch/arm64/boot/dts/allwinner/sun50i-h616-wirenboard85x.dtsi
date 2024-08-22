@@ -41,7 +41,6 @@
 		i2c0 = &r_i2c;  // PMIC
 		i2c1 = &i2c3;  // WBIO
 		i2c2 = &i2c_atecc_rtc;  // ATECC must be on i2c2 for compatibility
-		i2c3 = &i2c_wbmz;
 		rtc0 = &rtc_onboard;
 		rtc1 = &rtc;
 		rtc2 = &rtc_onboard_txco;
@@ -218,16 +217,6 @@
 		};
 	};
 
-	iio-hwmon-axp-wbmz5-temp {
-		compatible = "iio-hwmon";
-		io-channels = <&axp_wbmz5_adc 0>;
-	};
-
-	iio-hwmon-axp-wbmz5 {
-		compatible = "iio-hwmon";
-		io-channels = <&axp_wbmz5_adc 0>, <&axp_wbmz5_adc 1>, <&axp_wbmz5_adc 2>;
-	};
-
 	iio-hwmon-pcb-temp {
 		compatible = "iio-hwmon";
 		io-channels = <&wbec_adc 5>;
@@ -358,47 +347,6 @@
 		constant-charge-voltage-max-microvolt = <4100000>;
 		charge-full-design-microamp-hours = <2600000>;
 		status = "okay";
-	};
-
-	i2c_wbmz: i2c_wbmz {
-		compatible = "i2c-gpio";
-
-		sda-gpios = <&pio PD 13 GPIO_ACTIVE_HIGH>;
-		scl-gpios = <&pio PC 12 GPIO_ACTIVE_LOW>;  // connected via transistor thus inverting the signal
-		i2c-gpio,delay-us = <32>;  // ~30 kHz long period to compensate for slow fronts
-		i2c-gpio,scl-output-only;
-		i2c-gpio,scl-has-no-pullup;
-
-		#address-cells = <1>;
-		#size-cells = <0>;
-		status = "okay";
-
-		axp22x_wbmz5: pmic@34 {
-			compatible = "x-powers,axp221";
-			reg = <0x34>;
-
-			wirenboard,wbmz-pmic;  // keeps only ADC and battery sysfs nodes to fix conflict with main PMIC
-
-			interrupt-controller;
-			#interrupt-cells = <1>;
-
-			status = "okay";
-
-			axp_wbmz5_adc: adc {
-				compatible = "x-powers,axp221-adc";
-				#io-channel-cells = <1>;
-			};
-
-			battery_power_supply: battery-power-supply {
-				compatible = "x-powers,axp221-battery-power-supply";
-				status = "okay";
-				monitored-battery = <&fallback_battery_desc>;
-
-				// it's ~40C conservative high temperature limit.
-				// to be overrided by battery overlay
-				x-powers,charge-high-temp-microvolt = <499200>;
-			};
-		};
 	};
 
 	/* ATECC + optional TCXO RTC */
