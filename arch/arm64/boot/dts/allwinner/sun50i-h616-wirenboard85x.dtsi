@@ -113,13 +113,6 @@
 				averaging-window = <1>;
 				sort-order = <6>;
 			};
-
-			Vbus_network {
-				iio-device = <&vbus_network_volt>;
-				decimal-places = <2>;
-				averaging-window = <1>;
-				sort-order = <7>;
-			};
 		};
 
 		gpios {
@@ -252,15 +245,6 @@
 	vbus_debug_volt: vbus-debug-volt {
 		compatible = "voltage-divider";
 		io-channels = <&wbec_adc 3>;
-		#io-channel-cells = <1>;
-
-		output-ohms = <1>;
-		full-ohms = <1>;
-	};
-
-	vbus_network_volt: vbus-network-volt {
-		compatible = "voltage-divider";
-		io-channels = <&wbec_adc 4>;
 		#io-channel-cells = <1>;
 
 		output-ohms = <1>;
