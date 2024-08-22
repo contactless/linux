@@ -952,6 +952,15 @@ config CHARGER_BD99954
 	  information and altering charger configurations from the ROHM
 	  BD99954 charger IC.
 
+config WBEC_BATTERY
+	tristate "Wiren Board Embedded Controller Power Supply Battery Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for WBMZ6-BATTERY and WBMZ6-SUPERCAP
+	  on Wiren Board 8.5 and above.
+
+	  The driver provides power supply class for the Wiren Board.
+
 config WBEC_POWER
 	tristate "Wiren Board Embedded Controller Power Supply Driver"
 	depends on MFD_WBEC
