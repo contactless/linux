@@ -406,7 +406,12 @@
 			clock-names = "bus", "apb0", "hosc";
 			resets = <&ccu RST_BUS_PWM>;
 			#pwm-cells = <0x3>;
-			status = "okay";
+
+			/*
+				Disable SOC's PWM because we need wbec-pwm to be pwmchip0.
+				wbec-pwm controls the buzzer and we have a lot of hardcode references to pwmchip0 in the system.
+			*/
+			status = "disabled";
 		};
 	};
 
