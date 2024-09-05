@@ -329,16 +329,6 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_STATUS:
 
-		ret = regmap_read(axp20x_batt->regmap, AXP20X_PWR_OP_MODE,
-				  &reg);
-		if (ret)
-			return ret;
-
-		if (reg & AXP20X_PWR_OP_CHARGING) {
-			val->intval = POWER_SUPPLY_STATUS_CHARGING;
-			return 0;
-		}
-
 		ret = axp20x_get_batt_current_ua(axp20x_batt, &val1);
 
 		if (ret)
@@ -347,21 +337,20 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
 		// 3 mA threshold to ignore noise on current shunt
 		if (val1 < -3000) {
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
-			return 0;
+		} else {
+			// current is positive, it is either charging or full
+			ret = regmap_read(axp20x_batt->regmap, AXP20X_PWR_OP_MODE,
+					  &reg);
+			if (ret)
+				return ret;
+
+			if (reg & AXP20X_PWR_OP_CHARGING) {
+				val->intval = POWER_SUPPLY_STATUS_CHARGING;
+			} else {
+				val->intval = POWER_SUPPLY_STATUS_FULL;
+			}
 		}
 
-		ret = regmap_read(axp20x_batt->regmap, AXP20X_FG_RES, &val1);
-		if (ret)
-			return ret;
-
-		/*
-		 * Fuel Gauge data takes 7 bits but the stored value seems to be
-		 * directly the raw percentage without any scaling to 7 bits.
-		 */
-		if ((val1 & AXP209_FG_PERCENT) == 100)
-			val->intval = POWER_SUPPLY_STATUS_FULL;
-		else
-			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 		break;
 
 	case POWER_SUPPLY_PROP_HEALTH:
