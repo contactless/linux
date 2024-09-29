@@ -17,7 +17,7 @@ static u32 sun50i_afbc_get_base(struct sun8i_mixer *mixer, unsigned int channel)
 {
 	u32 base = sun8i_channel_base(mixer, channel);
 
-	if (mixer->cfg->de_type == sun8i_mixer_de3)
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE3)
 		return base + SUN50I_AFBC_CH_OFFSET;
 
 	return base + 0x4000;
@@ -39,7 +39,7 @@ bool sun50i_afbc_format_mod_supported(struct sun8i_mixer *mixer,
 		return true;
 	}
 
-	if (mixer->cfg->de_type == sun8i_mixer_de2)
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE2)
 		return false;
 
 	mode = AFBC_FORMAT_MOD_BLOCK_SIZE_16x16 |

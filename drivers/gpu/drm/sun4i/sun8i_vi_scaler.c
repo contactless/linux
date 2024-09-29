@@ -847,6 +847,9 @@ static u32 sun8i_vi_scaler_base(struct sun8i_mixer *mixer, int channel)
 
 static bool sun8i_vi_scaler_is_vi_plane(struct sun8i_mixer *mixer, int channel)
 {
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE33)
+		return mixer->cfg->map[channel] < mixer->cfg->vi_num;
+
 	return true;
 }
 
@@ -1026,7 +1029,7 @@ void sun8i_vi_scaler_setup(struct sun8i_mixer *mixer, int layer,
 		sun8i_vi_scaler_set_coeff_ui(mixer->engine.regs, base,
 					     hscale, vscale, format);
 
-	if (mixer->cfg->de_type <= sun8i_mixer_de3)
+	if (mixer->cfg->de_type <= SUN8I_MIXER_DE3)
 		regmap_write(mixer->engine.regs, SUN8I_SCALER_VSU_CTRL(base),
 			     SUN8I_SCALER_VSU_CTRL_EN |
 			     SUN8I_SCALER_VSU_CTRL_COEFF_RDY);

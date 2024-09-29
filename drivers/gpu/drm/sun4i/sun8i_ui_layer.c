@@ -100,7 +100,6 @@ static int sun8i_ui_layer_update_coord(struct sun8i_mixer *mixer, int channel,
 					      dst_w, dst_h, hscale, vscale,
 					      hphase, vphase,
 					      state->fb->format);
-			sun8i_vi_scaler_enable(mixer, channel, true);
 		} else {
 			sun8i_ui_scaler_setup(mixer, channel, src_w, src_h,
 					      dst_w, dst_h, hscale, vscale,
@@ -110,7 +109,7 @@ static int sun8i_ui_layer_update_coord(struct sun8i_mixer *mixer, int channel,
 	} else {
 		DRM_DEBUG_DRIVER("HW scaling is not needed\n");
 		if (mixer->cfg->de_type == SUN8I_MIXER_DE33)
-			sun8i_vi_scaler_enable(mixer, channel, false);
+			sun8i_vi_scaler_disable(mixer, channel);
 		else
 			sun8i_ui_scaler_enable(mixer, channel, false);
 	}
