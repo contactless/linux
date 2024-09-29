@@ -321,7 +321,10 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
 	regmap_write(bld_regs, SUN8I_MIXER_BLEND_PIPE_CTL(bld_base),
 		     pipe_en | SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0));
 
-	if (mixer->cfg->de_type != SUN8I_MIXER_DE33)
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE33)
+		regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_DBUFF,
+			     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
+	else
 		regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_DBUFF,
 			     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 }
@@ -372,7 +375,7 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 				 const struct drm_display_mode *mode)
 {
 	struct sun8i_mixer *mixer = engine_to_sun8i_mixer(engine);
-	struct regmap *bld_regs;
+	struct regmap *bld_regs, *disp_regs;
 	u32 bld_base, size, val;
 	bool interlaced;
 
@@ -385,10 +388,13 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 			 mode->hdisplay, mode->vdisplay);
 
 	if (mixer->cfg->de_type == SUN8I_MIXER_DE33)
+	{
+		disp_regs = mixer->disp_regs;
 		regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_SIZE, size);
-	else
+	} else {
+		disp_regs = mixer->engine.regs;
 		regmap_write(mixer->engine.regs, SUN8I_MIXER_GLOBAL_SIZE, size);
-
+	}
 	regmap_write(bld_regs, SUN8I_MIXER_BLEND_OUTSIZE(bld_base), size);
 
 	if (interlaced)
@@ -407,10 +413,8 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 	else
 		val = 0xff108080;
 
-	regmap_write(mixer->engine.regs,
-		     SUN8I_MIXER_BLEND_BKCOLOR(bld_base), val);
-	regmap_write(mixer->engine.regs,
-		     SUN8I_MIXER_BLEND_ATTR_FCOLOR(bld_base, 0), val);
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_BKCOLOR(bld_base), val);
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(bld_base, 0), val);
 
 	if (mixer->cfg->has_formatter)
 		sun50i_fmt_setup(mixer, mode->hdisplay,
@@ -850,6 +854,7 @@ static const struct sun8i_mixer_cfg sun50i_h6_mixer0_cfg = {
 static const struct sun8i_mixer_cfg sun50i_h616_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
 	.de_type	= SUN8I_MIXER_DE33,
+	.has_formatter	= 1,
 	.mod_rate	= 600000000,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 4096,

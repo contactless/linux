@@ -23,6 +23,7 @@
 
 #define SUN50I_MIXER_GLOBAL_SIZE		0x8
 #define SUN50I_MIXER_GLOBAL_CLK			0xc
+#define SUN50I_MIXER_GLOBAL_DBUFF		0x10
 
 #define SUN8I_MIXER_GLOBAL_CTL_RT_EN		BIT(0)
 
@@ -238,12 +239,6 @@ sun8i_blender_regmap(struct sun8i_mixer *mixer)
 {
 	return mixer->cfg->de_type == SUN8I_MIXER_DE33 ?
 		mixer->disp_regs : mixer->engine.regs;
-}
-
-static inline struct regmap *
-sun8i_blender_regmap(struct sun8i_mixer *mixer)
-{
-	return mixer->engine.regs;
 }
 
 static inline u32
