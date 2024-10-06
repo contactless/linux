@@ -617,8 +617,12 @@
 
 /* WBIO I2C */
 &i2c3 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&i2c3_pa_pins>;
+	pinctrl-1 = <&i2c3_gpio>;
+
+	scl-gpios = <&pio PA 10 GPIO_ACTIVE_HIGH>; /* PA10 */
+	sda-gpios = <&pio PA 11 GPIO_ACTIVE_HIGH>; /* PA11 */
 
 	status = "okay";
 };
@@ -1110,10 +1114,17 @@
 		drive-strength = <40>;
 	};
 
+	/delete-node/ i2c3-ph-pins;
+
 	i2c3_pa_pins: i2c3-pa-pins {
 		pins = "PA10", "PA11";
 		function = "i2c3";
 		drive-strength = <40>;
+	};
+
+	i2c3_gpio: i2c3-gpio-pins {
+		pins = "PA10", "PA11";
+		function = "gpio_out";
 	};
 };
 
