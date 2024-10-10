@@ -413,6 +413,12 @@
 
 /* WBIO I2C */
 &i2c1 {
+	pinctrl-names = "default", "gpio";
+	pinctrl-1 = <&i2c1_pins_gpio>;
+
+	scl-gpios = <&pio 1 18 GPIO_ACTIVE_HIGH>;
+	sda-gpios = <&pio 1 19 GPIO_ACTIVE_HIGH>;
+
 	status = "okay";
 };
 
@@ -763,6 +769,11 @@
 	spi2_cs0_pb_pin: spi2-cs0-pb-pin {
 		pins = "PB14";
 		function = "spi2";
+	};
+
+	i2c1_pins_gpio: i2c1-pins-gpio {
+		pins = "PB18", "PB19";
+		function = "gpio_out";
 	};
 };
 
