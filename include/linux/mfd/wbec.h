@@ -58,12 +58,9 @@
 #define WBEC_REG_ADC_DATA_ADC6                              0x4B
 
 /* Region GPIO: RW */
-#define WBEC_REG_GPIO                                       0x80
-   #define WBEC_REG_GPIO_A1_MSK                             BIT(0)
-   #define WBEC_REG_GPIO_A2_MSK                             BIT(1)
-   #define WBEC_REG_GPIO_A3_MSK                             BIT(2)
-   #define WBEC_REG_GPIO_A4_MSK                             BIT(3)
-   #define WBEC_REG_GPIO_V_OUT_MSK                          BIT(4)
+#define WBEC_REG_GPIO_CTRL                                  0x80
+   #define WBEC_REG_GPIO_DIR                                   0x82
+#define WBEC_REG_GPIO_AF                                    0x84
 
 /* Region WDT: RW */
 #define WBEC_REG_WDT_TIMEOUT                                0x90
