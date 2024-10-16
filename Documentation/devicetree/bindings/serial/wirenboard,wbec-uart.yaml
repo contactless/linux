@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/serial/wirenboard,wbec-uart.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Wiren Board Embedded Controller SPI-UART Driver
+
+maintainers:
+  - Pavel Gasheev <pavel.gasheev@wirenboard.com>
+
+description: |
+  Enables SPI-UART support on the Wiren Board Embedded Controller.
+
+properties:
+  compatible:
+    const: wirenboard,wbec-uart
+
+  reg:
+    const: [ 0, 1 ]
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    wbec_uart_mod1: serial@0 {
+      compatible = "wirenboard,wbec-uart";
+      reg = <0>;
+
+      status = "disabled";
+    };
+
+    wbec_uart_mod2: serial@1 {
+      compatible = "wirenboard,wbec-uart";
+      reg = <1>;
+
+      status = "disabled";
+    };
+...
