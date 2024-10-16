@@ -234,6 +234,9 @@
 /* Allwinner sun4i UART */
 #define PORT_SUN4I	124
 
+/* WBEC UART */
+#define PORT_WBEC	125
+
 /* Generic type identifier for ports which type is not important to userspace. */
 #define PORT_GENERIC	(-1)
 
