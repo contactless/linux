@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+%YAML 1.2
+---
+$id: "http://devicetree.org/schemas/regulator/allwinner,h616-mmc-regulator.yaml#"
+$schema: "http://devicetree.org/meta-schemas/core.yaml#"
+
+title: Allwinner H616 MMC Regulator
+
+maintainers:
+  - Anton Tarasov <anton.tarasov@wirenboard.com>
+
+description: |
+  This driver supports the built-in MMC voltage regulator of the 
+  Allwinner H616 processor, which allows switching voltage levels 
+  on data lines without using any external regulators. 
+  The regulator is required to switch the voltage from 3.3V to 1.8V 
+  on the data lines to support high-speed SD-UHS modes for MicroSD.
+  Without the regulator, the MicroSD will operate only in slow-modes.
+
+properties:
+  compatible:
+    const: allwinner,h616-mmc-regulator
+
+  syscon:
+    description: Phandle to the system controller (syscon) node.
+
+required:
+  - compatible
+  - syscon
+
+additionalProperties: false
+
+examples:
+  - |
+    mmc_regulator: regulator@0 {
+      compatible = "allwinner,h616-mmc-regulator";
+      syscon = <&syscon>;
+      regulator-name = "h616-mmc-vqmmc";
+      regulator-min-microvolt = <1800000>;
+      regulator-max-microvolt = <3300000>;
+    };
+
