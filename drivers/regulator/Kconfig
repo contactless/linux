@@ -1724,11 +1724,15 @@ config REGULATOR_H616_MMC
     bool "Allwinner H616 MMC power regulator support"
 	default ARCH_SUNXI
     help
-      This driver supports the PMMC regulator found in Allwinner sunxi SoCs,
-      allowing control over the IO voltage levels.
-
-      Say Y here if you need to control the IO voltage of pin banks
-      via the PIO controller.
+      This driver supports the built-in MMC voltage regulator of the 
+      Allwinner H616 processor, which allows switching voltage levels 
+      on data lines without using any external regulators. 
+      The regulator is required to switch the voltage from 3.3V to 1.8V 
+      on the data lines to support high-speed SD-UHS modes for MicroSD.
+      Without the regulator, the MicroSD will operate only in "slow" modes.
+        
+      Select "Yes" here if you want to use the built-in regulator to 
+      support high-speed UHS modes.
 
       If unsure, say N.
 
