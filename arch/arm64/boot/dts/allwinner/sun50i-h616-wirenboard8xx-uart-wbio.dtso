@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4
+/*
+ * Overlay to disable I2C on WBIO to use the released pins as software UART
+ * Copyright (C) 2024 Wiren Board
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "wirenboard,wirenboard-84x", "wirenboard,wirenboard-85x";
+
+    fragment@0 {
+        target = <&i2c3>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+};
