@@ -3,4 +3,5 @@
 	url = https://github.com/wirenboard/rtl8733bu
 [submodule "drivers/tty/serial/soft_uart"]
 	path = drivers/tty/serial/soft_uart
-	url = https://github.com/sfera-labs/soft_uart
+	url = https://github.com/Ilia1S/soft_uart
+	branch = dev/wb
