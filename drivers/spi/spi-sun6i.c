@@ -114,18 +114,53 @@ struct sun6i_spi {
 	const struct sun6i_spi_cfg *cfg;
 };
 
-static inline u32 sun6i_spi_read(struct sun6i_spi *sspi, u32 reg)
+static inline u32 __sun6i_spi_read(struct sun6i_spi *sspi, u32 reg)
 {
-	return readl(sspi->base_addr + reg);
+    return readl(sspi->base_addr + reg);
 }
 
-static inline void sun6i_spi_write(struct sun6i_spi *sspi, u32 reg, u32 value)
+static inline void __sun6i_spi_write(struct sun6i_spi *sspi, u32 reg, u32 value)
 {
 	writel(value, sspi->base_addr + reg);
+    /* printk(KERN_INFO "BASE ADDR: %p, 0x%X", sspi->base_addr, sspi->base_addr); */
 }
+
+// Макрос для записи в регистр с выводом информации
+#define sun6i_spi_write(sspi, reg_name, reg_value)                      \
+    do {                                                                \
+        char bin_str[33] = {0};                                         \
+        for (int i = 0; i < 32; i++) {                                  \
+            bin_str[i] = ((reg_value >> (31 - i)) & 1) ? '1' : '0';     \
+        }                                                               \
+        printk(KERN_INFO "WRITE %-18s: Phys 0x%08X: Virt 0x%08X: 0x%08X (0b%s)\n", \
+               #reg_name,                                               \
+               (u32)(virt_to_phys(sspi->base_addr) + reg_name),         \
+               (u32)((uintptr_t)sspi->base_addr + reg_name),            \
+               (unsigned int)(reg_value),                               \
+               bin_str);                                                \
+        __sun6i_spi_write(sspi, reg_name, reg_value);                   \
+    } while (0)
+
+// Макрос для чтения из регистра с выводом информации
+#define sun6i_spi_read(sspi, reg_name)                                  \
+    ({                                                                  \
+        u32 ret = __sun6i_spi_read(sspi, reg_name);                     \
+        char bin_str[33] = {0};                                         \
+        for (int i = 0; i < 32; i++) {                                  \
+            bin_str[i] = ((ret >> (31 - i)) & 1) ? '1' : '0';           \
+        }                                                               \
+        printk(KERN_INFO "READ  %-18s: Phys 0x%08X: Virt 0x%08X: 0x%08X (0b%s)\n", \
+               #reg_name,                                               \
+               (u32)(virt_to_phys(sspi->base_addr) + reg_name),         \
+               (u32)((uintptr_t)sspi->base_addr + reg_name),            \
+               (unsigned int)ret,                                       \
+               bin_str);                                                \
+        ret;                                                            \
+    })
 
 static inline u32 sun6i_spi_get_rx_fifo_count(struct sun6i_spi *sspi)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_get_rx_fifo_count()\n");
 	u32 reg = sun6i_spi_read(sspi, SUN6I_FIFO_STA_REG);
 
 	return FIELD_GET(SUN6I_FIFO_STA_RF_CNT_MASK, reg);
@@ -133,6 +168,7 @@ static inline u32 sun6i_spi_get_rx_fifo_count(struct sun6i_spi *sspi)
 
 static inline u32 sun6i_spi_get_tx_fifo_count(struct sun6i_spi *sspi)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_get_tx_fifo_count()\n");
 	u32 reg = sun6i_spi_read(sspi, SUN6I_FIFO_STA_REG);
 
 	return FIELD_GET(SUN6I_FIFO_STA_TF_CNT_MASK, reg);
@@ -140,6 +176,7 @@ static inline u32 sun6i_spi_get_tx_fifo_count(struct sun6i_spi *sspi)
 
 static inline void sun6i_spi_disable_interrupt(struct sun6i_spi *sspi, u32 mask)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_disable_interrupt()\n");
 	u32 reg = sun6i_spi_read(sspi, SUN6I_INT_CTL_REG);
 
 	reg &= ~mask;
@@ -148,6 +185,7 @@ static inline void sun6i_spi_disable_interrupt(struct sun6i_spi *sspi, u32 mask)
 
 static inline void sun6i_spi_drain_fifo(struct sun6i_spi *sspi)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_drain_fifo()\n");
 	u32 len;
 	u8 byte;
 
@@ -163,6 +201,7 @@ static inline void sun6i_spi_drain_fifo(struct sun6i_spi *sspi)
 
 static inline void sun6i_spi_fill_fifo(struct sun6i_spi *sspi)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_fill_fifo()\n");
 	u32 cnt;
 	int len;
 	u8 byte;
@@ -181,6 +220,7 @@ static inline void sun6i_spi_fill_fifo(struct sun6i_spi *sspi)
 
 static void sun6i_spi_set_cs(struct spi_device *spi, bool enable)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_set_cs()\n");
 	struct sun6i_spi *sspi = spi_controller_get_devdata(spi->controller);
 	u32 reg;
 
@@ -198,11 +238,13 @@ static void sun6i_spi_set_cs(struct spi_device *spi, bool enable)
 
 static size_t sun6i_spi_max_transfer_size(struct spi_device *spi)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_max_transfer_size()\n");
 	return SUN6I_MAX_XFER_SIZE - 1;
 }
 
 static void sun6i_spi_dma_rx_cb(void *param)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_dma_rx_cb()\n");
 	struct sun6i_spi *sspi = param;
 
 	complete(&sspi->dma_rx_done);
@@ -211,6 +253,7 @@ static void sun6i_spi_dma_rx_cb(void *param)
 static int sun6i_spi_prepare_dma(struct sun6i_spi *sspi,
 				 struct spi_transfer *tfr)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_prepare_dma()\n");
 	struct dma_async_tx_descriptor *rxdesc, *txdesc;
 	struct spi_controller *host = sspi->host;
 
@@ -276,6 +319,7 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 				  struct spi_device *spi,
 				  struct spi_transfer *tfr)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_transfer_one()\n");
 	struct sun6i_spi *sspi = spi_controller_get_devdata(host);
 	unsigned int div, div_cdr1, div_cdr2, timeout;
 	unsigned int start, end, tx_time;
@@ -527,6 +571,7 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 
 static irqreturn_t sun6i_spi_handler(int irq, void *dev_id)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_handler()\n");
 	struct sun6i_spi *sspi = dev_id;
 	u32 status = sun6i_spi_read(sspi, SUN6I_INT_STA_REG);
 
@@ -564,6 +609,7 @@ static irqreturn_t sun6i_spi_handler(int irq, void *dev_id)
 
 static int sun6i_spi_runtime_resume(struct device *dev)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_runtime_resume()\n");
 	struct spi_controller *host = dev_get_drvdata(dev);
 	struct sun6i_spi *sspi = spi_controller_get_devdata(host);
 	int ret;
@@ -601,6 +647,7 @@ out:
 
 static int sun6i_spi_runtime_suspend(struct device *dev)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_runtime_suspend()\n");
 	struct spi_controller *host = dev_get_drvdata(dev);
 	struct sun6i_spi *sspi = spi_controller_get_devdata(host);
 
@@ -615,6 +662,7 @@ static bool sun6i_spi_can_dma(struct spi_controller *host,
 			      struct spi_device *spi,
 			      struct spi_transfer *xfer)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_can_dma()\n");
 	struct sun6i_spi *sspi = spi_controller_get_devdata(host);
 
 	/*
@@ -627,6 +675,7 @@ static bool sun6i_spi_can_dma(struct spi_controller *host,
 
 static int sun6i_spi_probe(struct platform_device *pdev)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_probe()\n");
 	struct spi_controller *host;
 	struct sun6i_spi *sspi;
 	struct resource *mem;
@@ -766,6 +815,7 @@ err_free_host:
 
 static void sun6i_spi_remove(struct platform_device *pdev)
 {
+    printk(KERN_INFO "CALL: sun6i_spi_remove()\n");
 	struct spi_controller *host = platform_get_drvdata(pdev);
 
 	pm_runtime_force_suspend(&pdev->dev);
