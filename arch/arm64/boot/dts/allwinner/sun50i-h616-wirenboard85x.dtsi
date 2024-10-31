@@ -263,7 +263,7 @@
 			linux,default-trigger = "default-off";
 		};
 
-		red {
+		led_red: red {
 			label = "red";
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&pio PA 12 GPIO_ACTIVE_HIGH>;

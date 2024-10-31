@@ -55,6 +55,11 @@ setup_kernel_vars() {
 			KERNEL_DEFCONFIG="defconfig wb8.config"
 			KDEB_WBDESC="Wiren Board 8"
 			;;
+		wb8-38071cb)
+			DEBARCH=arm64
+			KERNEL_DEFCONFIG="defconfig wb8-38071cb.config"
+			KDEB_WBDESC="Wiren Board 8 38071cb no modules, no wireless"
+			;;
 		wb8x-bootlet)
 			INITRAMFS_DIR="/usr/src/wb-initramfs/wb8x-bootlet"
 			DEBARCH=arm64
