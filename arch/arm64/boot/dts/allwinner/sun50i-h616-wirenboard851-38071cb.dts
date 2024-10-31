@@ -1,0 +1,76 @@
+/dts-v1/;
+#include "sun50i-h616-wirenboard851.dts"
+#include "sun50i-h616-wirenboard85x-38071cb.dtsi"
+
+/ {
+	model = "Wiren Board rev. 8.5.1 (T507) 38071cb";
+	compatible = "wirenboard,wirenboard-851-38071cb", "wirenboard,wirenboard-85x-38071cb", "wirenboard,wirenboard-85x", "wirenboard,wirenboard-8xx", "allwinner,sun50i-h616";
+
+	mod1_pinmux_dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "mod1_pinmux_dummy";
+		pinctrl-names = "default";
+		pinctrl-0 = <>;
+	};
+
+	mod2_pinmux_dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "mod2_pinmux_dummy";
+		pinctrl-names = "default";
+		pinctrl-0 = <>;
+	};
+
+	mod3_pinmux_dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "mod3_pinmux_dummy";
+		pinctrl-names = "default";
+		pinctrl-0 = <>;
+	};
+
+	wirenboard {
+		gpios {
+			MOD1_OUT1 { io-gpios = <&wbec_gpio 7 0>; sort-order = <11>; };
+			MOD2_OUT1 { io-gpios = <&wbec_gpio 10 0>; sort-order = <21>; };
+			MOD3_OUT1 { io-gpios = <&pio 8 15 0>; sort-order = <31>; gpio-xlate-type = "bank_pin"; gpio-pins-per-bank = <32>; };
+		};
+	};
+
+	mod4_pps {
+		compatible = "pps-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <>;
+		gpios = <&pio 3 10 0>;
+	};
+};
+
+&wbec_uart_mod1 { /* MOD1 */
+	status = "okay";
+};
+
+&wbec_uart_mod2 { /* MOD2 */
+	status = "okay";
+};
+
+&uart4 { /* MOD3 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
+	status = "okay";
+};
+
+&uart5 { /* MOD4 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mod4_txrx_uart>;
+	status = "okay";
+};
+
+&wbc_modem { /* WBC2-4G */
+	status = "okay";
+	model = "a7600x";
+	type = "4g", "3g", "edge", "gprs";
+	compatible = "wirenboard,wbc-usb";
+};
+
+&led_red {
+	default-state = "off";
+	linux,default-trigger = "default-off";
+};
