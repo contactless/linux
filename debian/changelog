@@ -1,5 +1,11 @@
 linux-wb (6.8.0-wb114) stable; urgency=medium
 
+  * Update rtl8733bu submodule to use v5.15.12-126-wb version
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com> Fri, 1 Nov 2024 08:42:51 +0300
+
+linux-wb (6.8.0-wb114) stable; urgency=medium
+
   * wb8.config: add foreign devices support (as in wb7)
 
  -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 24 Oct 2024 22:13:21 +0300
