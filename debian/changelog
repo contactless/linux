@@ -6,6 +6,12 @@ linux-wb (6.8.0-wb116) stable; urgency=medium
 
 linux-wb (6.8.0-wb115) stable; urgency=medium
 
+  * wb 84x/85x bootlet: enable wbec-pwm buzzer
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 07 Nov 2024 13:03:49 +0300
+
+linux-wb (6.8.0-wb115) stable; urgency=medium
+
   * Update rtl8733bu submodule to use branch v5.15.12-126-wb
 
  -- Anton <anton.tarasov@wirenboard.com>  Sat, 02 Nov 2024 17:06:15 +0300
