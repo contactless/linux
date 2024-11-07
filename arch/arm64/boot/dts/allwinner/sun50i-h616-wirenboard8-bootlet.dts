@@ -76,3 +76,11 @@
 	usb0_vbus-supply = <&reg_usb_a_vbus_wb8>;
 	usb3_vbus-supply = <&reg_usb_a_vbus_wb85>;
 };
+
+&wbec {
+	wbec_pwm: pwm@0 {
+		compatible = "wirenboard,wbec-pwm";
+		reg = <0>;
+		#pwm-cells = <3>;
+	};
+};
