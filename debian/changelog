@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb114+wb100) stable; urgency=medium
+
+  * fix wbec-power sysfs path: set to 'wbec-power'
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.com>  Fri, 08 Nov 2024 16:29:05 +0300
+
 linux-wb (6.8.0-wb114) stable; urgency=medium
 
   * wb8.config: add foreign devices support (as in wb7)
