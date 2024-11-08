@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb116) stable; urgency=medium
+
+  * fix wbec-power sysfs path: set to 'wbec-power'
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.com>  Fri, 08 Nov 2024 14:47:40 +0300
+
 linux-wb (6.8.0-wb115) stable; urgency=medium
 
   * Update rtl8733bu submodule to use branch v5.15.12-126-wb
