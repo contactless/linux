@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb117) stable; urgency=medium
+
+  * wb8-bootlet: enable wbec-pwm (fixes buzzer in wb85+)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 08 Nov 2024 17:35:23 +0300
+
 linux-wb (6.8.0-wb116) stable; urgency=medium
 
   * fix wbec-power sysfs path: set to 'wbec-power'
