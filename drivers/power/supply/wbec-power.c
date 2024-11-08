@@ -22,7 +22,6 @@ struct wbec_power {
 	struct regmap *regmap;
 
 	struct power_supply *charger;
-	struct power_supply_desc charger_desc;
 };
 
 static int wbec_power_get_property(struct power_supply *psy,
@@ -63,12 +62,21 @@ static const enum power_supply_property wbec_power_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
 
+static const struct power_supply_desc wbec_power_desc = {
+	.name = "wbec-power",
+	.type = POWER_SUPPLY_TYPE_MAINS,
+	.properties = wbec_power_properties,
+	.num_properties = ARRAY_SIZE(wbec_power_properties),
+	.property_is_writeable = wbec_power_property_is_writeable,
+	.get_property = wbec_power_get_property,
+	.set_property = wbec_power_set_property,
+};
+
 static int wbec_power_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct wbec *wbec;
 	struct power_supply_config psy_cfg = {};
-	struct power_supply_desc *charger_desc;
 	struct wbec_power *wbec_power;
 	int ret;
 
@@ -82,23 +90,10 @@ static int wbec_power_probe(struct platform_device *pdev)
 	wbec = dev_get_drvdata(dev->parent);
 	wbec_power->regmap = wbec->regmap;
 
-	charger_desc = &wbec_power->charger_desc;
-	charger_desc->properties = wbec_power_properties;
-	charger_desc->num_properties = ARRAY_SIZE(wbec_power_properties);
-	charger_desc->get_property = wbec_power_get_property;
-	charger_desc->set_property = wbec_power_set_property;
-	charger_desc->property_is_writeable =
-					wbec_power_property_is_writeable;
-
 	psy_cfg.of_node = dev->of_node;
 	psy_cfg.drv_data = wbec_power;
 
-	charger_desc->type = POWER_SUPPLY_TYPE_MAINS;
-
-	if (!charger_desc->name)
-		charger_desc->name = pdev->name;
-
-	wbec_power->charger = devm_power_supply_register(dev, charger_desc,
+	wbec_power->charger = devm_power_supply_register(dev, &wbec_power_desc,
 							   &psy_cfg);
 	if (IS_ERR(wbec_power->charger)) {
 		ret = PTR_ERR(wbec_power->charger);
