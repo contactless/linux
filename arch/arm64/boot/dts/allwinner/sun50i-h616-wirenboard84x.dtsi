@@ -1105,7 +1105,6 @@
 };
 
 &pio {
-	/* compatible = "allwinner,sun50i-h616-pinctrl"; */
 	compatible = "allwinner,sun50i-h616-pinctrl", "syscon";
 	vcc-pa-supply = <&reg_dcdc1>;
 	vcc-pc-supply = <&reg_aldo1>;
@@ -1113,6 +1112,10 @@
 	vcc-pe-supply = <&reg_dcdc1>;
 	vcc-pg-supply = <&reg_dcdc1>;
 	vcc-pi-supply = <&reg_dcdc1>;
+
+    mmc0_pins: mmc0-pins {
+        drive-strength = <40>;
+    };
 };
 
 &mmc0 {
@@ -1127,8 +1130,8 @@
 	sd-uhs-sdr25;
 	sd-uhs-sdr12;
 	mmc-ddr-1_8v;
-	/* sd-uhs-ddr50;  // Dont work */
-    max-frequency = <120000000>; // 150Mhz dont work
+    /* sd-uhs-ddr50;  // Dont work */
+    max-frequency = <120000000>; // 150Mhz does not work on some flash drives
 };
 
 &mmc2 {
