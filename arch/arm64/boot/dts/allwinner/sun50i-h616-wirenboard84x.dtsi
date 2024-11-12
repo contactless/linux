@@ -1131,7 +1131,7 @@
 	sd-uhs-sdr12;
 	mmc-ddr-1_8v;
     /* sd-uhs-ddr50;  // Dont work */
-    max-frequency = <120000000>; // 150Mhz does not work on some flash drives
+	max-frequency = <100000000>; // >= 100Mhz does not work on some flash drives
 };
 
 &mmc2 {
