@@ -1,3 +1,10 @@
+linux-wb (6.8.0-wb118) stable; urgency=medium
+
+  * wb8.config: enable deprecated armv7 instructions emulation
+  * fix some armhf-built software launch (z-way-server)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 15 Nov 2024 15:02:39 +0300
+
 linux-wb (6.8.0-wb117) stable; urgency=medium
 
   * wb8-bootlet: enable wbec-pwm (fixes buzzer in wb85+)
