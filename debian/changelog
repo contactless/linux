@@ -1,3 +1,10 @@
+linux-wb (6.8.0-wb114+wb101) stable; urgency=medium
+
+  * wb8.config: enable deprecated armv7 instructions emulation
+  * fix some armhf-built software launch (z-way-server)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 18 Oct 2024 10:34:20 +0300
+
 linux-wb (6.8.0-wb114+wb100) stable; urgency=medium
 
   * fix wbec-power sysfs path: set to 'wbec-power'
