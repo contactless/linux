@@ -47,6 +47,7 @@
  * Metall-body WB:
  * - disable WBIO
  * - enable addtitonal rtc "whwave,sd3078"
+ * - additional rtc is a default one
  */
 &rtc_onboard_txco {
 	status = "okay";
@@ -54,4 +55,10 @@
 
 &i2c3 {
 	status = "disabled";
+};
+
+&aliases {
+	rtc0 = &rtc_onboard_txco;
+	rtc1 = &rtc;
+	rtc2 = &rtc_onboard;
 };
