@@ -822,6 +822,12 @@
 		function = "gpio_in";
 		bias-pull-up;
 	};
+
+	pinctrl_atecc_i2c_gpio: atecc-i2c-pins {
+		pins = "PE19", "PE0";
+		function = "gpio_in";
+		bias-pull-up;
+	};
 };
 
 /* Debug UART */
