@@ -64,11 +64,16 @@
 	};
 };
 
-&ohci3 {
+&ehci3 {
 	status = "okay";
+
+	/* we need to know (in bootlet), where usb-flashing-drive is connected */
+	compatible = "wirenboard,usb-flashing-drive",
+					"allwinner,sun50i-h616-ehci",
+					"generic-ehci";
 };
 
-&ehci3 {
+&ohci3 {
 	status = "okay";
 };
 
