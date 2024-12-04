@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb121) stable; urgency=medium
+
+  * wb8m: move rtc from crypto-chip bus to wbio bus
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 04 Dec 2024 14:15:16 +0300
+
 linux-wb (6.8.0-wb120) stable; urgency=medium
 
   * wb8-bootlet: name usb-flashing-port
