@@ -45,16 +45,16 @@
 
 /*
  * Metall-body WB:
- * - disable WBIO
- * - enable addtitonal rtc "whwave,sd3078"
+ * - no WBIO
+ * - enable addtitonal rtc "whwave,sd3078" on WBIO bus (instead of crypto-chip bus; check crypto-chip errata for reasons)
  * - additional rtc is a default one
  */
-&rtc_onboard_txco {
-	status = "okay";
-};
 
 &i2c3 {
-	status = "disabled";
+	rtc_onboard_txco: rtc@32 {
+		compatible = "whwave,sd3078";
+		reg = <0x32>;
+	};
 };
 
 &aliases {
