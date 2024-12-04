@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb121) stable; urgency=medium
+
+  * wb8.5: add 38071cb support
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 04 Dec 2024 13:30:40 +0300
+
 linux-wb (6.8.0-wb120) stable; urgency=medium
 
   * wb8-bootlet: name usb-flashing-port
