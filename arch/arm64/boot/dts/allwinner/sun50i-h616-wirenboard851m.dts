@@ -50,8 +50,6 @@
  * - additional rtc is a default one
  */
 
-/delete-node/ &rtc_onboard_txco;
-
 &i2c3 {
 	rtc_onboard_txco: rtc@32 {
 		compatible = "whwave,sd3078";
