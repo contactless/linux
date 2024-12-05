@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb114+wb103) stable; urgency=medium
+
+  * wb8.5.1m: move rtc_onboard_txco from crypto-chip bus to wbio bus
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 05 Dec 2024 18:26:34 +0300
+
 linux-wb (6.8.0-wb114+wb102) stable; urgency=medium
 
   * wb8.5.1m: make rtc_onboard_txco a default one
