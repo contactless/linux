@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb122) stable; urgency=medium
+
+  * Merging changes from the branch feature/3930-fast_microsd (enabling high-speed UHS 1.8V mode)
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sat, 07 Dec 2024 05:24:29 +0300
+
 linux-wb (6.8.0-wb121) stable; urgency=medium
 
   * wb8m: move rtc from crypto-chip bus to wbio bus
