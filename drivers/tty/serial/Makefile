@@ -88,6 +88,7 @@ obj-$(CONFIG_SERIAL_TIMBERDALE)		+= timbuart.o
 obj-$(CONFIG_SERIAL_TXX9)		+= serial_txx9.o
 obj-$(CONFIG_SERIAL_UARTLITE)		+= uartlite.o
 obj-$(CONFIG_SERIAL_VT8500)		+= vt8500_serial.o
+obj-$(CONFIG_SERIAL_WBEC)		+= wbec-uart.o
 obj-$(CONFIG_SERIAL_XILINX_PS_UART)	+= xilinx_uartps.o
 obj-$(CONFIG_SERIAL_ZS)			+= zs.o
 

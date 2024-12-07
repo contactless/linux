@@ -13,6 +13,7 @@
 #include <linux/regmap.h>
 
 #define WBEC_ID                                             0x3CD2
+#define WBEC_REGMAP_PAD_WORDS_COUNT                         5
 
 /* Region INFO: RO */
 #define WBEC_REG_INFO_WBEC_ID                               0x00
@@ -58,12 +59,9 @@
 #define WBEC_REG_ADC_DATA_ADC6                              0x4B
 
 /* Region GPIO: RW */
-#define WBEC_REG_GPIO                                       0x80
-   #define WBEC_REG_GPIO_A1_MSK                             BIT(0)
-   #define WBEC_REG_GPIO_A2_MSK                             BIT(1)
-   #define WBEC_REG_GPIO_A3_MSK                             BIT(2)
-   #define WBEC_REG_GPIO_A4_MSK                             BIT(3)
-   #define WBEC_REG_GPIO_V_OUT_MSK                          BIT(4)
+#define WBEC_REG_GPIO_CTRL                                  0x80
+#define WBEC_REG_GPIO_DIR                                   0x82
+#define WBEC_REG_GPIO_AF                                    0x84
 
 /* Region WDT: RW */
 #define WBEC_REG_WDT_TIMEOUT                                0x90
@@ -110,8 +108,11 @@
 
 struct wbec {
 	struct device *dev;
+	struct spi_device *spi;
 	struct regmap *regmap;
 	struct dentry *wbec_dir;
+	void (*irq_handler)(struct wbec *wbec);
+	bool support_v2_protocol;
 };
 
 #endif

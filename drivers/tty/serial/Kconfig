@@ -924,6 +924,13 @@ config SERIAL_VT8500_CONSOLE
 	depends on SERIAL_VT8500=y
 	select SERIAL_CORE_CONSOLE
 
+config SERIAL_WBEC
+	tristate "Wiren Board Embedded Controller SPI-UART Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for SPI-UART support
+	  on the Wiren Board Embedded Controller.
+
 config SERIAL_OMAP
 	tristate "OMAP serial port support"
 	depends on (ARCH_OMAP2PLUS && !SERIAL_8250_OMAP) || COMPILE_TEST

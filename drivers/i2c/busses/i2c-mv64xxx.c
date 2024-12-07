@@ -935,10 +935,25 @@ mv64xxx_of_config(struct mv64xxx_i2c_data *drv_data,
 }
 #endif /* CONFIG_OF */
 
+/*
+ * This routine does i2c bus recovery by using i2c_generic_scl_recovery
+ * which is provided by I2C Bus recovery infrastructure.
+ *
+ * External polling while performing i2c bus recovery causes hard lockup
+ * => disable driver's fsm before bus recovery (enabling after recovery done).
+ */
+static void mv64xxx_i2c_prepare_recovery(struct i2c_adapter *adap)
+{
+	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
+	drv_data->state = MV64XXX_I2C_STATE_INVALID;
+}
+
 static int mv64xxx_i2c_init_recovery_info(struct mv64xxx_i2c_data *drv_data,
 					  struct device *dev)
 {
 	struct i2c_bus_recovery_info *rinfo = &drv_data->rinfo;
+
+	rinfo->prepare_recovery = mv64xxx_i2c_prepare_recovery;
 
 	rinfo->pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(rinfo->pinctrl)) {

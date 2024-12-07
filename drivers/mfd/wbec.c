@@ -20,6 +20,7 @@
 #include <linux/mod_devicetable.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/of_platform.h>
 
 /* For power off WBEC activates PWON pin on PMIC for 6s */
 #define WBEC_POWER_RESET_DELAY_MS			10000
@@ -34,55 +35,41 @@ static const char * const wbec_poweron_reason[] = {
 	"PMIC is unexpectedly off",
 };
 
-static const struct regmap_config wbec_regmap_config = {
+static const struct regmap_config wbec_regmap_config_v1 = {
+	.name = "wbec_regmap_v1",
 	.reg_bits = 16,
 	.read_flag_mask = BIT(7),
 	.val_bits = 16,
+	/* v1 protocol does'n use pad bits */
+	.pad_bits = 0,
 	.max_register = 0xFF,
+	.can_sleep = true,
 };
 
-static const struct mfd_cell wbec_cells[] = {
-	{
-		.name = "wbec-adc",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-adc"
-	},
-	{
-		.name = "wbec-gpio",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-gpio"
-	},
-	{
-		.name = "wbec-watchdog",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-watchdog"
-	},
-	{
-		.name = "wbec-rtc",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-rtc"
-	},
-	{
-		.name = "wbec-pwrkey",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-pwrkey"
-	},
-	{
-		.name = "wbec-power",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-power"
-	},
-	{
-		.name = "wbec-pwm",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-pwm"
-	},
-	{
-		.name = "wbec-battery",
-		.id = PLATFORM_DEVID_NONE,
-		.of_compatible = "wirenboard,wbec-battery"
-	},
+static const struct regmap_config wbec_regmap_config_v2 = {
+	.name = "wbec_regmap",
+	.reg_bits = 16,
+	.read_flag_mask = BIT(7),
+	.val_bits = 16,
+	/* v2 protocol needs 5 pad words */
+	.pad_bits = 16 * WBEC_REGMAP_PAD_WORDS_COUNT,
+	.max_register = 0x130,
+	.can_sleep = true,
 };
+
+static int wbec_check_present(struct wbec *wbec)
+{
+	int wbec_id, ret;
+
+	ret = regmap_read(wbec->regmap, WBEC_REG_INFO_WBEC_ID, &wbec_id);
+	if (ret)
+		return ret;
+
+	if (wbec_id != WBEC_ID)
+		return -ENODEV;
+
+	return 0;
+}
 
 /* ----------------------------------------------------------------------- */
 /* SysFS interface */
@@ -290,6 +277,20 @@ static inline void wbec_clean_debugfs(struct wbec *wbec)
 }
 #endif
 
+static irqreturn_t wbec_irq_handler(int irq, void *dev_id)
+{
+	struct wbec *wbec = dev_id;
+
+	if (wbec->irq_handler)
+		wbec->irq_handler(wbec);
+	else {
+		dev_warn_ratelimited(wbec->dev, "Unhandled IRQ\n");
+		// dummy uart exchange
+	}
+
+	return IRQ_HANDLED;
+}
+
 static int wbec_power_off(struct sys_off_data *data)
 {
 	int ret;
@@ -326,13 +327,13 @@ static int wbec_probe(struct spi_device *spi)
 {
 	struct wbec *wbec;
 	int ret;
-	int wbec_id;
 
 	wbec = devm_kzalloc(&spi->dev, sizeof(*wbec), GFP_KERNEL);
 	if (!wbec)
 		return -ENOMEM;
 
 	wbec->dev = &spi->dev;
+	wbec->spi = spi;
 
 	spi->mode = SPI_MODE_0;
 	spi->bits_per_word = 8;
@@ -340,22 +341,49 @@ static int wbec_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, wbec);
 
-	wbec->regmap = devm_regmap_init_spi(spi, &wbec_regmap_config);
+	wbec->regmap = devm_regmap_init_spi(spi, &wbec_regmap_config_v2);
+
 	if (IS_ERR(wbec->regmap)) {
 		dev_err(&spi->dev, "regmap initialization failed\n");
 		return PTR_ERR(wbec->regmap);
 	}
 
-	ret = regmap_read(wbec->regmap, WBEC_REG_INFO_WBEC_ID, &wbec_id);
-	if (ret < 0) {
-		dev_err(&spi->dev, "failed to read the wbec id at 0x%X\n",
-			WBEC_REG_INFO_WBEC_ID);
-		return ret;
+	ret = wbec_check_present(wbec);
+	if (ret == -ENODEV) {
+		dev_info(wbec->dev, "WBEC not found with v2 protocol, trying v1\n");
+		/* don't worry about memory leak, previous regmap will be freed by devm */
+		wbec->regmap = devm_regmap_init_spi(spi, &wbec_regmap_config_v1);
+
+		if (IS_ERR(wbec->regmap)) {
+			dev_err(&spi->dev, "regmap initialization failed\n");
+			return PTR_ERR(wbec->regmap);
+		}
+
+		ret = wbec_check_present(wbec);
+		if (ret) {
+			dev_err(wbec->dev, "WBEC not found\n");
+			return ret;
+		}
+		dev_info(wbec->dev, "WBEC found with v1 protocol\n");
+		wbec->support_v2_protocol = false;
+	} else {
+		if (ret)
+			return ret;
+		dev_info(wbec->dev, "WBEC found with v2 protocol\n");
+		wbec->support_v2_protocol = true;
 	}
-	if (wbec_id != WBEC_ID) {
-		dev_err(&spi->dev, "wrong wbec ID at 0x%X. Get 0x%X istead of 0x%X\n",
-			WBEC_REG_INFO_WBEC_ID, wbec_id, WBEC_ID);
-		return -ENOTSUPP;
+
+	if (wbec->support_v2_protocol) {
+		/* IRQ for UARTs needs v2 protocol */
+		if (spi->irq) {
+			ret = devm_request_threaded_irq(wbec->dev, spi->irq, NULL, wbec_irq_handler,
+							IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+							dev_name(wbec->dev), wbec);
+			if (ret)
+				return dev_err_probe(wbec->dev, ret, "failed to request IRQ\n");
+		} else {
+			dev_warn(wbec->dev, "no IRQ defined, wbec-uart not supported\n");
+		}
 	}
 
 	ret = sysfs_create_group(&wbec->dev->kobj, &wbec_attr_group);
@@ -364,8 +392,7 @@ static int wbec_probe(struct spi_device *spi)
 		return ret;
 	}
 
-	ret = devm_mfd_add_devices(&spi->dev, PLATFORM_DEVID_NONE,
-			      wbec_cells, ARRAY_SIZE(wbec_cells), NULL, 0, NULL);
+	ret = devm_of_platform_populate(&spi->dev);
 	if (ret) {
 		dev_err(&spi->dev, "failed to add MFD devices %d\n", ret);
 		return ret;

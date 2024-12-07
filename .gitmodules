@@ -1,3 +1,4 @@
 [submodule "drivers/net/wireless/realtek/rtl8733bu"]
 	path = drivers/net/wireless/realtek/rtl8733bu
-	url = https://github.com/wirenboard/rtl8733bu
+    url = https://github.com/wirenboard/rtl8733bu
+    branch = v5.15.12-126-wb
