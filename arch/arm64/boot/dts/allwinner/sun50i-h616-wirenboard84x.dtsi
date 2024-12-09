@@ -342,14 +342,6 @@
 		};
 	};
 
-	h616_vqmmc_regulator: mmc-regulator {
-		compatible = "allwinner,h616-mmc-regulator";
-		syscon = <&pio>;
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-boot-on;
-	};
-
 	/*
 	Because PMIC battery driver must be enabled at boot time,
 	we have to give it  some battery description to
@@ -1097,33 +1089,19 @@
 };
 
 &pio {
-	compatible = "allwinner,sun50i-h616-pinctrl", "syscon";
 	vcc-pa-supply = <&reg_dcdc1>;
 	vcc-pc-supply = <&reg_aldo1>;
 	vcc-pd-supply = <&reg_dcdc1>, <&reg_bldo1>;
 	vcc-pe-supply = <&reg_dcdc1>;
 	vcc-pg-supply = <&reg_dcdc1>;
 	vcc-pi-supply = <&reg_dcdc1>;
-
-    mmc0_pins: mmc0-pins {
-        drive-strength = <40>;
-    };
 };
 
 &mmc0 {
 	bus-width = <4>;
 	cd-gpios = <&pio PF 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
-	vmmc-supply = <&vdd_sd_power>;
-	vqmmc-supply = <&h616_vqmmc_regulator>;
-
-	sd-uhs-sdr104;
-	sd-uhs-sdr50;
-	sd-uhs-sdr25;
-	sd-uhs-sdr12;
-	mmc-ddr-1_8v;
-    /* sd-uhs-ddr50;  // Dont work */
-	max-frequency = <100000000>; // >= 100Mhz does not work on some flash drives
+	vmmc-supply = <&reg_dcdc1>, <&vdd_sd_power>;
 };
 
 &mmc2 {
