@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb124) stable; urgency=medium
+
+  * Revert incorrect merge of feature/3930-fast_microsd (v6.8.0-wb122)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 13 Jan 2024 12:57:13 +0300
+
 linux-wb (6.8.0-wb123) stable; urgency=medium
 
   * wb8: add CONFIG_EXT4_FS_SECURITY (docker volume mounts)
