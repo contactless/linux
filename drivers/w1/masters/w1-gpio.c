@@ -74,12 +74,14 @@ static void w1_gpio_write_bit(void *data, u8 bit)
 	struct w1_gpio_ddata *ddata = data;
 
 	gpiod_set_value(ddata->gpiod, bit);
+	printk("w1-gpio: w1_gpio_write_bit; pullup delay: %d", ddata->pullup_duration);
 }
 
 static u8 w1_gpio_read_bit(void *data)
 {
 	struct w1_gpio_ddata *ddata = data;
 
+	printk("w1-gpio: w1_gpio_read_bit; pullup delay: %d", ddata->pullup_duration);
 	return gpiod_get_value(ddata->gpiod) ? 1 : 0;
 }
 
@@ -171,6 +173,8 @@ static int w1_gpio_probe(struct platform_device *pdev)
 		gpiod_set_value(ddata->strong_pullup_gpiod, 0);
 
 	platform_set_drvdata(pdev, master);
+
+	printk("w1-gpio: w1_gpio_probe; pullup delay: %d", ddata->pullup_duration);
 
 	return 0;
 }

@@ -73,6 +73,8 @@ static void w1_write_bit(struct w1_master *dev, int bit)
 {
 	unsigned long flags = 0;
 
+	printk("w1_io.c w1_write_bit");
+
 	if(w1_disable_irqs) local_irq_save(flags);
 
 	if (bit) {
