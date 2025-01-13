@@ -1,3 +1,11 @@
+linux-wb (6.8.0-wb125) stable; urgency=medium
+
+  * implement a MicroSD driver that utilizes the built-in voltage regulator
+    of the H616 to enable high-speed SD-UHS modes (@taraant)
+  * WB8: add high-speed microsd dts
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 13 Jan 2024 15:31:22 +0300
+
 linux-wb (6.8.0-wb124) stable; urgency=medium
 
   * Revert incorrect merge of feature/3930-fast_microsd (v6.8.0-wb122)
