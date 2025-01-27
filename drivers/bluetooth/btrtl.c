@@ -314,6 +314,14 @@ static const struct id_table ic_id_table[] = {
 	  .has_rom_version = true,
 	  .fw_name  = "rtl_bt/rtl8723fu_fw.bin",
 	  .cfg_name = "rtl_bt/rtl8723fu_config" },
+
+	/* 8733BU - Wirenboard */
+	{ IC_INFO(RTL_ROM_LMP_8723B, 0xf, 0x8, HCI_USB),
+	  .config_needed = true,
+	  .has_rom_version = true,
+	  .fw_name  = "rtl_bt/rtl8723fu_fw",
+	  .cfg_name = "rtl_bt/rtl8723fu_config" },
+
 	};
 
 static const struct id_table *btrtl_match_ic(u16 lmp_subver, u16 hci_rev,
