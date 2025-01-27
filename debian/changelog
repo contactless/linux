@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb127) stable; urgency=medium
+
+  * Add support BT-stack in config, add support load firmware for BT-chip RTL 8733BU 
+
+ -- Anton <anton.tarasov@wirenboard.com>  Mon, 27 Jan 2025 10:35:47 +0300
+
 linux-wb (6.8.0-wb126) stable; urgency=medium
 
   * pinctrl-mcp23s08: pass error on unsuccessful regmap_read
