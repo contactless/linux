@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb128-wbtmp1) stable; urgency=medium
+
+  * wb8: tmp build bootlet with full kernel config
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 06 Feb 2025 22:03:21 +0300
+
 linux-wb (6.8.0-wb127) stable; urgency=medium
 
   * wb8: add CONFIG_NF_CONNTRACK_* (extensions for connection tracking)
