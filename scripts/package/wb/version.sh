@@ -12,7 +12,7 @@ setup_kernel_vars() {
 		wb8x-bootlet)
 			INITRAMFS_DIR="/usr/src/wb-initramfs/wb8x-bootlet"
 			DEBARCH=arm64
-			KERNEL_DEFCONFIG="defconfig wb8-bootlet.config"
+			KERNEL_DEFCONFIG="defconfig wb8.config"
 			BOOTLET_DTB=allwinner/sun50i-h616-wirenboard8-bootlet.dtb
 			PROVIDES_BOOTLET_FOR_FITS=y
 			BOOTLET_DEPS=linux-image-wb8
