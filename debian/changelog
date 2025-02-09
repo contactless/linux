@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb128) stable; urgency=medium
+
+  * build bootlet with full kernel config
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 07 Feb 2025 21:38:29 +0300
+
 linux-wb (6.8.0-wb127) stable; urgency=medium
 
   * wb8: add CONFIG_NF_CONNTRACK_* (extensions for connection tracking)
