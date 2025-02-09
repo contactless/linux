@@ -293,6 +293,8 @@ struct sun4i_tcon {
 
 	/* TCON list management */
 	struct list_head		list;
+
+	bool hw_preconfigured;
 };
 
 struct drm_bridge *sun4i_tcon_find_bridge(struct device_node *node);
