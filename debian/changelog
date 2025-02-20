@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb128) stable; urgency=medium
+
+  * wb8: Add HDMI support based on Armbian patches.
+
+ -- Anton <anton.tarasov@wirenboard.com>  Thu, 20 Feb 2025 10:24:18 +0300
+
 linux-wb (6.8.0-wb127) stable; urgency=medium
 
   * wb8: add CONFIG_NF_CONNTRACK_* (extensions for connection tracking)
