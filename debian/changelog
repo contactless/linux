@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb129) stable; urgency=medium
+
+  * wb8: enable USB Audio/MIDI driver
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Wed, 19 Feb 2025 16:29:10 +0300
+
 linux-wb (6.8.0-wb128) stable; urgency=medium
 
   * WB8: Add support for BT for Realtek chip 8733BU
