@@ -37,6 +37,6 @@ examples:
   - |
     prcm_ppu: power-controller@7010210 {
         compatible = "allwinner,sun50i-h616-prcm-ppu";
-        reg = <0x7010210 0x10>;
+        reg = <0x07010250 0x10>;
         #power-domain-cells = <1>;
     };
