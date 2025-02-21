@@ -7,9 +7,8 @@ config SUN20I_PPU
 	default ARCH_SUNXI
 	select PM_GENERIC_DOMAINS
 	help
-	  Say y to enable the PPU power domain driver. This is required
-	  to enable power to certain peripherals, such as the display
-	  engine.
+	  Say y to enable the PPU power domain driver. This saves power
+	  when certain peripherals, such as the video engine, are idle.
 
 config SUN50I_H6_PRCM_PPU
 	tristate "Allwinner H6 PRCM power domain driver"
