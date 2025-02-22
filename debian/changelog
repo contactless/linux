@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb128) stable; urgency=medium
+
+  * wb8: add parameter for Docker 28.0.0
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sat, 22 Feb 2025 11:49:53 +0300
+
 linux-wb (6.8.0-wb127) stable; urgency=medium
 
   * wb8: add CONFIG_NF_CONNTRACK_* (extensions for connection tracking)
