@@ -1,8 +1,20 @@
-linux-wb (6.8.0-wb128) stable; urgency=medium
+linux-wb (6.8.0-wb130) stable; urgency=medium
 
-  * wb8: add parameter for Docker 28.0.0
+  * wb8: Add parameter for Docker 28.0.0
 
  -- Anton <anton.tarasov@wirenboard.com>  Sat, 22 Feb 2025 11:49:53 +0300
+
+linux-wb (6.8.0-wb129) stable; urgency=medium
+
+  * wb8: enable USB Audio/MIDI driver
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Wed, 19 Feb 2025 16:29:10 +0300
+
+linux-wb (6.8.0-wb128) stable; urgency=medium
+
+  * WB8: Add support for BT for Realtek chip 8733BU
+
+ -- Anton <anton.tarasov@wirenboard.com>  Tue, 11 Feb 2025 10:57:39 +0300
 
 linux-wb (6.8.0-wb127) stable; urgency=medium
 
