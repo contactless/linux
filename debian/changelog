@@ -1,3 +1,9 @@
+linux-wb (5.10.35-wb173+wb100) stable; urgency=medium
+
+  * Add parameters for support docker 28.0.0
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 24 Feb 2025 16:01:22 +0300
+
 linux-wb (5.10.35-wb173) stable; urgency=medium
 
   * Update rtl8733bu submodule to use branch v5.15.12-126-wb
