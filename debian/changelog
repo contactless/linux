@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb132) stable; urgency=medium
+
+  * wb8: enable ch341
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Wed, 12 Mar 2025 15:02:21 +0300
+
 linux-wb (6.8.0-wb131) stable; urgency=medium
 
   * wb8: Add HDMI support based on Armbian patches.
