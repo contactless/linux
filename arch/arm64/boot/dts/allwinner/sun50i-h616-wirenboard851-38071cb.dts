@@ -65,7 +65,12 @@
 
 &wbc_modem { /* WBC2-4G */
 	status = "okay";
-    model = "a7600x";
-    type = "4g", "3g", "edge", "gprs";
-    compatible = "wirenboard,wbc-usb";
+	model = "a7600x";
+	type = "4g", "3g", "edge", "gprs";
+	compatible = "wirenboard,wbc-usb";
+};
+
+&led_red {
+	default-state = "off";
+	linux,default-trigger = "default-off";
 };
