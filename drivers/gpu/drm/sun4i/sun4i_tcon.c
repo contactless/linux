@@ -40,6 +40,8 @@
 #include "sun8i_tcon_top.h"
 #include "sunxi_engine.h"
 
+static bool hw_preconfigured;
+
 static struct drm_connector *sun4i_tcon_get_connector(const struct drm_encoder *encoder)
 {
 	struct drm_connector *connector;
@@ -239,6 +241,34 @@ void sun4i_tcon_enable_vblank(struct sun4i_tcon *tcon, bool enable)
 	regmap_update_bits(tcon->regs, SUN4I_TCON_GINT0_REG, mask, val);
 }
 EXPORT_SYMBOL(sun4i_tcon_enable_vblank);
+
+void sun4i_tcon_load_gamma_lut(struct sun4i_tcon *tcon,
+			       struct drm_color_lut *lut)
+{
+	int i;
+
+	for (i = 0; i < SUN4I_TCON_GAMMA_LUT_SIZE; i++) {
+		u32 r, g, b;
+
+		r = drm_color_lut_extract(lut[i].red, 8);
+		g = drm_color_lut_extract(lut[i].green, 8);
+		b = drm_color_lut_extract(lut[i].blue, 8);
+
+		regmap_write(tcon->regs, SUN4I_TCON_GAMMA_TABLE_REG + 4 * i,
+			     SUN4I_TCON_GAMMA_TABLE_R(r) |
+			     SUN4I_TCON_GAMMA_TABLE_G(g) |
+			     SUN4I_TCON_GAMMA_TABLE_B(b));
+	}
+}
+EXPORT_SYMBOL(sun4i_tcon_load_gamma_lut);
+
+void sun4i_tcon_enable_gamma(struct sun4i_tcon *tcon, bool enable)
+{
+	regmap_update_bits(tcon->regs, SUN4I_TCON_GCTL_REG,
+			   SUN4I_TCON_GCTL_GAMMA_ENABLE,
+			   enable ? SUN4I_TCON_GCTL_GAMMA_ENABLE : 0);
+}
+EXPORT_SYMBOL(sun4i_tcon_enable_gamma);
 
 /*
  * This function is a helper for TCON output muxing. The TCON output
@@ -713,6 +743,13 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
 			 const struct drm_encoder *encoder,
 			 const struct drm_display_mode *mode)
 {
+	if (tcon->hw_preconfigured) {
+		// avoid the first modeset
+		tcon->hw_preconfigured = false;
+		hw_preconfigured = false;
+		return;
+	}
+
 	switch (encoder->encoder_type) {
 	case DRM_MODE_ENCODER_DSI:
 		/* DSI is tied to special case of CPU interface */
@@ -853,6 +890,7 @@ static int sun4i_tcon_init_regmap(struct device *dev,
 		return PTR_ERR(tcon->regs);
 	}
 
+	if (!tcon->hw_preconfigured) {
 	/* Make sure the TCON is disabled and all IRQs are off */
 	regmap_write(tcon->regs, SUN4I_TCON_GCTL_REG, 0);
 	regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, 0);
@@ -861,6 +899,7 @@ static int sun4i_tcon_init_regmap(struct device *dev,
 	/* Disable IO lines and set them to tristate */
 	regmap_write(tcon->regs, SUN4I_TCON0_IO_TRI_REG, ~0);
 	regmap_write(tcon->regs, SUN4I_TCON1_IO_TRI_REG, ~0);
+	}
 
 	return 0;
 }
@@ -1132,6 +1171,9 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 	tcon->dev = dev;
 	tcon->id = engine->id;
 	tcon->quirks = of_device_get_match_data(dev);
+	
+	if (tcon->id == 0)
+		tcon->hw_preconfigured = hw_preconfigured;
 
 	tcon->lcd_rst = devm_reset_control_get(dev, "lcd");
 	if (IS_ERR(tcon->lcd_rst)) {
@@ -1153,11 +1195,13 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 		}
 	}
 
+	if (!tcon->hw_preconfigured) {
 	/* Make sure our TCON is reset */
 	ret = reset_control_reset(tcon->lcd_rst);
 	if (ret) {
 		dev_err(dev, "Couldn't deassert our reset line\n");
 		return ret;
+	}
 	}
 
 	if (tcon->quirks->supports_lvds) {
@@ -1265,6 +1309,10 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 			goto err_free_dclk;
 	}
 
+	regmap_update_bits(tcon->regs, SUN4I_TCON_GCTL_REG,
+			   SUN4I_TCON_GCTL_PAD_SEL,
+			   SUN4I_TCON_GCTL_PAD_SEL);
+
 	if (tcon->quirks->needs_de_be_mux) {
 		/*
 		 * We assume there is no dynamic muxing of backends
@@ -1285,6 +1333,11 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
 	}
 
 	list_add_tail(&tcon->list, &drv->tcon_list);
+
+	drm_mode_crtc_set_gamma_size(&tcon->crtc->crtc,
+				     SUN4I_TCON_GAMMA_LUT_SIZE);
+	drm_crtc_enable_color_mgmt(&tcon->crtc->crtc, 0, false,
+				   tcon->crtc->crtc.gamma_size);
 
 	return 0;
 
@@ -1317,7 +1370,14 @@ static int sun4i_tcon_probe(struct platform_device *pdev)
 	const struct sun4i_tcon_quirks *quirks;
 	struct drm_bridge *bridge;
 	struct drm_panel *panel;
+	u32 fb_start;
 	int ret;
+
+	ret = of_property_read_u32_index(of_chosen, "p-boot,framebuffer-start", 0, &fb_start);
+	if (ret == 0) {
+		/* the display pipeline is already initialized by p-boot */
+		hw_preconfigured = true;
+	}
 
 	quirks = of_device_get_match_data(&pdev->dev);
 

@@ -1,8 +1,82 @@
-linux-wb (6.8.0-wb121) stable; urgency=medium
+linux-wb (6.8.0-wb133) stable; urgency=medium
 
   * wb8.5: add 38071cb support
 
- -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 04 Dec 2024 13:30:40 +0300
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 14 Mar 2025 18:29:40 +0300
+
+linux-wb (6.8.0-wb132) stable; urgency=medium
+
+  * wb8: enable ch341
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Wed, 12 Mar 2025 15:02:21 +0300
+
+linux-wb (6.8.0-wb131) stable; urgency=medium
+
+  * wb8: Add HDMI support based on Armbian patches.
+
+ -- Anton <anton.tarasov@wirenboard.com>  Wed, 12 Mar 2025 10:39:21 +0300
+
+linux-wb (6.8.0-wb130) stable; urgency=medium
+
+  * Add parameters for support docker 28.0.0
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sun, 23 Feb 2025 18:43:02 +0300
+
+linux-wb (6.8.0-wb129) stable; urgency=medium
+
+  * wb8: enable USB Audio/MIDI driver
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Wed, 19 Feb 2025 16:29:10 +0300
+
+linux-wb (6.8.0-wb128) stable; urgency=medium
+
+  * WB8: Add support for BT for Realtek chip 8733BU
+
+ -- Anton <anton.tarasov@wirenboard.com>  Tue, 11 Feb 2025 10:57:39 +0300
+
+linux-wb (6.8.0-wb127) stable; urgency=medium
+
+  * wb8: add CONFIG_NF_CONNTRACK_* (extensions for connection tracking)
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Thu, 30 Jan 2025 20:40:00 +0400
+
+linux-wb (6.8.0-wb126) stable; urgency=medium
+
+  * pinctrl-mcp23s08: pass error on unsuccessful regmap_read
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 23 Jan 2025 21:03:21 +0300
+
+linux-wb (6.8.0-wb125) stable; urgency=medium
+
+  * implement a MicroSD driver that utilizes the built-in voltage regulator
+    of the H616 to enable high-speed SD-UHS modes (@taraant)
+  * WB8: add high-speed microsd dts
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 13 Jan 2024 15:31:22 +0300
+
+linux-wb (6.8.0-wb124) stable; urgency=medium
+
+  * Revert incorrect merge of feature/3930-fast_microsd (v6.8.0-wb122)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 13 Jan 2024 12:57:13 +0300
+
+linux-wb (6.8.0-wb123) stable; urgency=medium
+
+  * wb8: add CONFIG_EXT4_FS_SECURITY (docker volume mounts)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 23 Dec 2024 11:32:21 +0300
+
+linux-wb (6.8.0-wb122) stable; urgency=medium
+
+  * Merging changes from the branch feature/3930-fast_microsd (enabling high-speed UHS 1.8V mode)
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sat, 07 Dec 2024 05:24:29 +0300
+
+linux-wb (6.8.0-wb121) stable; urgency=medium
+
+  * wb8m: move rtc from crypto-chip bus to wbio bus
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 04 Dec 2024 14:15:16 +0300
 
 linux-wb (6.8.0-wb120) stable; urgency=medium
 

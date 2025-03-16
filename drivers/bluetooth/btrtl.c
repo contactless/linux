@@ -309,10 +309,10 @@ static const struct id_table ic_id_table[] = {
 	  .hw_info  = "rtl8851bu" },
 
 	/* 8733BU */
-	{ IC_INFO(RTL_ROM_LMP_8723B, 0xf, 0xb, HCI_USB),
+	{ IC_INFO(RTL_ROM_LMP_8723B, 0xf, 0x8, HCI_USB),
 	  .config_needed = true,
 	  .has_rom_version = true,
-	  .fw_name  = "rtl_bt/rtl8723fu_fw.bin",
+	  .fw_name  = "rtl_bt/rtl8723fu_fw",
 	  .cfg_name = "rtl_bt/rtl8723fu_config" },
 	};
 
