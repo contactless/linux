@@ -1,3 +1,10 @@
+linux-wb (6.8.0-wb133) stable; urgency=medium
+
+  * wb8: possibly fix stuck of wbio-ao-10v-8 & wbio-ad-dv-12
+  * authored by @taraant
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 18 Mar 2025 16:45:23 +0300
+
 linux-wb (6.8.0-wb132) stable; urgency=medium
 
   * wb8: enable ch341
