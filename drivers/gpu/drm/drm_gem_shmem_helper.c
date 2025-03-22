@@ -339,7 +339,11 @@ int drm_gem_shmem_vmap(struct drm_gem_shmem_object *shmem,
 	int ret = 0;
 
 	if (drm_gem_is_imported(obj)) {
-		ret = dma_buf_vmap(obj->import_attach->dmabuf, map);
+<<<<<<< HEAD
+	ret = dma_buf_vmap(obj->dma_buf, map);
+=======
+		ret = dma_buf_vmap(obj->dma_buf, map);
+>>>>>>> a48040e29f39 (drm/shmem-helper: Remove obsoleted is_iomem test)
 	} else {
 		pgprot_t prot = PAGE_KERNEL;
 
