@@ -1,3 +1,9 @@
+linux-wb (5.10.35-wb174) stable; urgency=medium
+
+  * Add a delay before turning i2c on bus error
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Tue, 25 Mar 2025 10:52:35 +0300
+
 linux-wb (5.10.35-wb173) stable; urgency=medium
 
   * Update rtl8733bu submodule to use branch v5.15.12-126-wb
