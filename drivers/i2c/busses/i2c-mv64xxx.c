@@ -135,8 +135,8 @@ struct mv64xxx_i2c_data {
 	int			rc;
 	u32			freq_m;
 	u32			freq_n;
-	struct clk			  *clk;
-	struct clk			  *reg_clk;
+	struct clk              *clk;
+	struct clk              *reg_clk;
 	wait_queue_head_t	waitq;
 	spinlock_t		lock;
 	struct i2c_msg		*msg;
@@ -181,7 +181,7 @@ mv64xxx_i2c_prepare_for_io(struct mv64xxx_i2c_data *drv_data,
 	u32	dir = 0;
 
 	drv_data->cntl_bits = MV64XXX_I2C_REG_CONTROL_ACK |
-				  MV64XXX_I2C_REG_CONTROL_TWSIEN;
+			      MV64XXX_I2C_REG_CONTROL_TWSIEN;
 
 	if (!drv_data->atomic)
 		drv_data->cntl_bits |= MV64XXX_I2C_REG_CONTROL_INTEN;
@@ -361,7 +361,7 @@ static void mv64xxx_i2c_send_start(struct mv64xxx_i2c_data *drv_data)
 
 	mv64xxx_i2c_prepare_for_io(drv_data, drv_data->msgs);
 	writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_START,
-		   drv_data->reg_base + drv_data->reg_offsets.control);
+	       drv_data->reg_base + drv_data->reg_offsets.control);
 }
 
 static void
@@ -470,12 +470,12 @@ mv64xxx_i2c_intr_offload(struct mv64xxx_i2c_data *drv_data)
 	u32 cause, status;
 
 	cause = readl(drv_data->reg_base +
-			  MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
+		      MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
 	if (!cause)
 		return IRQ_NONE;
 
 	status = readl(drv_data->reg_base +
-			   MV64XXX_I2C_REG_BRIDGE_STATUS);
+		       MV64XXX_I2C_REG_BRIDGE_STATUS);
 
 	if (status & MV64XXX_I2C_BRIDGE_STATUS_ERROR) {
 		drv_data->rc = -EIO;
@@ -508,7 +508,7 @@ mv64xxx_i2c_intr_offload(struct mv64xxx_i2c_data *drv_data)
 out:
 	writel(0, drv_data->reg_base +	MV64XXX_I2C_REG_BRIDGE_CONTROL);
 	writel(0, drv_data->reg_base +
-		   MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
+	       MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
 	drv_data->block = 0;
 
 	wake_up(&drv_data->waitq);
@@ -547,7 +547,7 @@ mv64xxx_i2c_intr(int irq, void *dev_id)
 
 		if (drv_data->irq_clear_inverted)
 			writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_IFLG,
-				   drv_data->reg_base + drv_data->reg_offsets.control);
+			       drv_data->reg_base + drv_data->reg_offsets.control);
 
 		rc = IRQ_HANDLED;
 	}
@@ -607,7 +607,7 @@ static void mv64xxx_i2c_wait_polling(struct mv64xxx_i2c_data *drv_data)
 	ktime_t timeout = ktime_add_ms(ktime_get(), drv_data->adapter.timeout);
 
 	while (READ_ONCE(drv_data->block) &&
-		   ktime_compare(ktime_get(), timeout) < 0) {
+	       ktime_compare(ktime_get(), timeout) < 0) {
 		udelay(5);
 		mv64xxx_i2c_intr(0, drv_data);
 	}
@@ -895,7 +895,7 @@ mv64xxx_of_config(struct mv64xxx_i2c_data *drv_data,
 		bus_freq = I2C_MAX_STANDARD_MODE_FREQ; /* 100kHz by default */
 
 	if (of_device_is_compatible(np, "allwinner,sun4i-a10-i2c") ||
-		of_device_is_compatible(np, "allwinner,sun6i-a31-i2c"))
+	    of_device_is_compatible(np, "allwinner,sun6i-a31-i2c"))
 		drv_data->clk_n_base_0 = true;
 
 	if (!mv64xxx_find_baud_factors(drv_data, bus_freq, tclk)) {
@@ -1181,7 +1181,7 @@ static const struct dev_pm_ops mv64xxx_i2c_pm_ops = {
 	SET_RUNTIME_PM_OPS(mv64xxx_i2c_runtime_suspend,
 			   mv64xxx_i2c_runtime_resume, NULL)
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-					  pm_runtime_force_resume)
+				      pm_runtime_force_resume)
 };
 
 static struct platform_driver mv64xxx_i2c_driver = {
@@ -1189,7 +1189,7 @@ static struct platform_driver mv64xxx_i2c_driver = {
 	.remove_new = mv64xxx_i2c_remove,
 	.driver	= {
 		.name	= MV64XXX_I2C_CTLR_NAME,
-		.pm	 = &mv64xxx_i2c_pm_ops,
+		.pm     = &mv64xxx_i2c_pm_ops,
 		.of_match_table = mv64xxx_i2c_of_match_table,
 	},
 };
