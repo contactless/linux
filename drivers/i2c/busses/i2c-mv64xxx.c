@@ -135,8 +135,8 @@ struct mv64xxx_i2c_data {
 	int			rc;
 	u32			freq_m;
 	u32			freq_n;
-	struct clk              *clk;
-	struct clk              *reg_clk;
+	struct clk			  *clk;
+	struct clk			  *reg_clk;
 	wait_queue_head_t	waitq;
 	spinlock_t		lock;
 	struct i2c_msg		*msg;
@@ -150,8 +150,8 @@ struct mv64xxx_i2c_data {
 	bool			clk_n_base_0;
 	struct i2c_bus_recovery_info	rinfo;
 	bool			atomic;
-    struct work_struct error_work;
-    bool bus_disabled;
+	struct work_struct error_work;
+	bool bus_disabled;
 };
 
 static struct mv64xxx_i2c_regs mv64xxx_i2c_regs_mv64xxx = {
@@ -181,7 +181,7 @@ mv64xxx_i2c_prepare_for_io(struct mv64xxx_i2c_data *drv_data,
 	u32	dir = 0;
 
 	drv_data->cntl_bits = MV64XXX_I2C_REG_CONTROL_ACK |
-			      MV64XXX_I2C_REG_CONTROL_TWSIEN;
+				  MV64XXX_I2C_REG_CONTROL_TWSIEN;
 
 	if (!drv_data->atomic)
 		drv_data->cntl_bits |= MV64XXX_I2C_REG_CONTROL_INTEN;
@@ -336,18 +336,18 @@ mv64xxx_i2c_fsm(struct mv64xxx_i2c_data *drv_data, u32 status)
 			 drv_data->state, status, drv_data->msg->addr,
 			 drv_data->msg->flags);
 		drv_data->action = MV64XXX_I2C_ACTION_SEND_STOP;
-        drv_data->state = MV64XXX_I2C_STATE_IDLE;
+		drv_data->state = MV64XXX_I2C_STATE_IDLE;
 		drv_data->rc = -EAGAIN;
 
-        // reset i2c:
-        mv64xxx_i2c_hw_init(drv_data);
+		// reset i2c:
+		mv64xxx_i2c_hw_init(drv_data);
 
-        if (!drv_data->bus_disabled) {
-            drv_data->bus_disabled = true;
-            dev_err(&drv_data->adapter.dev,
-                "mv64xxx_i2c_fsm: disabling bus, scheduling recovery\n");
-            schedule_work(&drv_data->error_work);
-        }
+		if (!drv_data->bus_disabled) {
+			drv_data->bus_disabled = true;
+			dev_err(&drv_data->adapter.dev,
+				"mv64xxx_i2c_fsm: disabling bus, scheduling recovery\n");
+			schedule_work(&drv_data->error_work);
+		}
 	}
 }
 
@@ -361,13 +361,13 @@ static void mv64xxx_i2c_send_start(struct mv64xxx_i2c_data *drv_data)
 
 	mv64xxx_i2c_prepare_for_io(drv_data, drv_data->msgs);
 	writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_START,
-	       drv_data->reg_base + drv_data->reg_offsets.control);
+		   drv_data->reg_base + drv_data->reg_offsets.control);
 }
 
 static void
 mv64xxx_i2c_do_action(struct mv64xxx_i2c_data *drv_data)
 {
-	switch(drv_data->action) {
+	switch (drv_data->action) {
 	case MV64XXX_I2C_ACTION_SEND_RESTART:
 		/* We should only get here if we have further messages */
 		BUG_ON(drv_data->num_msgs == 0);
@@ -470,12 +470,12 @@ mv64xxx_i2c_intr_offload(struct mv64xxx_i2c_data *drv_data)
 	u32 cause, status;
 
 	cause = readl(drv_data->reg_base +
-		      MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
+			  MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
 	if (!cause)
 		return IRQ_NONE;
 
 	status = readl(drv_data->reg_base +
-		       MV64XXX_I2C_REG_BRIDGE_STATUS);
+			   MV64XXX_I2C_REG_BRIDGE_STATUS);
 
 	if (status & MV64XXX_I2C_BRIDGE_STATUS_ERROR) {
 		drv_data->rc = -EIO;
@@ -508,7 +508,7 @@ mv64xxx_i2c_intr_offload(struct mv64xxx_i2c_data *drv_data)
 out:
 	writel(0, drv_data->reg_base +	MV64XXX_I2C_REG_BRIDGE_CONTROL);
 	writel(0, drv_data->reg_base +
-	       MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
+		   MV64XXX_I2C_REG_BRIDGE_INTR_CAUSE);
 	drv_data->block = 0;
 
 	wake_up(&drv_data->waitq);
@@ -547,7 +547,7 @@ mv64xxx_i2c_intr(int irq, void *dev_id)
 
 		if (drv_data->irq_clear_inverted)
 			writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_IFLG,
-			       drv_data->reg_base + drv_data->reg_offsets.control);
+				   drv_data->reg_base + drv_data->reg_offsets.control);
 
 		rc = IRQ_HANDLED;
 	}
@@ -607,7 +607,7 @@ static void mv64xxx_i2c_wait_polling(struct mv64xxx_i2c_data *drv_data)
 	ktime_t timeout = ktime_add_ms(ktime_get(), drv_data->adapter.timeout);
 
 	while (READ_ONCE(drv_data->block) &&
-	       ktime_compare(ktime_get(), timeout) < 0) {
+		   ktime_compare(ktime_get(), timeout) < 0) {
 		udelay(5);
 		mv64xxx_i2c_intr(0, drv_data);
 	}
@@ -736,10 +736,10 @@ mv64xxx_i2c_can_offload(struct mv64xxx_i2c_data *drv_data)
 	 * a length between 1 and 8 bytes.
 	 */
 	if (num == 2 &&
-	    mv64xxx_i2c_valid_offload_sz(msgs) &&
-	    mv64xxx_i2c_valid_offload_sz(msgs + 1) &&
-	    !(msgs[0].flags & I2C_M_RD) &&
-	    msgs[1].flags & I2C_M_RD)
+		mv64xxx_i2c_valid_offload_sz(msgs) &&
+		mv64xxx_i2c_valid_offload_sz(msgs + 1) &&
+		!(msgs[0].flags & I2C_M_RD) &&
+		msgs[1].flags & I2C_M_RD)
 		return true;
 
 	return false;
@@ -764,10 +764,10 @@ mv64xxx_i2c_xfer_core(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
 	int rc, ret = num;
 
-    if (drv_data->bus_disabled) {
+	if (drv_data->bus_disabled) {
 		dev_dbg(&adap->dev,
 			 "mv64xxx_i2c: bus is disabled, ignoring xfer\n");
-        msleep(50);
+		msleep(50);
 		return -EAGAIN;
 	}
 
@@ -895,7 +895,7 @@ mv64xxx_of_config(struct mv64xxx_i2c_data *drv_data,
 		bus_freq = I2C_MAX_STANDARD_MODE_FREQ; /* 100kHz by default */
 
 	if (of_device_is_compatible(np, "allwinner,sun4i-a10-i2c") ||
-	    of_device_is_compatible(np, "allwinner,sun6i-a31-i2c"))
+		of_device_is_compatible(np, "allwinner,sun6i-a31-i2c"))
 		drv_data->clk_n_base_0 = true;
 
 	if (!mv64xxx_find_baud_factors(drv_data, bus_freq, tclk)) {
@@ -963,6 +963,7 @@ mv64xxx_of_config(struct mv64xxx_i2c_data *drv_data,
 static void mv64xxx_i2c_prepare_recovery(struct i2c_adapter *adap)
 {
 	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
+
 	drv_data->state = MV64XXX_I2C_STATE_INVALID;
 }
 
@@ -1015,30 +1016,30 @@ mv64xxx_i2c_runtime_resume(struct device *dev)
 
 static void mv64xxx_i2c_error_recovery_work(struct work_struct *work)
 {
-    /*
-     * mv64xxx_i2c_error_recovery_work - bottom-half task to handle I2C error recovery
-     *
-     * This function is scheduled (via schedule_work()) when the driver detects a
-     * critical or repeated I2C error in atomic context (e.g., from an IRQ handler).
-     * Because sleeping is not permitted in interrupt context, we delegate any
-     * time-consuming actions here in a regular kernel workqueue context.
-     *
-     * Steps:
-     * 1) Sleep for 50 ms (msleep(50)) to allow other subsystems (e.g., SPI,
-     *    watchdog) to proceed and to give the I2C device some time to recover.
-     * 2) Acquire the driver's spinlock to synchronize with the interrupt handler.
-     * 3) If the I2C bus is still marked as disabled (bus_disabled == true), then:
-     *    - Reset the controller with mv64xxx_i2c_hw_init().
-     *    - Attempt bus recovery i2c_recover_bus().
-     *    - Re-enable the bus by setting bus_disabled = false.
-     * 4) Release the spinlock.
-     *
-     * The idea is to momentarily "back off" from hammering the I2C bus when an
-     * error is detected, and then properly reinitialize the hardware in a safe
-     * context. This approach helps prevent endless IRQ loops and CPU starvation
-     * that can occur if we tried to reset the controller directly in the atomic
-     * interrupt context.
-     */
+	/*
+	 * mv64xxx_i2c_error_recovery_work - bottom-half task to handle I2C error recovery
+	 *
+	 * This function is scheduled (via schedule_work()) when the driver detects a
+	 * critical or repeated I2C error in atomic context (e.g., from an IRQ handler).
+	 * Because sleeping is not permitted in interrupt context, we delegate any
+	 * time-consuming actions here in a regular kernel workqueue context.
+	 *
+	 * Steps:
+	 * 1) Sleep for 50 ms (msleep(50)) to allow other subsystems (e.g., SPI,
+	 *	watchdog) to proceed and to give the I2C device some time to recover.
+	 * 2) Acquire the driver's spinlock to synchronize with the interrupt handler.
+	 * 3) If the I2C bus is still marked as disabled (bus_disabled == true), then:
+	 *	- Reset the controller with mv64xxx_i2c_hw_init().
+	 *	- Attempt bus recovery i2c_recover_bus().
+	 *	- Re-enable the bus by setting bus_disabled = false.
+	 * 4) Release the spinlock.
+	 *
+	 * The idea is to momentarily "back off" from hammering the I2C bus when an
+	 * error is detected, and then properly reinitialize the hardware in a safe
+	 * context. This approach helps prevent endless IRQ loops and CPU starvation
+	 * that can occur if we tried to reset the controller directly in the atomic
+	 * interrupt context.
+	 */
 
 	struct mv64xxx_i2c_data *drv_data =
 		container_of(work, struct mv64xxx_i2c_data, error_work);
@@ -1048,9 +1049,9 @@ static void mv64xxx_i2c_error_recovery_work(struct work_struct *work)
 
 	spin_lock_irqsave(&drv_data->lock, flags);
 	if (drv_data->bus_disabled) {
-        dev_warn(&drv_data->adapter.dev, "mv64xxx_i2c: recovering from error\n");
-        i2c_recover_bus(&drv_data->adapter);
-        drv_data->bus_disabled = false;
+		dev_warn(&drv_data->adapter.dev, "mv64xxx_i2c: recovering from error\n");
+		i2c_recover_bus(&drv_data->adapter);
+		drv_data->bus_disabled = false;
 	}
 	spin_unlock_irqrestore(&drv_data->lock, flags);
 }
@@ -1140,14 +1141,17 @@ mv64xxx_i2c_probe(struct platform_device *pd)
 			"mv64xxx: Can't register intr handler irq%d: %d\n",
 			drv_data->irq, rc);
 		goto exit_disable_pm;
-	} else if ((rc = i2c_add_numbered_adapter(&drv_data->adapter)) != 0) {
-		dev_err(&drv_data->adapter.dev,
-			"mv64xxx: Can't add i2c adapter, rc: %d\n", -rc);
-		goto exit_free_irq;
+	} else {
+		rc = i2c_add_numbered_adapter(&drv_data->adapter);
+		if (rc) {
+			dev_err(&drv_data->adapter.dev,
+				"mv64xxx: Can't add i2c adapter, rc: %d\n", -rc);
+			goto exit_free_irq;
+		}
 	}
 
-    INIT_WORK(&drv_data->error_work, mv64xxx_i2c_error_recovery_work);
-    drv_data->bus_disabled = false;
+	INIT_WORK(&drv_data->error_work, mv64xxx_i2c_error_recovery_work);
+	drv_data->bus_disabled = false;
 
 	return 0;
 
@@ -1177,7 +1181,7 @@ static const struct dev_pm_ops mv64xxx_i2c_pm_ops = {
 	SET_RUNTIME_PM_OPS(mv64xxx_i2c_runtime_suspend,
 			   mv64xxx_i2c_runtime_resume, NULL)
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				      pm_runtime_force_resume)
+					  pm_runtime_force_resume)
 };
 
 static struct platform_driver mv64xxx_i2c_driver = {
@@ -1185,7 +1189,7 @@ static struct platform_driver mv64xxx_i2c_driver = {
 	.remove_new = mv64xxx_i2c_remove,
 	.driver	= {
 		.name	= MV64XXX_I2C_CTLR_NAME,
-		.pm     = &mv64xxx_i2c_pm_ops,
+		.pm	 = &mv64xxx_i2c_pm_ops,
 		.of_match_table = mv64xxx_i2c_of_match_table,
 	},
 };
