@@ -736,10 +736,10 @@ mv64xxx_i2c_can_offload(struct mv64xxx_i2c_data *drv_data)
 	 * a length between 1 and 8 bytes.
 	 */
 	if (num == 2 &&
-		mv64xxx_i2c_valid_offload_sz(msgs) &&
-		mv64xxx_i2c_valid_offload_sz(msgs + 1) &&
-		!(msgs[0].flags & I2C_M_RD) &&
-		msgs[1].flags & I2C_M_RD)
+	    mv64xxx_i2c_valid_offload_sz(msgs) &&
+	    mv64xxx_i2c_valid_offload_sz(msgs + 1) &&
+	    !(msgs[0].flags & I2C_M_RD) &&
+	    msgs[1].flags & I2C_M_RD)
 		return true;
 
 	return false;
