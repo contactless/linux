@@ -1,8 +1,20 @@
-linux-wb (5.10.35-wb174) stable; urgency=medium
+linux-wb (5.10.35-wb176) stable; urgency=medium
 
   * Add a delay before turning i2c on bus error
 
  -- Anton Tarasov <anton.tarasov@wirenboard.com>  Tue, 25 Mar 2025 10:52:35 +0300
+
+linux-wb (5.10.35-wb175) stable; urgency=medium
+
+  *  wb6: support docker 28.0.0
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 24 Feb 2025 17:25:21 +0300
+
+linux-wb (5.10.35-wb174) stable; urgency=medium
+
+  *  Add parameters for support docker 28.0.0
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sun, 23 Feb 2025 18:33:33 +0300
 
 linux-wb (5.10.35-wb173) stable; urgency=medium
 
