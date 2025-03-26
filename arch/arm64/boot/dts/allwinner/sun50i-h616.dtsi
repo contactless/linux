@@ -398,7 +398,8 @@
 		};
 
 		iommu: iommu@30f0000 {
-			compatible = "allwinner,sun50i-h616-iommu";
+			compatible = "allwinner,sun50i-h616-iommu",
+			             "allwinner,sun50i-h6-iommu";
 			reg = <0x030f0000 0x10000>;
 			interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&ccu CLK_BUS_IOMMU>;
