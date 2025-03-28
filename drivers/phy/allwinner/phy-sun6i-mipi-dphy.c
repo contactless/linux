@@ -195,6 +195,8 @@ struct sun6i_dphy {
 
 	const struct sun6i_dphy_variant		*variant;
 	enum sun6i_dphy_direction		direction;
+
+	bool hw_preconfigured;
 };
 
 static int sun6i_dphy_init(struct phy *phy)
@@ -225,6 +227,11 @@ static int sun6i_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 static void sun6i_a31_mipi_dphy_tx_power_on(struct sun6i_dphy *dphy)
 {
 	u8 lanes_mask = GENMASK(dphy->config.lanes - 1, 0);
+
+	if (dphy->hw_preconfigured) {
+		dphy->hw_preconfigured = false;
+		return;
+	}
 
 	regmap_write(dphy->regs, SUN6I_DPHY_ANA0_REG,
 		     SUN6I_DPHY_ANA0_REG_PWS |
@@ -551,6 +558,7 @@ static int sun6i_dphy_probe(struct platform_device *pdev)
 	struct sun6i_dphy *dphy;
 	const char *direction;
 	void __iomem *regs;
+	u32 fb_start;
 	int ret;
 
 	dphy = devm_kzalloc(&pdev->dev, sizeof(*dphy), GFP_KERNEL);
@@ -560,6 +568,12 @@ static int sun6i_dphy_probe(struct platform_device *pdev)
 	dphy->variant = device_get_match_data(&pdev->dev);
 	if (!dphy->variant)
 		return -EINVAL;
+
+	ret = of_property_read_u32_index(of_chosen, "p-boot,framebuffer-start", 0, &fb_start);
+	if (ret == 0) {
+		/* the display pipeline is already initialized by p-boot */
+		dphy->hw_preconfigured = true;
+	}
 
 	regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(regs)) {
