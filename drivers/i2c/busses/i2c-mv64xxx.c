@@ -149,6 +149,8 @@ struct mv64xxx_i2c_data {
 	bool			clk_n_base_0;
 	struct i2c_bus_recovery_info	rinfo;
 	bool			atomic;
+	struct work_struct error_work;
+	bool bus_disabled;
 };
 
 static struct mv64xxx_i2c_regs mv64xxx_i2c_regs_mv64xxx = {
@@ -328,9 +330,18 @@ mv64xxx_i2c_fsm(struct mv64xxx_i2c_data *drv_data, u32 status)
 			 drv_data->state, status, drv_data->msg->addr,
 			 drv_data->msg->flags);
 		drv_data->action = MV64XXX_I2C_ACTION_SEND_STOP;
-		mv64xxx_i2c_hw_init(drv_data);
-		i2c_recover_bus(&drv_data->adapter);
+		drv_data->state = MV64XXX_I2C_STATE_IDLE;
 		drv_data->rc = -EAGAIN;
+
+		// reset i2c:
+		mv64xxx_i2c_hw_init(drv_data);
+
+		if (!drv_data->bus_disabled) {
+			drv_data->bus_disabled = true;
+			dev_err(&drv_data->adapter.dev,
+				"mv64xxx_i2c_fsm: disabling bus, scheduling recovery\n");
+			schedule_work(&drv_data->error_work);
+		}
 	}
 }
 
@@ -350,7 +361,7 @@ static void mv64xxx_i2c_send_start(struct mv64xxx_i2c_data *drv_data)
 static void
 mv64xxx_i2c_do_action(struct mv64xxx_i2c_data *drv_data)
 {
-	switch(drv_data->action) {
+	switch (drv_data->action) {
 	case MV64XXX_I2C_ACTION_SEND_RESTART:
 		/* We should only get here if we have further messages */
 		BUG_ON(drv_data->num_msgs == 0);
@@ -747,6 +758,13 @@ mv64xxx_i2c_xfer_core(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
 	int rc, ret = num;
 
+	if (drv_data->bus_disabled) {
+		dev_dbg(&adap->dev,
+			 "mv64xxx_i2c: bus is disabled, ignoring xfer\n");
+		msleep(50);
+		return -EAGAIN;
+	}
+
 	rc = pm_runtime_resume_and_get(&adap->dev);
 	if (rc)
 		return rc;
@@ -939,6 +957,7 @@ mv64xxx_of_config(struct mv64xxx_i2c_data *drv_data,
 static void mv64xxx_i2c_prepare_recovery(struct i2c_adapter *adap)
 {
 	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
+
 	drv_data->state = MV64XXX_I2C_STATE_INVALID;
 }
 
@@ -987,6 +1006,48 @@ mv64xxx_i2c_runtime_resume(struct device *dev)
 	mv64xxx_i2c_hw_init(drv_data);
 
 	return 0;
+}
+
+static void mv64xxx_i2c_error_recovery_work(struct work_struct *work)
+{
+	/*
+	 * mv64xxx_i2c_error_recovery_work - bottom-half task to handle I2C error recovery
+	 *
+	 * This function is scheduled (via schedule_work()) when the driver detects a
+	 * critical or repeated I2C error in atomic context (e.g., from an IRQ handler).
+	 * Because sleeping is not permitted in interrupt context, we delegate any
+	 * time-consuming actions here in a regular kernel workqueue context.
+	 *
+	 * Steps:
+	 * 1) Sleep for 50 ms (msleep(50)) to allow other subsystems (e.g., SPI,
+	 *	watchdog) to proceed and to give the I2C device some time to recover.
+	 * 2) Acquire the driver's spinlock to synchronize with the interrupt handler.
+	 * 3) If the I2C bus is still marked as disabled (bus_disabled == true), then:
+	 *	- Reset the controller with mv64xxx_i2c_hw_init().
+	 *	- Attempt bus recovery i2c_recover_bus().
+	 *	- Re-enable the bus by setting bus_disabled = false.
+	 * 4) Release the spinlock.
+	 *
+	 * The idea is to momentarily "back off" from hammering the I2C bus when an
+	 * error is detected, and then properly reinitialize the hardware in a safe
+	 * context. This approach helps prevent endless IRQ loops and CPU starvation
+	 * that can occur if we tried to reset the controller directly in the atomic
+	 * interrupt context.
+	 */
+
+	struct mv64xxx_i2c_data *drv_data =
+		container_of(work, struct mv64xxx_i2c_data, error_work);
+	unsigned long flags;
+
+	msleep(50);
+
+	spin_lock_irqsave(&drv_data->lock, flags);
+	if (drv_data->bus_disabled) {
+		dev_warn(&drv_data->adapter.dev, "mv64xxx_i2c: recovering from error\n");
+		i2c_recover_bus(&drv_data->adapter);
+		drv_data->bus_disabled = false;
+	}
+	spin_unlock_irqrestore(&drv_data->lock, flags);
 }
 
 static int
@@ -1074,11 +1135,17 @@ mv64xxx_i2c_probe(struct platform_device *pd)
 			"mv64xxx: Can't register intr handler irq%d: %d\n",
 			drv_data->irq, rc);
 		goto exit_disable_pm;
-	} else if ((rc = i2c_add_numbered_adapter(&drv_data->adapter)) != 0) {
-		dev_err(&drv_data->adapter.dev,
-			"mv64xxx: Can't add i2c adapter, rc: %d\n", -rc);
-		goto exit_free_irq;
+	} else {
+		rc = i2c_add_numbered_adapter(&drv_data->adapter);
+		if (rc) {
+			dev_err(&drv_data->adapter.dev,
+				"mv64xxx: Can't add i2c adapter, rc: %d\n", -rc);
+			goto exit_free_irq;
+		}
 	}
+
+	INIT_WORK(&drv_data->error_work, mv64xxx_i2c_error_recovery_work);
+	drv_data->bus_disabled = false;
 
 	return 0;
 
