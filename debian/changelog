@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb134) stable; urgency=medium
+
+  * wb8: add all usb-serial modules as were in wb7
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 01 Apr 2025 14:29:11 +0300
+
 linux-wb (6.8.0-wb133) stable; urgency=medium
 
   * Add a delay before turning i2c on bus error
