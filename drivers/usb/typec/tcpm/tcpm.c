@@ -4616,7 +4616,7 @@ static int tcpm_acc_attach(struct tcpm_port *port)
 	int ret;
 	enum typec_role role;
 	enum typec_data_role data;
-	int state = TYPEC_STATE_USB;
+int state = TYPEC_STATE_USB;
 
 	if (port->attached)
 		return 0;
