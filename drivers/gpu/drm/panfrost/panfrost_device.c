@@ -213,7 +213,6 @@ int panfrost_device_init(struct panfrost_device *pfdev)
 	mutex_init(&pfdev->debugfs.gems_lock);
 	INIT_LIST_HEAD(&pfdev->debugfs.gems_list);
 #endif
-
 	err = panfrost_pm_domain_init(pfdev);
 	if (err)
 		return err;
