@@ -4412,8 +4412,7 @@ static int tcpm_src_attach(struct tcpm_port *port)
 	if (ret < 0)
 		return ret;
 
-	tcpm_enable_auto_vbus_discharge(port, true);
-
+tcpm_enable_auto_vbus_discharge(port, true);
 	/*
 	 * USB Type-C specification, version 1.2,
 	 * chapter 4.5.2.2.8.1 (Attached.SRC Requirements)
@@ -4615,7 +4614,7 @@ static int tcpm_acc_attach(struct tcpm_port *port)
 {
 	int ret;
 	enum typec_role role;
-	enum typec_data_role data;
+enum typec_data_role data;
 int state = TYPEC_STATE_USB;
 
 	if (port->attached)
