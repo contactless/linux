@@ -1184,6 +1184,7 @@
 
 			reset-gpios = <&pio PI 4 GPIO_ACTIVE_LOW>;
 			reset-delay-us = <50000>;
+			reset-post-delay-us = <150000>;  // Datasheet "Power On and PHY Reset Sequence"
 
 			ext_rmii_phy0: ethernet-phy {
 				compatible = "ethernet-phy-ieee802.3-c22";
@@ -1200,6 +1201,7 @@
 
 			reset-gpios = <&pio PI 8 GPIO_ACTIVE_LOW>;
 			reset-delay-us = <50000>;
+			reset-post-delay-us = <150000>;  // Datasheet "Power On and PHY Reset Sequence"
 
 			ext_rmii_phy1: ethernet-phy {
 				compatible = "ethernet-phy-ieee802.3-c22";
