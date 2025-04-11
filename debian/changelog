@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb135) stable; urgency=medium
+
+  * wb8: add DP83822 phy driver
+
+ -- Evgeny Boger <boger@wirenboard.com>  Fri, 11 Apr 2025 22:04:19 +0300
+
 linux-wb (6.8.0-wb134) stable; urgency=medium
 
   * wb8 dts: add eth phy reset-post-delay-us: 150000 (as datasheet says)
