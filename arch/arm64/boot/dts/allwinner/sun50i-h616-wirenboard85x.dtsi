@@ -267,6 +267,18 @@
 			gpios = <&pio PA 12 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "timer";
 		};
+
+		eth0yellow {
+			label = "eth0:yellow";
+			gpios = <&pio PE 3 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "netdev";
+		};
+
+		eth1yellow {
+			label = "eth1:yellow";
+			gpios = <&pio PE 17 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "netdev";
+		};
 	};
 
 	chosen {
