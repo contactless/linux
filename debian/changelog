@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb135) stable; urgency=medium
+
+  * wb8: enable all usb-serial drivers (as were in wb7)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 15 Apr 2025 15:54:39 +0300
+
 linux-wb (6.8.0-wb134) stable; urgency=medium
 
   * wb8 dts: add eth phy reset-post-delay-us: 150000 (as datasheet says)
