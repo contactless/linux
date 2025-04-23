@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb136) stable; urgency=medium
+
+  * wb8: add RNDIS host module
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Wed, 23 Apr 2025 15:02:56 +0500
+
 linux-wb (6.8.0-wb135) stable; urgency=medium
 
   * wb8: enable all usb-serial drivers (as were in wb7)
