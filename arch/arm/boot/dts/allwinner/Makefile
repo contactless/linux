@@ -251,7 +251,6 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-r16-nintendo-super-nes-classic.dtb \
 	sun8i-r16-parrot.dtb \
 	sun8i-r40-bananapi-m2-ultra.dtb \
-	sun8i-r40-oka40i-c.dtb \
 	sun8i-r40-wirenboard-som-test.dtb \
 	sun8i-r40-wirenboard72x-initram.dtb \
 	sun8i-r40-wirenboard72x-factory.dtb \
