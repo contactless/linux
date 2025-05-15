@@ -25,6 +25,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
+#include <linux/reboot.h>
 
 #define AXP20X_GPIO0_FUNC_MASK		GENMASK(3, 0)
 #define AXP20X_GPIO1_FUNC_MASK		GENMASK(3, 0)
@@ -1556,6 +1557,24 @@ static bool axp20x_is_polyphase_slave(struct axp20x_dev *axp20x, int id)
 	return false;
 }
 
+static int axp20x_restart_notify(struct notifier_block *this,
+				unsigned long mode, void *cmd)
+{
+	struct axp20x_dev *axp20x =
+		container_of(this, struct axp20x_dev, restart_handler);
+
+	mdelay(10);
+
+	regmap_set_bits(axp20x->regmap, AXP20X_V_OFF, BIT(6));
+
+	/* give it some time */
+	mdelay(100);
+
+	WARN_ON(1);
+
+	return NOTIFY_DONE;
+}
+
 static int axp20x_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev;
@@ -1745,6 +1764,16 @@ static int axp20x_regulator_probe(struct platform_device *pdev)
 			return PTR_ERR(rdev);
 		}
 	}
+
+	axp20x->restart_handler.notifier_call = axp20x_restart_notify;
+	axp20x->restart_handler.priority = 200;
+	ret = register_restart_handler(&axp20x->restart_handler);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: cannot register restart handler, %d\n",
+				__func__, ret);
+		return -ENODEV;
+	}
+
 
 	return 0;
 }

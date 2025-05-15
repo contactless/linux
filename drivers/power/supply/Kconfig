@@ -222,6 +222,12 @@ config BATTERY_INGENIC
 	  This driver can also be built as a module. If so, the module will be
 	  called ingenic-battery.
 
+config BATTERY_EDLC
+	tristate "EDLC (supercapacitor) battery driver"
+	depends on IIO
+	help
+	  Say Y to enable support for the generic ADC-backed EDLC battery.
+
 config BATTERY_IPAQ_MICRO
 	tristate "iPAQ Atmel Micro ASIC battery driver"
 	depends on MFD_IPAQ_MICRO
@@ -945,6 +951,15 @@ config CHARGER_BD99954
 	  Say Y here to enable support for getting battery and charger
 	  information and altering charger configurations from the ROHM
 	  BD99954 charger IC.
+
+config WBEC_POWER
+	tristate "Wiren Board Embedded Controller Power Supply Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for power status of
+	  Wiren Board.
+
+	  The driver provides power supply class for the Wiren Board.
 
 config CHARGER_WILCO
 	tristate "Wilco EC based charger for ChromeOS"
