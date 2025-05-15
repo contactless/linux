@@ -329,6 +329,16 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-tx6ul-0010.dtb \
 	imx6ul-tx6ul-0011.dtb \
 	imx6ul-tx6ul-mainboard.dtb \
+ 	imx6ul-wirenboard65.dtb \
+ 	imx6ul-wirenboard660.dtb \
+ 	imx6ul-wirenboard670.dtb \
+	imx6ul-wirenboard670-nousbhub.dtb \
++	imx6ul-wirenboard680.dtb \
++	imx6ul-wirenboard690.dtb \
+	imx6ul-wirenboard6x-init.dtb \
+ 	imx6ull-14x14-evk.dtb \
+ 	imx6ull-colibri-eval-v3.dtb \
+ 	imx6ull-colibri-wifi-eval-v3.dtb \
 	imx6ull-14x14-evk.dtb \
 	imx6ull-colibri-aster.dtb \
 	imx6ull-colibri-emmc-aster.dtb \

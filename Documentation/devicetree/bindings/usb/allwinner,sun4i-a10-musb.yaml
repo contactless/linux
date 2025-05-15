@@ -61,6 +61,13 @@ properties:
       - otg
       - peripheral
 
+  host-controllers:
+    $ref: /schemas/types.yaml#/definitions/phandle-array
+    description: Port 0 is shared between host and device (this one) controllers. This property contains list of host controllers for the same port, so host and peripheral controllers servicing the same port can coordinate.
+    items:
+      - description: EHCI0 (USB 2.0 HS) controller
+      - description: OHCI0 (USB 1.1 FS/LS) controller
+
   allwinner,sram:
     description: Phandle to the device SRAM
     $ref: /schemas/types.yaml#/definitions/phandle-array
@@ -84,10 +91,32 @@ if:
           - allwinner,sun6i-a31-musb
           - allwinner,sun8i-a33-musb
           - allwinner,sun8i-h3-musb
+          - allwinner,sun8i-r40-musb
 
 then:
   required:
     - resets
+
+if:
+  properties:
+    compatible:
+      not:
+        contains:
+          enum:
+            - allwinner,sun4i-r40-musb
+then:
+  required:
+    - dr_mode
+
+if:
+  properties:
+    compatible:
+        contains:
+          enum:
+            - allwinner,sun4i-r40-musb
+then:
+  required:
+    - host-controllers
 
 additionalProperties: false
 

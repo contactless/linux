@@ -252,6 +252,18 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-r16-parrot.dtb \
 	sun8i-r40-bananapi-m2-ultra.dtb \
 	sun8i-r40-oka40i-c.dtb \
+	sun8i-r40-wirenboard-som-test.dtb \
+	sun8i-r40-wirenboard72x-initram.dtb \
+	sun8i-r40-wirenboard72x-factory.dtb \
+	sun8i-r40-wirenboard720.dtb \
+	sun8i-r40-wirenboard730.dtb \
+	sun8i-r40-wirenboard731.dtb \
+	sun8i-r40-wirenboard732.dtb \
+	sun8i-r40-wirenboard733.dtb \
+	sun8i-r40-wirenboard734-38071cb.dtb \
+	sun8i-r40-wirenboard741.dtb \
+	sun8i-r40-wirenboard742.dtb \
+	sun8i-r40-wirenboard742-38071cb.dtb \
 	sun8i-s3-elimo-initium.dtb \
 	sun8i-s3-lichee-zero-plus.dtb \
 	sun8i-s3-pinecube.dtb \

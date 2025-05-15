@@ -1,0 +1,523 @@
+/dts-v1/;
+#include "sun8i-r40.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pwm/pwm.h>
+
+#define PIN_PA &pio 0
+#define PIN_PB &pio 1
+#define PIN_PC &pio 2
+#define PIN_PD &pio 3
+#define PIN_PE &pio 4
+#define PIN_PF &pio 5
+#define PIN_PG &pio 6
+#define PIN_PH &pio 7
+#define PIN_PI &pio 8
+
+/ {
+	model = "Wiren Board 7 SoM Test (A40i)";
+	compatible = "allwinner,sun8i-r40";
+
+	aliases {
+		ethernet0 = &gmac;
+		ethernet1 = &emac;
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		serial6 = &uart6;
+		serial7 = &uart7;
+		mmc0 = &mmc2;
+		mmc1 = &mmc0;
+		rtc0 = &rtc;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		/* Wi-Fi on SoM */
+		som_wifi_pwrseq: som_wifi_pwrseq {
+			compatible = "mmc-pwrseq-simple";
+			reset-gpios = <PIN_PC 3 GPIO_ACTIVE_LOW>; /* PC3*/
+			// clocks = <&ccu CLK_OUTA>;
+			// clock-names = "ext_clock";
+		};
+	};
+
+	/* eMMC reset */
+	emmc_pwrseq: emmc_pwrseq {
+		compatible = "mmc-pwrseq-emmc";
+		reset-gpios = <PIN_PC 24 GPIO_ACTIVE_LOW>;
+	};
+
+	wbmz_bat: wbmz-bat {
+		compatible = "simple-battery";
+		constant-charge-current-max-microamp = <600000>;
+		voltage-min-design-microvolt = <2600000>;
+		constant-charge-voltage-max-microvolt = <4100000>;
+		status = "okay";
+	};
+};
+
+
+&i2c1 {
+	status = "okay";
+};
+
+&i2c3 {
+	status = "okay";
+	clock-frequency = <10000>;
+};
+
+&i2c3_pins {
+	bias-pull-up;
+};
+
+&pio {
+	/*input-debounce = <1>;*/
+	vcc-pa-supply = <&reg_dcdc1>; //ok
+	// vcc-pb-supply = <&reg_dcdc1>; /* VCC-IO */
+	vcc-pc-supply = <&reg_aldo2>; /* eMMC, SoM wi-fi gpios*/
+	vcc-pd-supply = <&reg_dcdc1>; //ok 
+	vcc-pe-supply = <&reg_eldo3>; //ok
+	vcc-pf-supply = <&reg_dcdc1>; //ok
+	vcc-pg-supply = <&reg_dcdc1>; // microSD 3v3!!
+	vcc-ph-supply = <&reg_dcdc1>; // VCC-IO
+	vcc-pi-supply = <&reg_dcdc1>;// VCC-IO
+
+	gpio-line-names =
+		/* PA */
+		"SOM ETH1 RXD3", "SOM ETH1 RXD2", "SOM ETH1 RXD1", "SOM ETH1 RXD0", /*  0 - 3 */
+		"SOM ETH1 TXD3", "SOM ETH1 TXD2", "SOM ETH1 TXD1", "SOM ETH1 TXD0", /*  4 - 7 */
+		"SOM ETH1 RXCK", "SOM ETH1 RXERR", "SOM ETH1 RXDV", "SOM ETH1 MDC", /*  8 - 11 */
+		"SOM ETH1 MDIO", "SOM ETH1 TXEN", "SOM ETH1 TXCK", "SOM ETH1 CRS", /* 12 - 15 */
+		"CAN TX", "CAN RX", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PB */
+		"SOM PMIC SCL", "SOM PMIC SDA", "", "", /*  0 - 3 */
+		"", "SODIMM:111 [NC]", "SODIMM:113 [NC]", "SODIMM:121 [NC]", /*  4 - 7 */
+		"SODIMM:123 [NC]", "", "", "[NC]", /*  8 - 11 */
+		"SODIMM:125 [NC]", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"SODIMM:52 [NC]", "SODIMM:50 [NC]", "DEBUG UART TX", "DEBUG UART RX", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PC */
+		"", "", "", "SOM WI-FI ON", /*  0 - 3 */
+		"SOM BT ON", "MICROSD CD", "SOM EMMC CMD", "SOM EMMC CLK", /*  4 - 7 */
+		"SOM EMMC D0", "SOM EMMC D1", "SOM EMMC D2", "SOM EMMC D3", /*  8 - 11 */
+		"SOM EMMC D4", "SOM EMMC D5", "SOM EMMC D6", "SOM EMMC D7", /* 12 - 15 */
+		"SOM WI-FI HOST_WAKE", "SOM BT WAKE", "SOM BT HOST_WAKE", "", /* 16 - 19 */
+		"", "", "SODIMM:16 [NC]", "", /* 20 - 23 */
+		"SOM EMMC RST", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PD */
+		"LVDS D0 P", "LVDS D0 N", "LVDS D1 P", "LVDS D1 N", /*  0 - 3 */
+		"LVDS D2 P", "LVDS D2 N", "LVDS DCK P", "LVDS DCK N", /*  4 - 7 */
+		"LVDS D3 P", "LVDS D3 N", "", "", /*  8 - 11 */
+		"", "", "", "[NC]", /* 12 - 15 */
+		"[NC]", "[NC]", "[NC]", "", /* 16 - 19 */
+		"USB0 ID", "", "[NC]", "[NC]", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PE */
+		"", "", "", "",  /*  0 - 3 */
+		"SODIMM:79 [NC]", "", "", "", /*  4 - 7 */
+		"", "[NC]", "", "", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PF */
+		"MICROSD D1", "MICROSD D0", "MICROSD CLK", "MICROSD CMD", /*  0 - 3 */
+		"MICROSD D3", "MICROSD D2", "", "", /*  4 - 7 */
+		"", "", "", "", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PG */
+		"SOM WI-FI CMD", "SOM WI-FI CLK", "SOM WI-FI D0", "SOM WI-FI D1", /*  0 - 3 */
+		"SOM WI-FI D2", "SOM WI-FI D3", "SOM BT TX", "SOM BT RX", /*  4 - 7 */
+		"SOM BT RESERVED", "SOM BT RESERVED", "", "", /*  8 - 11 */
+		"", "", "", "", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PH PH0-PH21 interrupts*/
+		"", "", "", "", /*  0 - 3 */
+		"", "", "", "", //*  4 - 7 */
+		"SOM ETH0 RXD3", "SOM ETH0 RXD2", "SOM ETH0 RXD1", "SOM ETH0 RXD0", /*  8 - 11 */
+		"SOM ETH0 RST", "SOM ETH1 RST", "SOM ETH0 TXD3", "SOM ETH0 TXD2", /* 12 - 15 */
+		"SOM ETH0 TXD1", "SOM ETH0 TXD0", "SOM ETH0 RXCK", "SOM ETH0 RXERR", /* 16 - 19 */
+		"SOM ETH0 RXDV", "SOM ETH0 MDC", "SOM ETH0 MDIO", "SOM ETH0 TXEN", /* 20 - 23 */
+		"SOM ETH0 TXCK", "SOM ETH0 CRS", "SOM ETH0 COL", "SPM LCD BACKLIGHT ON", /* 24 - 27 */
+		"", "", "", "", /* 28 - 31 */
+		/* PI*/
+		"", "", "SODIMM: 76 [NC]", "[NC]", /*  0 - 3 */
+		"SODIMM: 75 [NC]", "SODIMM: 77 [NC]", "SODIMM: 79 [NC]", "SODIMM: 81 [NC]", /*  4 - 7 */
+		"SODIMM: 83 [NC]", "SODIMM: 85 [NC]", "", "", /*  8 - 11 */
+		"", "", "", "W2", /* 12 - 15 */
+		"", "", "", "", /* 16 - 19 */
+		"", "", "", "", /* 20 - 23 */
+		"", "", "", "", /* 24 - 27 */
+		"", "", "", ""; /* 28 - 31 */
+
+
+    	/* w/o ECOL and ETXERR */
+    	gmac_mii_pins_reduced: gmac-mii-pins-reduced {
+		pins = "PA0", "PA1", "PA2", "PA3",
+			"PA4", "PA5", "PA6", "PA7",
+			"PA8", "PA9", "PA10", "PA11", "PA12",
+			"PA13", "PA14", "PA15";
+		drive-strength = <40>;
+
+		function = "gmac";
+	};
+	/* eMMC */
+	mmc2_pins_wo_carddet: mmc2-pins {
+		pins = "PC6", "PC7", "PC8", "PC9",
+			"PC10", "PC11", "PC12", "PC13", "PC14",
+			"PC15", "PC24";
+		function = "mmc2";
+		drive-strength = <40>;
+		bias-pull-up;
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+
+/* Enable USB ports (FS and HS controllers) */
+&ehci0 {
+	status = "okay";
+};
+
+&ehci1 {
+	status = "okay";
+};
+
+&ehci2 {
+	status = "okay";
+};
+
+
+&ohci0 {
+	status = "okay";
+};
+
+&ohci1 {
+	status = "okay";
+};
+
+&ohci2 {
+	status = "okay";
+};
+
+&usbphy {
+	usb0_vbus-supply = <&reg_dcdc1>;
+	usb1_vbus-supply = <&reg_dcdc1>;
+	usb2_vbus-supply = <&reg_dcdc1>;
+	status = "okay";
+};
+
+/* Ethernet ports */
+&gmac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac_mii_pins_reduced>;
+	phy-handle = <&phy1>;
+	phy-mode = "mii";
+	phy-supply = <&reg_dcdc1>;
+	status = "okay";
+};
+
+
+&gmac_mdio {
+	phy1: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+		reset-gpios = <PIN_PH 13 GPIO_ACTIVE_LOW>; /* PH13 */
+		reset-assert-us = <10000>;
+		reset-deassert-us = <100000>;
+		icplus,select-rx-error;
+		status = "okay";
+	};
+};
+
+&emac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&emac_ph_pins>;
+	phy-handle = <&phy2>;
+	phy-mode = "mii";
+	phy-supply = <&reg_dcdc1>;
+	status = "okay";
+};
+
+&emac_mdio {
+	status = "okay";
+	phy2: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+		reset-gpios = <PIN_PH 12 GPIO_ACTIVE_LOW>; /* PH12 */
+		reset-assert-us = <10000>;
+		reset-deassert-us = <100000>;
+		icplus,select-rx-error;
+		status = "okay";
+	};
+};
+
+/* System power */
+
+&i2c0 {
+	status = "okay";
+
+	axp22x: pmic@34 {
+		compatible = "x-powers,axp221";
+		reg = <0x34>;
+		interrupt-parent = <&nmi_intc>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+
+#include "axp22x.dtsi"
+
+/* ALDO1: 0.7V~3.3V, 300 mA, default: OFF */
+/* CPU: VCC-TVIN, VCC-TVOUT */
+&reg_aldo1 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "tv";
+};
+
+
+/* ALDO2: 0.7V~3.3V, 300mA, default: 1.8V */
+/* eMMC VDDQ (optional), VCC-PC*/
+&reg_aldo2 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-init-microvolt = <3300000>;
+	regulator-name = "aldo2";
+};
+
+/* ALDO3: 0.7V~3.3V, 200 mA, default: 3.0 V */
+/* VCC-PLL и AVCC */
+&reg_aldo3 {
+	regulator-always-on;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-init-microvolt = <3000000>;
+	regulator-name = "avcc-pll";
+};
+
+/* DC1SW Switch, 400 mA, 100mOhm, default: OFF */
+&reg_dc1sw {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "vcc-gmac-phy";
+};
+
+/* DCDC1: 1.6V~3.4V, 1400 mA, default: 3.3V
+   VCC-IO процессора
+   ref: eFUSE, microSD, PD, PA, DSI, HDMI, HP
+   eMMC, eth phy
+   3.3V для периферии на основной плате WB
+*/
+&reg_dcdc1 {
+	regulator-always-on;
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "vcc-3v3";
+};
+
+/* DCDC2: 0.6V~1.54V, 2500 mA, default: 1.1 V */
+/* CPU core vdd-cpu */
+&reg_dcdc2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1300000>;
+	regulator-name = "vdd-cpu";
+};
+
+/* CPU vdd-sys */
+/* DCDC3: 0.6V~1.86V, 2500 mA, default: 1.1 V */
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1300000>;
+	regulator-name = "vdd-sys";
+};
+
+/* DCDC4: 0.6V~1.54V, 600mA, default: 1.1 V */
+/* unused */
+
+/* DCDC5: 1.0V~2.55V, 2000 mA, default: 1.5/DC5SET V */
+/* DRAM */
+&reg_dcdc5 {
+	regulator-always-on;
+	regulator-min-microvolt = <1350000>;
+	regulator-max-microvolt = <1350000>;
+	regulator-name = "vcc-dram";
+};
+
+/* DLDO1: 0.7V~3.3V, 400 mA, default: OFF */
+/* in: 5V/4V (PS).
+   microSD reference voltage (internal)
+*/
+&reg_dldo1 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	regulator-name = "vcc-sd-alt";
+	regulator-always-on;
+};
+
+/* ELDO3: 0.7V~3.3V, 200 mA, default: OFF */
+/* ref. VCC-PE */
+&reg_eldo3 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-init-microvolt = <3300000>;
+	regulator-always-on;
+	regulator-name = "vcc-pe";
+};
+
+/* Unused: */
+	/* DLDO2: 0.7V~3.3V, 200 mA, default: OFF */
+	/* DLDO3: 0.7V~3.3V, 200 mA, default: OFF */
+	/* DLDO4: 0.7V~3.3V, 100 mA, default: OFF */
+	/* ELDO1: 0.7V~3.3V, 400 mA, default: OFF */
+	/* ELDO2: 0.7V~3.3V, 200 mA, default: OFF */
+
+
+
+/* DC5LDO: 0.7V~1.4V, 200 mA, default: 1.1V */
+/* xxx: xxx V~xxxx V, xxxx mA, default: OFF */
+
+
+&battery_power_supply {
+    status = "okay";
+    monitored-battery = <&wbmz_bat>;
+};
+
+/* microSD */
+&mmc0 {
+
+//	vmmc-supply = <&reg_dcdc1>;
+	bus-width = <4>;
+	cd-gpios = <&pio 2 5 GPIO_ACTIVE_LOW>; /* pc5 */
+	status = "okay";
+
+	vqmmc-supply = <&reg_dcdc1>;
+	vmmc-supply = <&reg_dcdc1>;
+
+	// vqmmc-supply = <&reg_dldo1>;
+	// vmmc-supply = <&reg_dldo1>;
+	// sd-uhs-sdr12;
+	// sd-uhs-sdr25;
+	// sd-uhs-sdr50;
+	// sd-uhs-sdr104;
+	no-1-8-v;
+	// cap-sd-highspeed;
+
+};
+
+
+&mmc2 {
+	pinctrl-0 = <&mmc2_pins_wo_carddet>;
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_aldo2>;
+	mmc-pwrseq = <&emmc_pwrseq>;
+	bus-width = <8>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+	clock-frequency = <52000000>;
+
+};
+
+/* Wi-Fi on SoM */
+&mmc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pg_pins>;
+	vmmc-supply = <&reg_dcdc1>;
+	vqmmc-supply = <&reg_dcdc1>; //fixme
+	mmc-pwrseq = <&som_wifi_pwrseq>;
+	bus-width = <4>;
+	non-removable;
+	status = "disabled";
+};
+
+
+/* CAN bus */
+&can0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&can_pa_pins>;
+};
+
+
+/* Debug UART */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb_pins>;
+	status = "okay";
+};
+
+/* UARTs */
+&uart2 { 
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pi_pins>;
+	status = "okay";
+};
+
+&uart3 { 
+	pinctrl-0 = <&uart3_pg_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&uart4 {
+	status = "okay";
+
+};
+
+&uart6 {
+	status = "disabled";
+};
+
+&uart5 {
+	status = "disabled";
+};
+
+&uart7 {
+	pinctrl-0 = <&uart7_pi_pins>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&usb_otg {
+	status = "disabled";
+};
+
+/* CPU RTC is useless since it doesn't have separate power supply. However we must keep it on to get proper LOSC for the rest of SoC.*/
+&rtc {
+	status = "okay";
+};
+
+&pwm {
+	status = "okay";
+};

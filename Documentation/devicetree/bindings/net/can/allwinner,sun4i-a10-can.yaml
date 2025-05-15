@@ -41,6 +41,8 @@ if:
       enum:
         - allwinner,sun8i-r40-can
         - allwinner,sun20i-d1-can
+      contains:
+        const: allwinner,sun8i-r40-can
 
 then:
   required:
