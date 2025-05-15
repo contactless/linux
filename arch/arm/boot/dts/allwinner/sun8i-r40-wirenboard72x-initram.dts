@@ -1,0 +1,8 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard72x-initram.dtsi"
+
+/* This DTS is used only in FIT bootlets. For production version, use sun8i-r40-wirenboard72x-factory.dts */
+/ {
+	model = "Wiren Board rev. 7.x (A40i), FIT bootlet";
+	compatible = "wirenboard,wirenboard-74x-initram", "wirenboard,wirenboard-720-initram", "wirenboard,wirenboard-720", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-700", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+};

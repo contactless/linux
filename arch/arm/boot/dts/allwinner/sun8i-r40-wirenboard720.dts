@@ -1,0 +1,14 @@
+/dts-v1/;
+#include "sun8i-r40-wirenboard72x.dtsi"
+#include "sun8i-r40-wirenboard72x-eui-eeprom.dtsi"
+
+/ {
+	model = "Wiren Board rev. 7.2.0 (A40i)";
+	compatible = "wirenboard,wirenboard-720", "wirenboard,wirenboard-72x", "wirenboard,wirenboard-700", "wirenboard,wirenboard-7xx", "allwinner,sun8i-r40";
+};
+
+&mmc0 {
+	vmmc-supply = <&vcc_sd>;
+	no-1-8-v; /* we don't have SD card power switch, so 3.3=>1.8V voltage switching can not be implemented */
+	max-frequency = <100000000>; /* Linux won't automatically go higher than 50MHz anyway due to lack of 1.8V support */
+};
