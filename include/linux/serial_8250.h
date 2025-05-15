@@ -139,6 +139,7 @@ struct uart_8250_port {
 						 *   if no_console_suspend
 						 */
 	unsigned char		probe;
+	ktime_t			char_duration;
 	struct mctrl_gpios	*gpios;
 #define UART_PROBE_RSA	(1 << 0)
 
@@ -167,6 +168,7 @@ struct uart_8250_port {
 	/* Serial port overrun backoff */
 	struct delayed_work overrun_backoff;
 	u32 overrun_backoff_time_ms;
+	bool rx_disabled;
 };
 
 static inline struct uart_8250_port *up_to_u8250p(struct uart_port *up)

@@ -234,4 +234,7 @@
 /* Generic type identifier for ports which type is not important to userspace. */
 #define PORT_GENERIC	(-1)
 
+/* Allwinner sun4i UART */
+#define PORT_SUN4I	123
+
 #endif /* _UAPILINUX_SERIAL_CORE_H */
