@@ -2103,4 +2103,12 @@ config RTC_DRV_AMLOGIC_A4
 	  This driver can also be built as a module. If so, the module
 	  will be called "rtc-amlogic-a4".
 
+config RTC_DRV_WBEC
+	tristate "Wiren Board Embedded Controller RTC Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for Real Time Clock on the
+	  Wiren Board Embedded Controller.
+	  Also rtcwake from poweroff mode is supported.
+
 endif # RTC_CLASS
