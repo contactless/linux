@@ -1652,6 +1652,13 @@ config VIPERBOARD_ADC
 	  To compile this driver as a module, choose M here: the module will be
 	  called viperboard_adc.
 
+config WBEC_ADC
+	tristate "Wiren Board Embedded Controller ADC Driver"
+	depends on MFD_WBEC
+	help
+	  This option enables support for ADC and temperature measurement by
+	  Wiren Board Embedded Controller.
+
 config XILINX_XADC
 	tristate "Xilinx XADC driver"
 	depends on HAS_IOMEM
