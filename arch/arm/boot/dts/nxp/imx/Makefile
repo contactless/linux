@@ -332,6 +332,7 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
  	imx6ul-wirenboard65.dtb \
  	imx6ul-wirenboard660.dtb \
  	imx6ul-wirenboard670.dtb \
+	imx6ul-wirenboard670-nousbhub.dtb \
 +	imx6ul-wirenboard680.dtb \
 +	imx6ul-wirenboard690.dtb \
  	imx6ull-14x14-evk.dtb \
