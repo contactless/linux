@@ -790,6 +790,17 @@ static void sunxi_pmx_set(struct pinctrl_dev *pctldev,
 	raw_spin_unlock_irqrestore(&pctl->lock, flags);
 }
 
+static u8 sunxi_pmx_get(struct pinctrl_dev *pctldev,
+				 unsigned pin)
+{
+	struct sunxi_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
+	u32 val;
+
+	pin -= pctl->desc->pin_base;
+	val = readl(pctl->membase + sunxi_mux_reg(pin));
+	return (val >> sunxi_mux_offset(pin)) & MUX_PINS_MASK;
+}
+
 static int sunxi_pmx_set_mux(struct pinctrl_dev *pctldev,
 			     unsigned function,
 			     unsigned group)
@@ -880,6 +891,25 @@ out:
 	return ret;
 }
 
+static int sunxi_pmx_request_gpio(struct pinctrl_dev *pctldev,
+				    struct pinctrl_gpio_range *range,
+				    unsigned int offset)
+{
+	u8 mux = sunxi_pmx_get(pctldev, offset);
+
+	switch (mux) {
+		case SUN4I_FUNC_INPUT:
+		case SUN4I_FUNC_IRQ:
+		case SUN4I_FUNC_OUTPUT:
+			break;
+		default:
+			sunxi_pmx_set(pctldev, offset, SUN4I_FUNC_INPUT);
+			break;
+	}
+
+	return sunxi_pmx_request(pctldev, offset);
+}
+
 static int sunxi_pmx_free(struct pinctrl_dev *pctldev, unsigned offset)
 {
 	struct sunxi_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
@@ -905,6 +935,7 @@ static const struct pinmux_ops sunxi_pmx_ops = {
 	.set_mux		= sunxi_pmx_set_mux,
 	.gpio_set_direction	= sunxi_pmx_gpio_set_direction,
 	.request		= sunxi_pmx_request,
+	.gpio_request_enable = sunxi_pmx_request_gpio,
 	.free			= sunxi_pmx_free,
 	.strict			= true,
 };
@@ -916,6 +947,27 @@ static int sunxi_pinctrl_gpio_direction_input(struct gpio_chip *chip,
 
 	return sunxi_pmx_gpio_set_direction(pctl->pctl_dev, NULL,
 					    chip->base + offset, true);
+}
+
+static int sunxi_pinctrl_gpio_get_direction(struct gpio_chip *gc,
+						unsigned int offset)
+{
+	struct sunxi_pinctrl *pctl = gpiochip_get_data(gc);
+	u32 pin = offset + gc->base;
+	u8 mux = sunxi_pmx_get(pctl->pctl_dev, pin);
+
+	switch (mux) {
+		case SUN4I_FUNC_INPUT:
+		case SUN4I_FUNC_IRQ:
+			return GPIO_LINE_DIRECTION_IN;
+		case SUN4I_FUNC_OUTPUT:
+			return GPIO_LINE_DIRECTION_OUT;
+		default:
+			dev_dbg(gc->parent, "%s: get direction GPIO %d, unexpected mux %x. Maybe request the pin first?\n",
+				gc->label, offset + gc->base, mux);
+			/* Other code don't really expect errors routinely happening here, so return direction in instead */
+			return GPIO_LINE_DIRECTION_IN;
+	}
 }
 
 static int sunxi_pinctrl_gpio_get(struct gpio_chip *chip, unsigned offset)
@@ -1578,6 +1630,7 @@ int sunxi_pinctrl_init_with_variant(struct platform_device *pdev,
 	pctl->chip->direction_output = sunxi_pinctrl_gpio_direction_output;
 	pctl->chip->get = sunxi_pinctrl_gpio_get;
 	pctl->chip->set = sunxi_pinctrl_gpio_set;
+	pctl->chip->get_direction = sunxi_pinctrl_gpio_get_direction;
 	pctl->chip->of_xlate = sunxi_pinctrl_gpio_of_xlate;
 	pctl->chip->to_irq = sunxi_pinctrl_gpio_to_irq;
 	pctl->chip->of_gpio_n_cells = 3;
