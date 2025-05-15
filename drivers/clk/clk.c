@@ -4693,6 +4693,12 @@ static void devm_clk_release(struct device *dev, void *res)
 	clk_put(*(struct clk **)res);
 }
 
+bool devm_clk_name_match(struct clk *clk, const char *string)
+{
+	return match_string(&clk->con_id, 1, string) == 0;
+}
+EXPORT_SYMBOL_GPL(devm_clk_name_match);
+
 /**
  * devm_clk_hw_get_clk - resource managed clk_hw_get_clk()
  * @dev: device that is registering this clock
