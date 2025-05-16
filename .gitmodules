@@ -1,6 +1,0 @@
-[submodule "drivers/net/wireless/realtek/rtl8723bu"]
-	path = drivers/net/wireless/realtek/rtl8723bu
-	url = https://github.com/wirenboard/rtl8723bu
-[submodule "drivers/net/wireless/realtek/rtl8733bu"]
-	path = drivers/net/wireless/realtek/rtl8733bu
-	url = https://github.com/wirenboard/rtl8733bu
