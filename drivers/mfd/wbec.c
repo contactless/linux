@@ -386,7 +386,7 @@ static int wbec_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int wbec_remove(struct spi_device *spi)
+static void wbec_remove(struct spi_device *spi)
 {
 	struct wbec *wbec = spi_get_drvdata(spi);
 	/**
@@ -400,8 +400,6 @@ static int wbec_remove(struct spi_device *spi)
 
 	sysfs_remove_group(&wbec->dev->kobj, &wbec_attr_group);
 	wbec_clean_debugfs(wbec);
-
-	return 0;
 }
 
 static const struct spi_device_id wbec_spi_id[] = {

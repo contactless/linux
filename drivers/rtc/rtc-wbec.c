@@ -241,9 +241,10 @@ static int wbec_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, true);
 
-	wbec_rtc->rtc->uie_unsupported = 1;
+	clear_bit(RTC_FEATURE_UPDATE_INTERRUPT,
+		  wbec_rtc->rtc->features);
 
-	return rtc_register_device(wbec_rtc->rtc);
+	return devm_rtc_register_device(wbec_rtc->rtc);
 }
 
 static const struct of_device_id wbec_rtc_of_match[] = {
