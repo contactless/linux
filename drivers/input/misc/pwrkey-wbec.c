@@ -28,7 +28,7 @@ struct wbec_pwrkey {
 	struct regmap *regmap;
 };
 
-void pwrkey_poll_wq(struct work_struct *work)
+static void pwrkey_poll_wq(struct work_struct *work)
 {
 	struct wbec_pwrkey *wbec_pwrkey =
 		container_of(work, struct wbec_pwrkey, wq.work);
@@ -105,7 +105,7 @@ static int wbec_pwrkey_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int wbec_pwrkey_remove(struct platform_device *pdev)
+static void wbec_pwrkey_remove(struct platform_device *pdev)
 {
 	struct wbec_pwrkey *wbec_pwrkey = platform_get_drvdata(pdev);
 
@@ -113,8 +113,6 @@ static int wbec_pwrkey_remove(struct platform_device *pdev)
 
 	cancel_delayed_work_sync(&wbec_pwrkey->wq);
 	input_unregister_device(wbec_pwrkey->pwr);
-
-	return 0;
 }
 
 static const struct of_device_id wbec_pwrkey_of_match[] = {
