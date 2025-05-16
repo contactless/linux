@@ -250,9 +250,9 @@ static void dw8250_serial_out32be(struct uart_port *p, int offset, int value)
 
 static unsigned int dw8250_serial_in32be(struct uart_port *p, int offset)
 {
-	   unsigned int value = ioread32be(p->membase + (offset << p->regshift));
+       unsigned int value = ioread32be(p->membase + (offset << p->regshift));
 
-	   return dw8250_modify_msr(p, offset, value);
+       return dw8250_modify_msr(p, offset, value);
 }
 
 
@@ -364,7 +364,7 @@ dw8250_do_pm(struct uart_port *port, unsigned int state, unsigned int old)
 }
 
 static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
-				   const struct ktermios *old)
+			       const struct ktermios *old)
 {
 	unsigned long newrate = tty_termios_baud_rate(termios) * 16;
 	struct dw8250_data *d = to_dw8250_data(p->private_data);
@@ -439,8 +439,8 @@ static void dw8250_prepare_tx_dma(struct uart_8250_port *p)
 
 	dw8250_writel_ext(up, RZN1_UART_TDMACR, 0);
 	val = dw8250_rzn1_get_dmacr_burst(dma->txconf.dst_maxburst) |
-		  RZN1_UART_xDMACR_BLK_SZ(dma->tx_size) |
-		  RZN1_UART_xDMACR_DMA_EN;
+	      RZN1_UART_xDMACR_BLK_SZ(dma->tx_size) |
+	      RZN1_UART_xDMACR_DMA_EN;
 	dw8250_writel_ext(up, RZN1_UART_TDMACR, val);
 }
 
@@ -452,8 +452,8 @@ static void dw8250_prepare_rx_dma(struct uart_8250_port *p)
 
 	dw8250_writel_ext(up, RZN1_UART_RDMACR, 0);
 	val = dw8250_rzn1_get_dmacr_burst(dma->rxconf.src_maxburst) |
-		  RZN1_UART_xDMACR_BLK_SZ(dma->rx_size) |
-		  RZN1_UART_xDMACR_DMA_EN;
+	      RZN1_UART_xDMACR_BLK_SZ(dma->rx_size) |
+	      RZN1_UART_xDMACR_DMA_EN;
 	dw8250_writel_ext(up, RZN1_UART_RDMACR, val);
 }
 
@@ -461,11 +461,9 @@ static void dw8250_quirks(struct uart_port *p, struct dw8250_data *data)
 {
 	unsigned int quirks = data->pdata ? data->pdata->quirks : 0;
 	u32 cpr_value = data->pdata ? data->pdata->cpr_value : 0;
-	struct uart_8250_port *up = up_to_u8250p(p);
 
 	if (quirks & DW_UART_QUIRK_CPR_VALUE)
 		data->data.cpr_value = cpr_value;
-
 
 #ifdef CONFIG_64BIT
 	if (quirks & DW_UART_QUIRK_OCTEON) {
@@ -476,19 +474,6 @@ static void dw8250_quirks(struct uart_port *p, struct dw8250_data *data)
 		data->skip_autocfg = true;
 	}
 #endif
-	if (of_device_is_big_endian(p->dev->of_node)) {
-		p->iotype = UPIO_MEM32BE;
-		p->serial_in = dw8250_serial_in32be;
-		p->serial_out = dw8250_serial_out32be;
-	}
-	if (of_device_is_compatible(np, "marvell,armada-38x-uart"))
-		p->serial_out = dw8250_serial_out38x;
-
-	if (of_device_is_compatible(np, "allwinner,sun4i-a10-uart")) {
-		p->flags = UPF_SHARE_IRQ | UPF_FIXED_TYPE | UPF_FIXED_PORT;
-		up->capabilities = UART_CAP_FIFO;
-		p->type = PORT_SUN4I;
-	}
 
 	if (quirks & DW_UART_QUIRK_ARMADA_38X)
 		p->serial_out = dw8250_serial_out38x;
@@ -542,9 +527,6 @@ static int dw8250_probe(struct platform_device *pdev)
 	p->dev		= dev;
 	p->set_ldisc	= dw8250_set_ldisc;
 	p->set_termios	= dw8250_set_termios;
-	p->rs485_config = serial8250_em485_config;
-	up->rs485_start_tx = serial8250_em485_start_tx;
-	up->rs485_stop_tx = serial8250_em485_stop_tx;
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -618,7 +600,7 @@ static int dw8250_probe(struct platform_device *pdev)
 		data->clk = devm_clk_get_optional_enabled(dev, NULL);
 	if (IS_ERR(data->clk))
 		return dev_err_probe(dev, PTR_ERR(data->clk),
-					 "failed to get baudclk\n");
+				     "failed to get baudclk\n");
 
 	INIT_WORK(&data->clk_work, dw8250_clk_work_cb);
 	data->clk_notifier.notifier_call = dw8250_clk_notifier_cb;
@@ -652,10 +634,6 @@ static int dw8250_probe(struct platform_device *pdev)
 
 	if (!data->skip_autocfg)
 		dw8250_setup_port(p);
-
-	if (p->dev->of_node)
-		if (of_property_read_bool(p->dev->of_node, "uart-has-rtscts"))
-			up->capabilities |= UART_CAP_AFE;
 
 	/* If we have a valid fifosize, try hooking up DMA */
 	if (p->fifosize) {
@@ -756,7 +734,7 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
 	.usr_reg = DW_UART_USR,
 };
 
-static const struct dw8250_platform_data dw8249_octeon_3860_data = {
+static const struct dw8250_platform_data dw8250_octeon_3860_data = {
 	.usr_reg = OCTEON_UART_USR,
 	.quirks = DW_UART_QUIRK_OCTEON,
 };
@@ -784,7 +762,6 @@ static const struct of_device_id dw8250_of_match[] = {
 	{ .compatible = "renesas,rzn1-uart", .data = &dw8250_renesas_rzn1_data },
 	{ .compatible = "sophgo,sg2044-uart", .data = &dw8250_skip_set_rate_data },
 	{ .compatible = "starfive,jh7100-uart", .data = &dw8250_skip_set_rate_data },
-	{ .compatible = "allwinner,sun4i-a10-uart" },
 	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, dw8250_of_match);

@@ -371,99 +371,6 @@ static int ntc_adc_iio_read(struct ntc_data *data)
 	return uv;
 }
 
-static const struct of_device_id ntc_match[] = {
-	{ .compatible = "epcos,b57330v2103",
-		.data = &ntc_thermistor_id[NTC_B57330V2103]},
-	{ .compatible = "epcos,b57891s0103",
-		.data = &ntc_thermistor_id[NTC_B57891S0103] },
-	{ .compatible = "murata,ncp03wb473",
-		.data = &ntc_thermistor_id[NTC_NCP03WB473] },
-	{ .compatible = "murata,ncp03wf104",
-		.data = &ntc_thermistor_id[NTC_NCP03WF104] },
-	{ .compatible = "murata,ncp15wb473",
-		.data = &ntc_thermistor_id[NTC_NCP15WB473] },
-	{ .compatible = "murata,ncp15wl333",
-		.data = &ntc_thermistor_id[NTC_NCP15WL333] },
-	{ .compatible = "murata,ncp15xh103",
-		.data = &ntc_thermistor_id[NTC_NCP15XH103] },
-	{ .compatible = "murata,ncp18wb473",
-		.data = &ntc_thermistor_id[NTC_NCP18WB473] },
-	{ .compatible = "murata,ncp21wb473",
-		.data = &ntc_thermistor_id[NTC_NCP21WB473] },
-
-	/* Usage of vendor name "ntc" is deprecated */
-	{ .compatible = "ntc,ncp03wb473",
-		.data = &ntc_thermistor_id[NTC_NCP03WB473] },
-	{ .compatible = "ntc,ncp15wb473",
-		.data = &ntc_thermistor_id[NTC_NCP15WB473] },
-	{ .compatible = "ntc,ncp15wl333",
-		.data = &ntc_thermistor_id[NTC_NCP15WL333] },
-	{ .compatible = "ntc,ncp18wb473",
-		.data = &ntc_thermistor_id[NTC_NCP18WB473] },
-	{ .compatible = "ntc,ncp21wb473",
-		.data = &ntc_thermistor_id[NTC_NCP21WB473] },
-	{ },
-};
-MODULE_DEVICE_TABLE(of, ntc_match);
-
-static struct ntc_thermistor_platform_data *
-ntc_thermistor_parse_dt(struct device *dev)
-{
-	struct iio_channel *chan;
-	enum iio_chan_type type;
-	struct device_node *np = dev->of_node;
-	struct ntc_thermistor_platform_data *pdata;
-	int ret;
-
-	if (!np)
-		return NULL;
-
-	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata)
-		return ERR_PTR(-ENOMEM);
-
-	chan = devm_iio_channel_get(dev, NULL);
-	if (IS_ERR(chan))
-		return ERR_CAST(chan);
-
-	ret = iio_get_channel_type(chan, &type);
-	if (ret < 0)
-		return ERR_PTR(ret);
-
-	if (type != IIO_VOLTAGE)
-		return ERR_PTR(-EINVAL);
-
-	if (of_property_read_u32(np, "pullup-uv", &pdata->pullup_uv))
-		/* return ERR_PTR(-ENODEV); */
-	if (of_property_read_u32(np, "pullup-ohm", &pdata->pullup_ohm))
-		return ERR_PTR(-ENODEV);
-	if (of_property_read_u32(np, "pulldown-ohm", &pdata->pulldown_ohm))
-		return ERR_PTR(-ENODEV);
-
-	if (of_property_read_u32(np, "series-ohm", &pdata->series_ohm))
-		pdata->series_ohm = 0;
-
-	if (of_find_property(np, "connected-positive", NULL))
-		pdata->connect = NTC_CONNECTED_POSITIVE;
-	else /* status change should be possible if not always on. */
-		pdata->connect = NTC_CONNECTED_GROUND;
-
-	pdata->chan = chan;
-	pdata->read_uv = ntc_adc_iio_read;
-
-	return pdata;
-}
-#else
-static struct ntc_thermistor_platform_data *
-ntc_thermistor_parse_dt(struct device *dev)
-{
-	return NULL;
-}
-
-#define ntc_match	NULL
-
-#endif
-
 static inline u64 div64_u64_safe(u64 dividend, u64 divisor)
 {
 	if (divisor == 0 && dividend == 0)
@@ -496,8 +403,6 @@ static int get_ohm_of_thermistor(struct ntc_data *data, unsigned int uv)
 				puo * uv - pdo * (puv - uv));
 	else
 		n = div64_u64_safe(pdo * puo * uv, pdo * (puv - uv) - puo * uv);
-
-	n -= pdata->series_ohm;
 
 	if (n > INT_MAX)
 		n = INT_MAX;

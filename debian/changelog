@@ -1,0 +1,558 @@
+linux-wb (5.10.35-wb175) stable; urgency=medium
+
+  *  wb6: support docker 28.0.0
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 24 Feb 2025 17:25:21 +0300
+
+linux-wb (5.10.35-wb174) stable; urgency=medium
+
+  *  Add parameters for support docker 28.0.0
+
+ -- Anton <anton.tarasov@wirenboard.com>  Sun, 23 Feb 2025 18:33:33 +0300
+
+linux-wb (5.10.35-wb173) stable; urgency=medium
+
+  * Update rtl8733bu submodule to use branch v5.15.12-126-wb
+
+ -- Anton <anton.tarasov@wirenboard.com>  Wed, 06 Nov 2024 09:19:19 +0300
+
+linux-wb (5.10.35-wb172) stable; urgency=medium
+
+  * wb6, wb7 defconfig: add CONFIG_CAN_GS_USB=m
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 16 Oct 2024 11:59:19 +0300
+
+linux-wb (5.10.35-wb171) stable; urgency=medium
+
+  * wb7 dts: add i2c-wbio-recovery pins
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 10 Oct 2024 18:48:19 +0300
+
+linux-wb (5.10.35-wb170) stable; urgency=medium
+
+  * axp20x: fix charging status logic again, hopefully for the last time
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.com>  Thu, 05 Sep 2024 10:42:01 +0500
+
+linux-wb (5.10.35-wb169) stable; urgency=medium
+
+  * i2c-wbio: cherry-pick i2c bus recovery logic (mv64xxx driver)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 07 Aug 2024 16:21:22 +0300
+
+linux-wb (5.10.35-wb168) stable; urgency=medium
+
+  * add CAN SAE J1939 support built-in
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.com>  Mon, 17 Jun 2024 18:36:12 +0500
+
+linux-wb (5.10.35-wb167) stable; urgency=medium
+
+  * wbec: add 'uid' sysfs attribute
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Mon, 22 Apr 2024 17:26:09 +0300
+
+linux-wb (5.10.35-wb166) stable; urgency=medium
+
+  * wb74-38071cb: add necessary wbec modules; add modules to dts
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 18 Apr 2024 19:21:22 +0300
+
+linux-wb (5.10.35-wb165) stable; urgency=medium
+
+  * wb74: add 38071cb dts
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 16 Apr 2024 11:22:21 +0300
+
+linux-wb (5.10.35-wb164) stable; urgency=medium
+
+  * wb6, wb7: add config options required for wg-quick tool
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.com>  Fri, 22 Mar 2024 14:41:13 +0500
+
+linux-wb (5.10.35-wb163) stable; urgency=medium
+
+  * rtl8733bu: move BusyTraffic log messages to debug level
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Tue, 13 Feb 2024 14:11:00 +0400
+
+linux-wb (5.10.35-wb162) stable; urgency=medium
+
+  * wbec: rtc: build in kernel (not as module) - fix wrong timestamps in log while booting
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Thu, 25 Jan 2024 08:30:49 +0300
+
+linux-wb (5.10.35-wb161) stable; urgency=medium
+
+  * scripts: make wb7x-factory-bootlet not work as regular bootlet; no functional
+    changes to kernel
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 17 Jan 2024 20:28:33 +0600
+
+linux-wb (5.10.35-wb160) stable; urgency=medium
+
+  * pinctrl-mcp23s08: mcp_read: pass error of regmap_read
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 15 Jan 2024 16:21:22 +0300
+
+linux-wb (5.10.35-wb159) stable; urgency=medium
+
+  * Fix edlc zero values after startup in case of full charge
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.ru>  Fri, 22 Dec 2023 10:32:46 +0300
+
+linux-wb (5.10.35-wb158) stable; urgency=medium
+
+  * rtl8733bu: move some log messages to info debug level
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Mon, 18 Dec 2023 13:08:03 +0500
+
+linux-wb (5.10.35-wb157) stable; urgency=medium
+
+  * rtl8733bu: log association rejection messages as warnings 
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Wed, 29 Nov 2023 10:06:57 +0500
+
+linux-wb (5.10.35-wb156) stable; urgency=medium
+
+  * wb7x: enable USB regulator on boot to fix some USB flash drives detection
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 21 Nov 2023 19:05:38 +0600
+
+linux-wb (5.10.35-wb155) stable; urgency=medium
+
+  * Fix 1-Wire pin numbers for Wiren Board 7.4+
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Sat, 11 Nov 2023 00:16:41 +0600
+
+linux-wb (5.10.35-wb154) stable; urgency=medium
+
+  * wb7x: dts: fix microsd card power in bootlet on 7.3+ boards
+  * wb7x: add exFAT driver in bootlet
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 07 Nov 2023 22:29:19 +0600
+
+linux-wb (5.10.35-wb153) stable; urgency=medium
+
+  * wb74: disable microsd card detect gpio (it is broken on some boards)
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Thu, 26 Oct 2023 13:58:00 +0400
+
+linux-wb (5.10.35-wb152) stable; urgency=medium
+
+  * wbec: fix stack overwrite in sysfs read resulting in junk in fwrev
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sun, 22 Oct 2023 00:15:00 +0300
+
+linux-wb (5.10.35-wb151) stable; urgency=medium
+
+  * Bluetooth: btrtl: Add support for RTL8733BU
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Wed, 11 Oct 2023 09:56:01 +0500
+
+linux-wb (5.10.35-wb150) stable; urgency=medium
+
+  * wb7: add WB 7.4.2 revision with different ADC resistor divider
+
+ -- Evgeny Boger <boger@wirenboard.com>  Tue, 10 Oct 2023 14:31:45 +0300
+
+linux-wb (5.10.35-wb149) stable; urgency=medium
+
+  * add rtl8733bu wireless driver as a submodule
+    wb7 defconfig: enable CONFIG_RTL8733BU=m
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Fri, 29 Sep 2023 10:10:25 +0500
+
+linux-wb (5.10.35-wb148) stable; urgency=medium
+
+  * wb7: disable microsd card detect gpio (it is broken on some boards)
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 20 Sep 2023 15:52:20 +0600
+
+linux-wb (5.10.35-wb147) stable; urgency=medium
+
+  * wb741 dts: fix "V_OUT ON" gpio name
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Sun, 27 Aug 2023 21:30:28 +0300
+
+linux-wb (5.10.35-wb146) stable; urgency=medium
+
+  * add wb74 support to bootlet
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Mon, 21 Aug 2023 12:41:06 +0600
+
+linux-wb (5.10.35-wb145) stable; urgency=medium
+
+  * wb74: add dts
+  * wb-ec: add drivers
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Fri, 18 Aug 2023 12:57:15 +0300
+
+linux-wb (5.10.35-wb144) stable; urgency=medium
+
+  * add bootlet package build support, no functional changes to generic kernel
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 16 Aug 2023 21:17:30 +0600
+
+linux-wb (5.10.35-wb143) stable; urgency=medium
+
+  * fix battery status reporting on WB7
+
+ -- Evgeny Boger <boger@wirenboard.com>  Thu, 10 Aug 2023 18:36:34 +0300
+
+linux-wb (5.10.35-wb142) stable; urgency=medium
+
+  * wb6: initramfs: wb7-like update scheme support
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 18 Jul 2023 19:56:13 +0600
+
+linux-wb (5.10.35-wb141) stable; urgency=medium
+
+  * gpio: get rid of ARCH_NR_GPIOS_DYNALLOC, use ARCH_NR_GPIOS instead
+
+    On A40i there are 288 GPIOs but the range of for dynamically allocation is only 256.
+    So, GPIO drivers with gpio_base = -1 won't be able to allocate GPIO numbers.
+    Now 416 GPIO is available for sunxi.
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Wed, 12 Jul 2023 11:17:11 +0300
+
+linux-wb (5.10.35-wb140) stable; urgency=medium
+
+  * spi: spi-sun6i: enable autosuspend feature
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.ru>  Tue, 11 Jul 2023 10:16:43 +0300
+
+linux-wb (5.10.35-wb139) stable; urgency=medium
+
+  * fix RTC bug on WB7: PCF85063 config register was not properly cleared
+leading to factory test failure
+
+ -- Evgeny Boger <boger@wirenboard.com>  Wed, 05 Jul 2023 12:45:01 +0300
+
+linux-wb (5.10.35-wb138) stable; urgency=medium
+
+  * add 38071cb dts, defconfig and special build scripts
+
+ -- Evgeny Boger <boger@wirenboard.com>  Tue, 04 Jul 2023 22:09:19 +0300
+
+linux-wb (5.10.35-wb137) stable; urgency=medium
+
+  * wb7: enable exfat support
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Fri, 05 May 2023 14:27:21 +0600
+
+linux-wb (5.10.35-wb136) stable; urgency=medium
+
+  * dts: add missing wirenboard-7xx compatible strings for 7.2.x
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Fri, 05 May 2023 13:42:37 +0600
+
+linux-wb (5.10.35-wb135) stable; urgency=medium
+
+  * fix LED mode on second ethernet
+
+ -- Evgeny Boger <boger@wirenboard.com>  Tue, 02 May 2023 19:00:50 +0300
+
+linux-wb (5.10.35-wb134) stable; urgency=medium
+
+  * wb builddeb: add wireguard-modules package to "Provides:" sections
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 26 Apr 2023 13:15:21 +0300
+
+linux-wb (5.10.35-wb133) stable; urgency=medium
+
+  * rtl8723bu: Move powersave logs to debug.
+    This patch move nolinked powersave mode enter/leave notifications and RTW_ADAPTIVITY notifications to debug. These messages are repeated every minute and confuse regular users
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Mon, 20 Feb 2023 17:44:30 +0500
+
+linux-wb (5.10.35-wb132) stable; urgency=medium
+
+  * wb6: defconfig: add nftables nat support
+  * wb6: defconfig: add modules for ipsec support
+    see https://wiki.strongswan.org/projects/strongswan/wiki/KernelModules for details
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Tue, 14 Feb 2023 15:14:38 +0300
+
+linux-wb (5.10.35-wb131) stable; urgency=medium
+
+  * wb7-initramfs: remove all unused USB gadget features
+    (no functional changes for main OS kernel)
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 25 Jan 2023 17:27:12 +0600
+
+linux-wb (5.10.35-wb130) stable; urgency=medium
+
+  * wb7: dts: lower usb-gadget speed; add initram-dts with removed low usb-gadget speed
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 18 Jan 2023 17:11:38 +0300
+
+linux-wb (5.10.35-wb129) stable; urgency=medium
+
+  * usb: msub: sunxi: set max speed from DT
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 17 Jan 2023 21:08:26 +0600
+
+linux-wb (5.10.35-wb128) stable; urgency=medium
+
+  * rtl8723bu: fix disallow scan on buddy interface if configured as AP
+  * rtl8723bu: check buddy interface before starting new client or AP
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Fri, 23 Dec 2022 12:28:56 +0600
+
+linux-wb (5.10.35-wb127) stable; urgency=medium
+
+  * rtl8723bu: improve NetworkManager support
+    * fix disconnection procedure as a client
+    * disallow scan on the second interface if first is configured as a client
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Fri, 16 Dec 2022 16:33:42 +0600
+
+linux-wb (5.10.35-wb126) stable; urgency=medium
+
+  * wb7: defconfig: add nftables nat support
+  * wb7: defconfig: add modules for ipsec support
+    see https://wiki.strongswan.org/projects/strongswan/wiki/KernelModules for details
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 07 Dec 2022 14:07:11 +0300
+
+linux-wb (5.10.35-wb125) stable; urgency=medium
+
+  * wb: dts: adjust gpio line names
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Wed, 07 Dec 2022 10:12:12 +0500
+
+linux-wb (5.10.35-wb124) stable; urgency=medium
+
+  * usb-gadget: cherry-pick u_ether device name change
+
+ -- Aleksandr Kazadaev <aleksandr.kazadaev@wirenboard.com>  Thu, 1 Dec 2022 18:54:00 +0300
+
+linux-wb (5.10.35-wb123) stable; urgency=medium
+
+  * wb: more robust 1-wire readings. Fix regression in wb 5.10 kernel.
+    Revert 1-wire timings to kernel defaults
+
+ -- Evgeny Boger <boger@wirenboard.com>  Mon, 21 Nov 2022 11:31:33 +0300
+
+linux-wb (5.10.35-wb122) stable; urgency=medium
+
+  * dts: wb7: add generic labels for ethernet adapters
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 15 Nov 2022 21:13:50 +0600
+
+linux-wb (5.10.35-wb121) stable; urgency=medium
+
+  * wb6, wb7: add bunch of kernel options for Docker
+  * wb6, wb7: enable wireguard
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sun, 23 Oct 2022 23:03:09 +0300
+
+linux-wb (5.10.35-wb120) stable; urgency=medium
+
+  * wb7: add support for hw rev. 7.3.3
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Thu, 01 Sep 2022 20:37:11 +0300
+
+linux-wb (5.10.35-wb119) stable; urgency=medium
+
+  * wb7: add support for hw rev. 7.3.2 w/o eth MAC EEPROMs
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sat, 13 Aug 2022 16:12:27 +0300
+
+linux-wb (5.10.35-wb118) stable; urgency=medium
+
+  * disable CAN on WB7.3 and add WB7.3.1
+    See ERRWB73002 (https://wirenboard.com/wiki/WB_7:_Errata) for details.
+
+ -- Evgeny Boger <boger@wirenboard.com>  Tue, 02 Aug 2022 22:56:03 +0300
+
+linux-wb (5.10.35-wb117) stable; urgency=medium
+
+  * wb7: enable SYSVIPC config option
+
+    This config option enables System V IPC functions
+    (like shared memory access, semaphores, message queues and so on).
+    As it turned out, these functions are used by some of our customers.
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 19 Jul 2022 19:59:23 +0300
+
+linux-wb (5.10.35-wb116) stable; urgency=medium
+
+  * fec: use ethFECX interface names to reorder them in userspace
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 06 Jul 2022 17:20:48 +0300
+
+linux-wb (5.10.35-wb115) stable; urgency=medium
+
+  * wb7: removed adc (a1-a3, vin) noise (fixups in sun4i-gpadc-iio driver)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 15 Jun 2022 01:05:48 +0300
+
+linux-wb (5.10.35-wb114) stable; urgency=medium
+
+  * dts: wb7: add dts for WB 7.3 which supports ultra high-speed SD cards
+
+ -- Evgeny Boger <boger@wirenboard.com>  Thu, 09 Jun 2022 12:46:13 +0300
+
+linux-wb (5.10.35-wb113) stable; urgency=medium
+
+  * wb7: add missing drivers similar to wb6
+    This includes USB cameras, USB sound cards and GPIO keyboard
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Thu, 26 May 2022 12:37:29 +0300
+
+linux-wb (5.10.35-wb112) stable; urgency=medium
+
+  * dts: wb6: add missing eMMC pinctrl entries for DATA4..DATA7 pins
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Thu, 19 May 2022 23:26:55 +0300
+
+linux-wb (5.10.35-wb111) stable; urgency=medium
+
+  * Fixes the 00 byte (and a break condition) received while sending large
+    enough buffers by RS-485 on Wiren Board 7
+
+ -- Evgeny Boger <boger@wirenboard.com>  Mon, 18 Apr 2022 23:39:39 +0300
+
+linux-wb (5.10.35-wb110) stable; urgency=medium
+
+  * wb6.7.x: added imx6ul-wirenboard670-nousbhub dts (wbc-modem is connected directly to SoC's usb)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Mon, 11 Apr 2022 17:01:23 +0300
+
+linux-wb (5.10.35-wb109) stable; urgency=medium
+
+  * wb6, wb7: added rtc-rv8803 driver to defconfig
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Thu, 10 Mar 2022 19:04:37 +0300
+
+linux-wb (5.10.35-wb108) stable; urgency=medium
+
+  * wb7: defined proper modem's gpios
+  * wb6, wb7: binded modem's usb port
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 23 Feb 2022 23:43:21 +0300
+
+linux-wb (5.10.35-wb107) stable; urgency=medium
+
+  * wb7: battery and supercap modules support
+
+ -- Evgeny Boger <boger@wirenboard.com>  Wed, 23 Feb 2022 18:46:52 +0300
+
+linux-wb (5.10.35-wb106) stable; urgency=medium
+
+  * wb7: fix interrupts on WBIO modules
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sun, 20 Feb 2022 18:58:34 +0300
+
+linux-wb (5.10.35-wb105) stable; urgency=medium
+
+  * wb6.9: fixed incorrect clk on fec2
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 02 Feb 2022 23:05:27 +0300
+
+linux-wb (5.10.35-wb104) stable; urgency=medium
+
+  * make linux-image-wb6 and linux-image-wb7 conflict
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Tue, 01 Feb 2022 00:58:49 +0300
+
+linux-wb (5.10.35-wb103) stable; urgency=medium
+
+  * dts: fixed unstable eth connection on wb6.9
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Mon, 31 Jan 2022 13:30:41 +0300
+
+linux-wb (5.10.35-wb102) stable; urgency=medium
+
+  * wb7: improved USB role switching for muxed USB-A/USB-C ports
+  * wb7: remove battery nodes from device tree
+  * wb7: remove V_OUT_OK status input
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 30 Jan 2022 00:27:35 +0300
+
+linux-wb (5.10.35-wb101) stable; urgency=medium
+
+  * wb7: proper initramfs for USB update
+  * wb7: improved handling of GPIOs
+  * wb7: LEDs are driven by PWM
+  * wb7: PWM improvements
+  * wb7: delete some unused options from defconf
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sun, 23 Jan 2022 15:39:54 +0300
+
+linux-wb (5.10.35-wb100) stable; urgency=medium
+
+  * WB7 initial support
+
+ -- Evgeny Boger <boger@wirenboard.com>  Mon, 17 May 2021 19:46:14 +0300
+
+linux-wb (5.10.35-wb8) stable; urgency=medium
+
+  * spidev: add compatible string for rfm96w
+    (missing after migration from 4.9)
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Fri, 28 Jan 2022 13:06:55 +0300
+
+linux-wb (5.10.35-wb7) stable; urgency=medium
+
+  * dts: added WB6.9 support
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Wed, 26 Jan 2022 00:39:12 +0300
+
+linux-wb (5.10.35-wb6) stable; urgency=medium
+
+  * dts: remove rts-gpios from WB6 dts by default.
+    This fixes some internal Wiren Board modules such as GPS and Zigbee
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Wed, 29 Sep 2021 22:40:39 +0300
+
+linux-wb (5.10.35-wb5) stable; urgency=medium
+
+  * LIRC and SC16IS7XX drivers are included into imx6_wirenboard_defconfig
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.ru>  Fri, 06 Aug 2021 11:29:13 +0500
+
+linux-wb (5.10.35-wb4) stable; urgency=medium
+
+  * CONFIG_NVMEM_IMX_OCOTP=y
+  * Duplicate entries in imx6_wirenboard_defconfig are removed
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.ru>  Thu, 05 Aug 2021 16:00:26 +0500
+
+linux-wb (5.10.35-wb3) stable; urgency=medium
+
+  * Defined RTC_CLKOUT as gpio in WB6.8+
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Fri, 25 Jun 2021 19:41:11 +0300
+
+linux-wb (5.10.35-wb2) stable; urgency=medium
+
+  * fix unstable link on eth0 on some units
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 01 Jun 2021 20:20:05 +0300
+
+linux-wb (5.10.35-wb1) stable; urgency=medium
+
+  * merge linux-stable/v.5.10.y, 5.10.35
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 07 May 2021 19:23:18 +0300
+
+linux-wb (5.10.31-wb1) stable; urgency=medium
+
+  * rebased on linux-stable/v5.10.y, initial linux stable version was 5.10.31
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 07 May 2021 19:13:47 +0300
+
+linux-wb (5.10.0-wb2) stable; urgency=medium
+
+  * RS-485 transcievers rts pins are configured as gpios with default pull down
+
+ -- Vladimir Romanov <v.romanov@wirenboard.ru>  Thu, 22 Apr 2021 18:24:12 +0300
+
+linux-wb (5.10.0-wb1) stable; urgency=medium
+
+  * Initial release
+
+ -- Nikita Maslov <nikita.maslov@wirenboard.ru>  Mon, 05 Apr 2021 23:30:04 +0300

@@ -1,0 +1,6 @@
+# WARNING: this is a minimal control file to make dch happy.
+# Actual control file for the package will be generated using
+# our modified builddeb script, see
+#   scripts/package/wb/builddeb
+Source: linux
+Maintainer: Wirenboard team <info@wirenboard.com>

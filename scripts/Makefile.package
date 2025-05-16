@@ -132,6 +132,11 @@ deb-pkg srcdeb-pkg bindeb-pkg:
 		--no-check-builddeps) \
 	$(DPKG_FLAGS))
 
+PHONY += binwbdeb-pkg
+binwbdeb-pkg:
+	+$$KBUILD_PKG_ROOTCMD $(CONFIG_SHELL) $(srctree)/scripts/package/wb/builddeb $@
+
+
 # snap-pkg
 # ---------------------------------------------------------------------------
 PHONY += snap-pkg
