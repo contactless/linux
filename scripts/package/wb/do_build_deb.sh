@@ -39,22 +39,22 @@ make_bootlet() {
     INSTALL_MOD_PATH="initramfs-modules"
     mkdir -p "$KBUILD_OUTPUT/$INSTALL_MOD_PATH"
 
-    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH=arm KBUILD_DEBARCH="${DEBARCH}" \
+    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH="$KERNEL_ARCH" KBUILD_DEBARCH="${DEBARCH}" \
         INSTALL_MOD_PATH="$INSTALL_MOD_PATH" all modules
 
-    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH=arm KBUILD_DEBARCH="${DEBARCH}" \
+    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH="$KERNEL_ARCH" KBUILD_DEBARCH="${DEBARCH}" \
         INSTALL_MOD_PATH="$INSTALL_MOD_PATH" modules_install
 
     local CPIO_PATH
     CPIO_PATH="$(realpath --relative-to="$KBUILD_OUTPUT/$INSTALL_MOD_PATH" "$KBUILD_OUTPUT/initramfs.cpio")"
     { pushd "$KBUILD_OUTPUT/$INSTALL_MOD_PATH" >/dev/null; find . -mindepth 1 | fakeroot cpio -oA -H newc -F "$CPIO_PATH"; popd >/dev/null; }
 
-    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH=arm KBUILD_DEBARCH="${DEBARCH}" zImage dtbs
+    make -j"$CORES" LOCALVERSION="$(get_kernel_revision)" ARCH="$KERNEL_ARCH" KBUILD_DEBARCH="${DEBARCH}" "$KERNEL_IMAGE" dtbs
     set +x
 }
 
 make_deb () {
-    fakeroot make -j"$CORES" ARCH=arm KBUILD_DEBARCH="$DEBARCH" \
+    fakeroot make -j"$CORES" ARCH="$KERNEL_ARCH" KBUILD_DEBARCH="$DEBARCH" \
         LOCALVERSION="$(get_kernel_revision)" WB_VERSION_SUFFIX="$VERSION_SUFFIX" \
         KDEB_WBTARGET="$KERNEL_FLAVOUR" KDEB_WBDESC="$KDEB_WBDESC" \
         BOOTLET_DTB="$BOOTLET_DTB" INITRAMFS_VERSION="$INITRAMFS_VERSION" binwbdeb-pkg
@@ -77,8 +77,8 @@ make_bootlet_deb() {
 
     mkdir -p "$BOOTLET_DIR"
 
-    cp "$KBUILD_OUTPUT/arch/arm/boot/zImage" "$BOOTLET_DIR/zImage"
-    cp "$KBUILD_OUTPUT/arch/arm/boot/dts/$BOOTLET_DTB" "$BOOTLET_DIR/boot.dtb"
+    cp "$KBUILD_OUTPUT/arch/$KERNEL_ARCH/boot/$KERNEL_IMAGE" "$BOOTLET_DIR/$KERNEL_IMAGE"
+    cp "$KBUILD_OUTPUT/arch/$KERNEL_ARCH/boot/dts/$BOOTLET_DTB" "$BOOTLET_DIR/boot.dtb"
 
     rm -f "$PACKAGE_NAME"*.deb || true
     fpm -s dir -t deb -n "$PACKAGE_NAME" -v "$(get_kernel_full_version)${VERSION_SUFFIX}-fs${INITRAMFS_VERSION}" \

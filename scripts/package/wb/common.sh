@@ -55,15 +55,19 @@ make_config() {
             echo
         fi
         if [[ "$yn" == "y" ]]; then
-            make ARCH=arm $KERNEL_DEFCONFIG
+            # shellcheck disable=SC2086
+            # $KERNEL_DEFCONFIG may contain spaces and it is intended (e.g. "defconfig wb8.config")
+            make ARCH="$KERNEL_ARCH" $KERNEL_DEFCONFIG
         else
             echo "Using existing .config"
         fi
     else
-        make ARCH=arm $KERNEL_DEFCONFIG
+        # shellcheck disable=SC2086
+        # $KERNEL_DEFCONFIG may contain spaces and it is intended (e.g. "defconfig wb8.config")
+        make ARCH="$KERNEL_ARCH" $KERNEL_DEFCONFIG
     fi
 }
 
 make_image() {
-    make -j${CORES} LOCALVERSION=$(get_kernel_revision) ARCH=arm KBUILD_DEBARCH=${DEBARCH} zImage modules dtbs
+    make -j${CORES} LOCALVERSION=$(get_kernel_revision) ARCH="$KERNEL_ARCH" KBUILD_DEBARCH=${DEBARCH} "$KERNEL_IMAGE" modules dtbs
 }
