@@ -4,22 +4,6 @@ INITRAMFS_DIR="/usr/src/wb-initramfs/$KERNEL_FLAVOUR"
 
 setup_kernel_vars() {
 	case "$KERNEL_FLAVOUR" in
-		wb2)
-			DEBARCH=armel
-			KERNEL_DEFCONFIG=mxs_wirenboard_defconfig
-            KDEB_WBDESC="Wiren Board 2-5"
-			;;
-		wb2_initramfs)
-			DEBARCH=armel
-			KERNEL_DEFCONFIG=mxs_wirenboard_initramfs_defconfig
-			KDEB_WBDESC="Wiren Board 2-5 (initramfs)"
-			;;
-		wb2_usbgadget)
-			DEBARCH=armel
-			KERNEL_DEFCONFIG=mxs_wirenboard_initramfs_defconfig
-			KDEB_WBDESC="Wiren Board 2-5 (USB gadget bootlet)"
-			APPEND_DT=imx28-wirenboard5x-usbfw
-			;;
 		wb6)
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=imx6_wirenboard_defconfig
@@ -66,8 +50,22 @@ setup_kernel_vars() {
 			BOOTLET_DEPS=
 			KDEB_WBDESC="Wiren Board 7 (factory bootlet)"
 			;;
+		wb8)
+			DEBARCH=arm64
+			KERNEL_DEFCONFIG="defconfig wb8.config"
+			KDEB_WBDESC="Wiren Board 8"
+			;;
+		wb8x-bootlet)
+			INITRAMFS_DIR="/usr/src/wb-initramfs/wb8x-bootlet"
+			DEBARCH=arm64
+			KERNEL_DEFCONFIG="defconfig wb8-bootlet.config"
+			BOOTLET_DTB=allwinner/sun50i-h616-wirenboard8-bootlet.dtb
+			PROVIDES_BOOTLET_FOR_FITS=y
+			BOOTLET_DEPS=linux-image-wb8
+			KDEB_WBDESC="Wiren Board 8 (bootlet)"
+			;;
 		*)
-			echo "Unsupported KERNEL_FLAVOUR, please specify one of: wb2, wb6, wb7"
+			echo "Unsupported KERNEL_FLAVOUR, please specify one of: wb6, wb7, wb8, wb8x-bootlet"
 			return 1
 	esac
 
@@ -86,14 +84,23 @@ setup_kernel_vars() {
 	case "$DEBARCH" in
 		armel)
 			CROSS_COMPILE=arm-linux-gnueabi-
+			KERNEL_ARCH=arm
+			KERNEL_IMAGE=zImage
 			;;
 		armhf)
 			CROSS_COMPILE=arm-linux-gnueabihf-
+			KERNEL_ARCH=arm
+			KERNEL_IMAGE=zImage
+			;;
+		arm64)
+			CROSS_COMPILE=aarch64-linux-gnu-
+			KERNEL_ARCH=arm64
+			KERNEL_IMAGE=Image.gz
 			;;
 		*)
-			echo "Unsupported DEBARCH, please specify one of: armel, armhf"
+			echo "Unsupported DEBARCH, please specify one of: armel, armhf, arm64"
 			return 1
 			;;
 	esac
-	export DEBARCH KERNEL_DEFCONFIG KDEB_WBFLAVOUR_DESC CROSS_COMPILE BOOTLET_DTB INITRAMFS_VERSION KDEB_WBDESC BOOTLET_DEPS PROVIDES_BOOTLET_FOR_FITS
+	export DEBARCH KERNEL_ARCH KERNEL_IMAGE KERNEL_DEFCONFIG KDEB_WBFLAVOUR_DESC CROSS_COMPILE BOOTLET_DTB INITRAMFS_VERSION KDEB_WBDESC BOOTLET_DEPS PROVIDES_BOOTLET_FOR_FITS
 }

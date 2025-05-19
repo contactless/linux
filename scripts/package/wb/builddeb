@@ -200,7 +200,6 @@ if grep -q '^CONFIG_MODULES=y' $KCONFIG_CONFIG ; then
 fi
 
 if [ "$ARCH" != "um" ]; then
-	$MAKE headers_check KBUILD_SRC=
 	$MAKE headers_install KBUILD_SRC= INSTALL_HDR_PATH="$libc_headers_dir/usr"
 fi
 
@@ -235,9 +234,18 @@ EOF
 done
 
 # Create symlink to kernel image (/boot/zImage) in postinst
+case $ARCH in
+arm64)
+    target_image_path="/boot/Image.gz"
+    ;;
+armhf)
+    target_image_path="/boot/zImage"
+    ;;
+esac
+
 sed -e "s/exit 0//g" -i $tmpdir/DEBIAN/postinst
 cat >> $tmpdir/DEBIAN/postinst <<EOF
-ln -sf /$installed_image_path /boot/zImage > /dev/null 2>&1 || mv /$installed_image_path /boot/zImage
+ln -sf /$installed_image_path $target_image_path > /dev/null 2>&1 || mv /$installed_image_path $target_image_path
 touch /boot/.next
 exit 0
 EOF
