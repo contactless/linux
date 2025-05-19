@@ -49,6 +49,8 @@
 
 #define CLK_CPU			24
 
+#define CLK_APB1                27
+
 #define CLK_BUS_MIPI_DSI	29
 #define CLK_BUS_CE		30
 #define CLK_BUS_DMA		31
