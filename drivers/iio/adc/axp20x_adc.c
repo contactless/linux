@@ -20,8 +20,10 @@
 
 #include <linux/iio/iio.h>
 #include <linux/iio/driver.h>
-#include <linux/iio/machine.h>
+
+#include <linux/iio/consumer.h>
 #include <linux/mfd/axp20x.h>
+#include <linux/iio/machine.h>
 
 #define AXP192_ADC_EN1_MASK			GENMASK(7, 0)
 #define AXP192_ADC_EN2_MASK			(GENMASK(3, 0) | BIT(7))
@@ -205,21 +207,21 @@ static struct iio_map axp717_maps[] = {
 	}, { /* sentinel */ }
 };
 
-static struct iio_map axp22x_maps[] = {
-	{
-		.consumer_dev_name = "axp20x-battery-power-supply",
-		.consumer_channel = "batt_v",
-		.adc_channel_label = "batt_v",
-	}, {
-		.consumer_dev_name = "axp20x-battery-power-supply",
-		.consumer_channel = "batt_chrg_i",
-		.adc_channel_label = "batt_chrg_i",
-	}, {
-		.consumer_dev_name = "axp20x-battery-power-supply",
-		.consumer_channel = "batt_dischrg_i",
-		.adc_channel_label = "batt_dischrg_i",
-	}, { /* sentinel */ }
-};
+/* static struct iio_map axp22x_maps[] = { */
+/* 	{ */
+/* 		.consumer_dev_name = "axp20x-battery-power-supply", */
+/* 		.consumer_channel = "batt_v", */
+/* 		.adc_channel_label = "batt_v", */
+/* 	}, { */
+/* 		.consumer_dev_name = "axp20x-battery-power-supply", */
+/* 		.consumer_channel = "batt_chrg_i", */
+/* 		.adc_channel_label = "batt_chrg_i", */
+/* 	}, { */
+/* 		.consumer_dev_name = "axp20x-battery-power-supply", */
+/* 		.consumer_channel = "batt_dischrg_i", */
+/* 		.adc_channel_label = "batt_dischrg_i", */
+/* 	}, { /1* sentinel *1/ } */
+/* }; */
 
 /*
  * Channels are mapped by physical system. Their channels share the same index.
