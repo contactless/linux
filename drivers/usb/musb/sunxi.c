@@ -297,8 +297,6 @@ static int sunxi_musb_exit(struct musb *musb)
 	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags))
 		sunxi_sram_release(musb->controller->parent);
 
-	devm_usb_put_phy(glue->dev, glue->xceiv);
-
 	return 0;
 }
 
@@ -741,12 +739,6 @@ static int sunxi_musb_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	pdata.config = cfg->hdrc_config;
-
-	if (!of_device_is_compatible(np, "allwinner,sun8i-h3-musb") && 
-	    !of_device_is_compatible(np, "allwinner,sun8i-r40-musb"))
-		pdata.config = &sunxi_musb_hdrc_config;
-	else
-		pdata.config = &sunxi_musb_hdrc_config_h3;
 
 	glue->dev = &pdev->dev;
 	INIT_WORK(&glue->work, sunxi_musb_work);
