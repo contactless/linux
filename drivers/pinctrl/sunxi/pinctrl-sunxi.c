@@ -810,11 +810,15 @@ static u8 sunxi_pmx_get(struct pinctrl_dev *pctldev,
 				 unsigned pin)
 {
 	struct sunxi_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
-	u32 val;
+	u32 reg, shift, mask, val;
 
 	pin -= pctl->desc->pin_base;
-	val = readl(pctl->membase + sunxi_mux_reg(pin));
-	return (val >> sunxi_mux_offset(pin)) & MUX_PINS_MASK;
+
+	/* get register/bitfield for this pin */
+	sunxi_mux_reg(pctl, pin, &reg, &shift, &mask);
+
+	val = readl(pctl->membase + reg);
+	return (val & mask) >> shift; /* 0-based mux value */
 }
 
 static int sunxi_pmx_set_mux(struct pinctrl_dev *pctldev,
