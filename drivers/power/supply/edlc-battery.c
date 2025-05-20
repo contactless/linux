@@ -70,7 +70,7 @@ struct edlc_battery {
 	struct iio_channel *channel;
 	struct power_supply_desc desc;
 	struct power_supply *battery;
-	struct power_supply_battery_info info;
+	const struct power_supply_battery_info *info;
 	struct delayed_work bat_work;
 
 	int voltage_max_uv;
@@ -108,7 +108,7 @@ static int edlc_battery_get_property(struct power_supply *psy,
 					union power_supply_propval *val)
 {
 	struct edlc_battery *bat = power_supply_get_drvdata(psy);
-	struct power_supply_battery_info *info = &bat->info;
+	const struct power_supply_battery_info *info = bat->info;
 	int ret;
 	int voltage;
 
@@ -228,7 +228,7 @@ static int edlc_battery_get_status(struct edlc_battery *bat, int delta_v)
 
 static void eldc_battery_update_current(struct edlc_battery *bat, int delta_uv, int delta_ms)
 {
-	if (bat->info.energy_full_design_uwh <= 0)
+    if (!bat->info || bat->info->energy_full_design_uwh <= 0)
 		return;
 
 	if (delta_uv == 0) { // fast path
@@ -237,7 +237,7 @@ static void eldc_battery_update_current(struct edlc_battery *bat, int delta_uv, 
 	} else {
 		int64_t tmp_divisor;
 		int64_t tmp = 2;
-		tmp *= bat->info.energy_full_design_uwh;
+		tmp *= bat->info->energy_full_design_uwh;
 		tmp *= delta_uv;
 		tmp *= 3600; // Wh to J
 
@@ -304,6 +304,13 @@ static void edlc_battery_clear_data(void *res)
 	cancel_delayed_work_sync(res);
 }
 
+static void edlc_battery_put_info(void *data)
+{
+       struct edlc_battery *bat = data;
+       power_supply_put_battery_info(bat->battery,
+               (struct power_supply_battery_info *)bat->info);
+}
+
 static int edlc_battery_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -335,21 +342,22 @@ static int edlc_battery_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(bat->battery),
 				     "Unable to register battery\n");
 
-	ret = power_supply_get_battery_info(bat->battery, &bat->info);
+    ret = power_supply_get_battery_info(bat->battery,
+					    (struct power_supply_battery_info **)&bat->info);
 	if (ret) {
 		dev_dbg(dev, "Unable to get battery info: %d\n", ret);
 	}
+	if (!ret)
+		devm_add_action_or_reset(dev, edlc_battery_put_info, bat);
 
-	if (bat->info.voltage_min_design_uv >= 0) {
-		bat->voltage_min_uv = bat->info.voltage_min_design_uv;
+	if (bat->info) {
+		if (bat->info->voltage_min_design_uv >= 0)
+			bat->voltage_min_uv = bat->info->voltage_min_design_uv;
+		if (bat->info->voltage_max_design_uv > 0)
+			bat->voltage_max_uv = bat->info->voltage_max_design_uv;
 	}
-	if (bat->info.voltage_max_design_uv > 0) {
-		bat->voltage_max_uv = bat->info.voltage_max_design_uv;
-	} else {
-		dev_info(dev, "Unable to get max design voltage, will "
-		"report incorrect data prior to first full charge\n");
-	}
-	if (bat->info.energy_full_design_uwh < 0) {
+
+	if (bat->info->energy_full_design_uwh < 0) {
 		dev_info(dev, "Unable to get full design energy, only "
 		"percent capacity will be reported\n");
 	}
