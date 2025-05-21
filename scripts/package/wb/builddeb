@@ -238,6 +238,9 @@ case $ARCH in
 arm64)
     target_image_path="/boot/Image.gz"
     ;;
+arm)
+    target_image_path="/boot/zImage"
+    ;;
 armhf)
     target_image_path="/boot/zImage"
     ;;
