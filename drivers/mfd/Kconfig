@@ -1949,6 +1949,16 @@ config MFD_CS47L24
 	help
 	  Support for Cirrus Logic CS47L24 and WM1831 low power audio SoC
 
+config MFD_WBEC
+	tristate "Wiren Board Embedded Controller MFD Driver"
+	depends on SPI && OF
+	select MFD_CORE
+	select REGMAP_SPI
+	help
+	  This driver provides common support for accessing the Wiren Board
+	  Embedded Controller through SPI interface. The device supports
+	  multiple sub-devices including RTC, WDT, pwrkey, GPIO, IIO.
+
 config MFD_WM5102
 	bool "Wolfson Microelectronics WM5102"
 	depends on MFD_ARIZONA
