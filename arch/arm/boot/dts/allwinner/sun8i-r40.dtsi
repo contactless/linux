@@ -491,6 +491,8 @@
 			status = "disabled";
 			#address-cells = <1>;
 			#size-cells = <0>;
+			dmas = <&dma 26>, <&dma 26>;
+			dma-names = "rx", "tx";
 		};
 
 		ahci: sata@1c18000 {
