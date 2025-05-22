@@ -17,7 +17,7 @@ setup_kernel_vars() {
 		wb67-bootlet|wb6x-bootlet)
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=imx6_wirenboard_initramfs_defconfig
-			BOOTLET_DTB=imx6ul-wirenboard6x-init.dtb
+			BOOTLET_DTB=allwinner/imx6ul-wirenboard6x-init.dtb
 			BOOTLET_DEPS=linux-image-wb6
 			PROVIDES_BOOTLET_FOR_FITS=y
 			KDEB_WBDESC="Wiren Board 6 (bootlet)"
@@ -35,7 +35,7 @@ setup_kernel_vars() {
 		wb7x-bootlet)
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=wirenboard7_initramfs_defconfig
-			BOOTLET_DTB=sun8i-r40-wirenboard72x-initram.dtb
+			BOOTLET_DTB=allwinner/sun8i-r40-wirenboard72x-initram.dtb
 			BOOTLET_DEPS=linux-image-wb7
 			PROVIDES_BOOTLET_FOR_FITS=y
 			KDEB_WBDESC="Wiren Board 7 (bootlet)"
@@ -45,7 +45,7 @@ setup_kernel_vars() {
 			INITRAMFS_DIR="/usr/src/wb-initramfs/wb7x-bootlet"
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=wirenboard7_initramfs_defconfig
-			BOOTLET_DTB=sun8i-r40-wirenboard72x-factory.dtb
+			BOOTLET_DTB=allwinner/sun8i-r40-wirenboard72x-factory.dtb
 			PROVIDES_BOOTLET_FOR_FITS=  # used in production, no need to install it on boards
 			BOOTLET_DEPS=
 			KDEB_WBDESC="Wiren Board 7 (factory bootlet)"
