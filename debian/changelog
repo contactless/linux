@@ -1,3 +1,9 @@
+linux-wb (5.10.35-wb176) stable; urgency=medium
+
+  * wb7: disallow scan on buddy interface for rtl8733bu if configured as client
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Fri, 30 May 2025 13:20:48 +0300
+
 linux-wb (5.10.35-wb175) stable; urgency=medium
 
   *  wb6: support docker 28.0.0
