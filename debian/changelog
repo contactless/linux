@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb137) stable; urgency=medium
+
+  * wb8: disallow scan on buddy interface for rtl8733bu if configured as client
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Fri, 30 May 2025 13:01:27 +0300
+
 linux-wb (6.8.0-wb136) stable; urgency=medium
 
   * wb8: add RNDIS host module
