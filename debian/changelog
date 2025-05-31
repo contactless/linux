@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb138) stable; urgency=medium
+
+  * wb8: fix rtl8733bu client not connecting when it is the only interface bug
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Sat, 31 May 2025 08:16:02 +0300
+
 linux-wb (6.8.0-wb137) stable; urgency=medium
 
   * wb8: disallow scan on buddy interface for rtl8733bu if configured as client
