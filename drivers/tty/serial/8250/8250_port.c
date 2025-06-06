@@ -15,7 +15,6 @@
 #include <linux/moduleparam.h>
 #include <linux/ioport.h>
 #include <linux/init.h>
-#include <linux/iopoll.h>
 #include <linux/irq.h>
 #include <linux/console.h>
 #include <linux/gpio/consumer.h>
@@ -325,7 +324,6 @@ static const struct serial8250_config uart_config[] = {
 		.fifo_size	= 64,
 		.tx_loadsz	= 64,
 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
-		.flags		= UART_CAP_FIFO | UART_CAP_AFE,
 		.rxtrig_bytes	= {1, 16, 32, 62},
 	},
 };
@@ -618,7 +616,7 @@ EXPORT_SYMBOL_GPL(serial8250_em485_destroy);
 
 struct serial_rs485 serial8250_em485_supported = {
 	.flags = SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND | SER_RS485_RTS_AFTER_SEND |
-		 SER_RS485_TERMINATE_BUS | SER_RS485_RX_DURING_TX,
+		 SER_RS485_TERMINATE_BUS ,
 	.delay_rts_before_send = 1,
 	.delay_rts_after_send = 1,
 };
@@ -1441,50 +1439,20 @@ void serial8250_em485_stop_tx(struct uart_8250_port *p, bool toggle_ier)
 }
 EXPORT_SYMBOL_GPL(serial8250_em485_stop_tx);
 
-static inline int __get_lsr(struct uart_8250_port *p)
-{
-	return serial_in(p, UART_LSR);
-}
-
-static inline int __wait_for_empty(struct uart_8250_port *p, u64 timeout_us)
-{
-	int lsr;
-
-	return readx_poll_timeout(__get_lsr, p, lsr,
-				  (lsr & UART_LSR_BOTH_EMPTY) == UART_LSR_BOTH_EMPTY,
-				  0, timeout_us);
-}
-
 static enum hrtimer_restart serial8250_em485_handle_stop_tx(struct hrtimer *t)
 {
 	struct uart_8250_em485 *em485 = container_of(t, struct uart_8250_em485,
 			stop_tx_timer);
 	struct uart_8250_port *p = em485->port;
 	unsigned long flags;
-	enum hrtimer_restart restart = HRTIMER_NORESTART;
 
 	serial8250_rpm_get(p);
 	uart_port_lock_irqsave(&p->port, &flags);
 	if (em485->active_timer == &em485->stop_tx_timer) {
-		/*
-		 * On 8250 without TEMT interrupt, check LSR state and
-		 * restart timer if not empty yet.
-		 */
-		if (!(p->capabilities & UART_CAP_NOTEMT)) {
-			int ret = __wait_for_empty(p, 100);
-
-			if (ret < 0) {
-				hrtimer_forward_now(&em485->stop_tx_timer, p->char_duration / 4);
-				restart = HRTIMER_RESTART;
-				goto out;
-			}
-		}
-
 		p->rs485_stop_tx(p, true);
 		em485->active_timer = NULL;
 		em485->tx_stopped = true;
 	}
-out:
 	uart_port_unlock_irqrestore(&p->port, flags);
 	serial8250_rpm_put(p);
 
@@ -1512,13 +1480,6 @@ static void __stop_tx_rs485(struct uart_8250_port *p, u64 stop_delay)
 	if (stop_delay > 0) {
 		em485->active_timer = &em485->stop_tx_timer;
 		hrtimer_start(&em485->stop_tx_timer, ns_to_ktime(stop_delay), HRTIMER_MODE_REL);
-	} else if (!(p->capabilities & UART_CAP_NOTEMT) && __wait_for_empty(p, 100)) {
-		/* Short timer of char / 2 to check for clear fifos */
-		unsigned int tx_fifo_level = p->port.serial_in(&p->port, 0x20); //UART_TFL
-
-
-		em485->active_timer = &em485->stop_tx_timer;
-		hrtimer_start(&em485->stop_tx_timer, p->char_duration * tx_fifo_level, HRTIMER_MODE_REL);
 	} else {
 		p->rs485_stop_tx(p, true);
 		em485->active_timer = NULL;
@@ -1555,6 +1516,7 @@ static inline void __stop_tx(struct uart_8250_port *p)
 			 * Roughly estimate 1 extra bit here with / 7.
 			 */
 			stop_delay = p->port.frame_time + DIV_ROUND_UP(p->port.frame_time, 7);
+			// stop_delay = p->port.frame_time;
 		}
 
 		__stop_tx_rs485(p, stop_delay);
@@ -1620,13 +1582,9 @@ static inline void __start_tx(struct uart_port *port)
 void serial8250_em485_start_tx(struct uart_8250_port *up, bool toggle_ier)
 {
 	unsigned char mcr = serial8250_in_MCR(up);
-	struct uart_port *port = &up->port;
 
-	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier){
-		up->rx_disabled = true;
-		gpiod_set_value(port->rs485_re_gpio, 0);
+	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX) && toggle_ier)
 		serial8250_stop_rx(&up->port);
-	}
 
 	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
 		mcr |= UART_MCR_RTS;
@@ -1781,6 +1739,11 @@ void serial8250_read_char(struct uart_8250_port *up, u16 lsr)
 
 	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
 		if (lsr & UART_LSR_BI) {
+ 			if (port->ignore_status_mask & UART_LSR_BI) {
+ 				trace_printk("UART%u BREAK ignored\n", port->line);
+ 				return;
+ 			}
+
 			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
 			port->icount.brk++;
 			/*
@@ -3598,3 +3561,4 @@ int serial8250_console_exit(struct uart_port *port)
 
 MODULE_DESCRIPTION("Base port operations for 8250/16550-type serial ports");
 MODULE_LICENSE("GPL");
+
