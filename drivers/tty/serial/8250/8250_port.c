@@ -1739,6 +1739,11 @@ void serial8250_read_char(struct uart_8250_port *up, u16 lsr)
 
 	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
 		if (lsr & UART_LSR_BI) {
+			// FIXME: линия RX несколько бит удерживается лишнего - этого хватает
+			// чтобы контроллер посчитал это разрывом линии.
+			// Необходимо найти источник и поправить это, а пока подкостылил так:
+			return;
+
  			if (port->ignore_status_mask & UART_LSR_BI) {
  				trace_printk("UART%u BREAK ignored\n", port->line);
  				return;
