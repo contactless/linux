@@ -546,7 +546,6 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 {
 	unsigned long newrate = tty_termios_baud_rate(termios) * 16;
 	struct dw8250_data *d = to_dw8250_data(p->private_data);
-	struct uart_8250_port *up = up_to_u8250p(p);
 	long rate;
 	int ret;
 
@@ -564,9 +563,9 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 	clk_prepare_enable(d->clk);
 
 	p->status &= ~UPSTAT_AUTOCTS;
-	if ((up->capabilities & UART_CAP_AFE) && (termios->c_cflag & CRTSCTS)){
-		p->status |= UPSTAT_AUTOCTS;
-	}
+	// if ((up->capabilities & UART_CAP_AFE) && (termios->c_cflag & CRTSCTS)){
+	// 	p->status |= UPSTAT_AUTOCTS;
+	// }
 
 	dw8250_do_set_termios(p, termios, old);
 }
@@ -673,14 +672,15 @@ static void dw8250_quirks(struct uart_port *p, struct dw8250_data *data)
 #endif
 
 	if (quirks & DW_UART_QUIRK_SUN4I) {
-		p->flags = UPF_SHARE_IRQ | UPF_FIXED_TYPE | UPF_FIXED_PORT;
-		up->capabilities = UART_CAP_FIFO;
 		p->type = PORT_SUN4I;
+		p->flags |= UPF_FIXED_TYPE |   		 /* порт жёстко привязан к типу */
+                    UPF_SHARE_IRQ;     		 /* IRQ-линия может быть общей */
+		up->capabilities |= UART_CAP_FIFO |  /* есть полноценный FIFO */
+							UART_CAP_NOTEMT; /* аппарат может выставлять THRE до
+											  * полного опустошения shift-регистра;
+											  * драйвер учитывает это и ждёт дольше */
 	}
-	if (quirks & DW_UART_QUIRK_ARMADA_38X)
-		p->serial_out = dw8250_serial_out38x;
-	if (quirks & DW_UART_QUIRK_SKIP_SET_RATE)
-		p->set_termios = dw8250_do_set_termios;
+
 	if (quirks & DW_UART_QUIRK_IS_DMA_FC) {
 		data->data.dma.txconf.device_fc = 1;
 		data->data.dma.rxconf.device_fc = 1;
@@ -847,10 +847,6 @@ static int dw8250_probe(struct platform_device *pdev)
 
 	if (!data->skip_autocfg)
 		dw8250_setup_port(p);
-
-       if (p->dev->of_node)
-               if (of_property_read_bool(p->dev->of_node, "uart-has-rtscts"))
-                       up->capabilities |= UART_CAP_AFE;
 
 	/* If we have a valid fifosize, try hooking up DMA */
 	if (p->fifosize) {
