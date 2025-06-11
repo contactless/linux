@@ -41,8 +41,12 @@ static int wbec_gpio_probe(struct platform_device *pdev)
 	config.ngpio = ngpios;
 	config.regmap = wbec->regmap;
 	config.parent = dev;
-	config.reg_dat_base = WBEC_REG_GPIO;
-	config.reg_set_base = WBEC_REG_GPIO;
+	config.reg_set_base = WBEC_REG_GPIO_CTRL;
+	if (wbec->support_v2_protocol) {
+		/* direction of gpios supported since v2 */
+		config.reg_dat_base = WBEC_REG_GPIO_CTRL;
+		config.reg_dir_out_base = WBEC_REG_GPIO_DIR;
+	}
 	config.ngpio_per_reg = WBEC_GPIO_PER_REG;
 	config.reg_stride = 1;
 
@@ -65,6 +69,6 @@ static struct platform_driver wbec_gpio_driver = {
 module_platform_driver(wbec_gpio_driver);
 
 MODULE_AUTHOR("Pavel Gasheev <pavel.gasheev@wirenboard.com>");
-MODULE_DESCRIPTION("Wiren Board 7 Embedded Controller GPIO driver");
+MODULE_DESCRIPTION("Wiren Board Embedded Controller GPIO driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wbec-gpio");
