@@ -33,16 +33,16 @@ static int wbec_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	if (state->period > 1000000000) {
 		// Minimum frequency is 1 Hz
-		dev_err(chip->dev, "Period %llu ns is not supported: bigger than 1 second\n", state->period);
+		dev_err(&chip->dev, "Period %llu ns is not supported: bigger than 1 second\n", state->period);
 		return -EINVAL;
 	}
 	if (state->period < 100000) {
 		// Maximum frequency is 10 kHz
-		dev_err(chip->dev, "Period %llu ns is not supported: less than 100 us\n", state->period);
+		dev_err(&chip->dev, "Period %llu ns is not supported: less than 100 us\n", state->period);
 		return -EINVAL;
 	}
 	if (state->polarity == PWM_POLARITY_INVERSED) {
-		dev_err(chip->dev, "Polarity inverted is not supported\n");
+		dev_err(&chip->dev, "Polarity inverted is not supported\n");
 		return -EINVAL;
 	}
 
@@ -59,7 +59,7 @@ static int wbec_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 			 regs, ARRAY_SIZE(regs));
 
 	if (ret < 0) {
-		dev_err(chip->dev, "Failed to write PWM regs: %d\n", ret);
+		dev_err(&chip->dev, "Failed to write PWM regs: %d\n", ret);
 		return ret;
 	}
 
@@ -78,7 +78,7 @@ static int wbec_pwm_get_state(struct pwm_chip *chip,
 			 regs, ARRAY_SIZE(regs));
 
 	if (ret < 0) {
-		dev_err(chip->dev, "Failed to read PWM regs: %d\n", ret);
+		dev_err(&chip->dev, "Failed to read PWM regs: %d\n", ret);
 		return ret;
 	}
 
@@ -123,7 +123,7 @@ static int wbec_pwm_probe(struct platform_device *pdev)
 	wbec = dev_get_drvdata(dev->parent);
 	wbec_pwm->regmap = wbec->regmap;
 
-	wbec_pwm->chip.dev = dev;
+	wbec_pwm->chip.dev = *dev;
 	wbec_pwm->chip.ops = &wbec_pwm_ops;
 	wbec_pwm->chip.npwm = 1;
 
@@ -138,13 +138,11 @@ static int wbec_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int wbec_pwm_remove(struct platform_device *pdev)
+static void wbec_pwm_remove(struct platform_device *pdev)
 {
 	struct wbec_pwm *wbec_pwm = platform_get_drvdata(pdev);
 
 	pwmchip_remove(&wbec_pwm->chip);
-
-	return 0;
 }
 
 static const struct of_device_id wbec_pwm_of_match[] = {
