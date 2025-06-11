@@ -167,6 +167,8 @@
 				 <&ccu CLK_MBUS_CE>, <&rtc CLK_IOSC>;
 			clock-names = "bus", "mod", "ram", "trng";
 			resets = <&ccu RST_BUS_CE>;
+		};
+
 		bus@1000000 {
 			compatible = "allwinner,sun50i-h616-de33",
 				     "allwinner,sun50i-a64-de2";
@@ -737,6 +739,18 @@
 				#size-cells = <0>;
 			};
 		};
+		emac1: ethernet@5030000 {
+			compatible = "allwinner,sun50i-t507-emac1";
+			reg = <0x05030000 0x10000>;
+			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			clocks = <&ccu CLK_BUS_EMAC1>;
+			clock-names = "stmmaceth";
+			resets = <&ccu RST_BUS_EMAC1>;
+			reset-names = "stmmaceth";
+			syscon = <&syscon>;
+			status = "disabled";
+		};
 
 		gpadc: adc@5070000 {
 			compatible = "allwinner,sun50i-h616-gpadc",
@@ -798,17 +812,6 @@
 			resets = <&ccu RST_BUS_AUDIO_CODEC>;
 			dmas = <&dma 6>;
 			dma-names = "tx";
-
-		emac1: ethernet@5030000 {
-			compatible = "allwinner,sun50i-t507-emac1";
-			reg = <0x05030000 0x10000>;
-			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "macirq";
-			clocks = <&ccu CLK_BUS_EMAC1>;
-			clock-names = "stmmaceth";
-			resets = <&ccu RST_BUS_EMAC1>;
-			reset-names = "stmmaceth";
-			syscon = <&syscon>;
 			status = "disabled";
 		};
 
@@ -1208,89 +1211,6 @@
 			status = "disabled";
 			#address-cells = <1>;
 			#size-cells = <0>;
-		};
-
-		ths: thermal-sensor@5070400 {
-			compatible = "allwinner,sun50i-h616-ths";
-			reg = <0x05070400 0x100>;
-			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&ccu CLK_BUS_THS>;
-			clock-names = "bus";
-			resets = <&ccu RST_BUS_THS>;
-			nvmem-cells = <&ths_calibration>;
-			nvmem-cell-names = "calibration";
-			allwinner,sram = <&syscon>;
-			#thermal-sensor-cells = <1>;
-		};
-	};
-
-	thermal-zones {
-		cpu-thermal {
-			polling-delay-passive = <500>;
-			polling-delay = <1000>;
-			thermal-sensors = <&ths 2>;
-			sustainable-power = <1000>;
-
-			trips {
-				cpu_threshold: cpu-trip-0 {
-					temperature = <60000>;
-					type = "passive";
-					hysteresis = <0>;
-				};
-				cpu_target: cpu-trip-1 {
-					temperature = <70000>;
-					type = "passive";
-					hysteresis = <0>;
-				};
-				cpu_critical: cpu-trip-2 {
-					temperature = <110000>;
-					type = "critical";
-					hysteresis = <0>;
-				};
-			};
-		};
-
-		gpu-thermal {
-			polling-delay-passive = <500>;
-			polling-delay = <1000>;
-			thermal-sensors = <&ths 0>;
-			sustainable-power = <1100>;
-
-			trips {
-				gpu_temp_critical: gpu-trip-0 {
-					temperature = <110000>;
-					type = "critical";
-					hysteresis = <0>;
-				};
-			};
-		};
-
-		ve-thermal {
-			polling-delay-passive = <0>;
-			polling-delay = <0>;
-			thermal-sensors = <&ths 1>;
-
-			trips {
-				ve_temp_critical: ve-trip-0 {
-					temperature = <110000>;
-					type = "critical";
-					hysteresis = <0>;
-				};
-			};
-		};
-
-		ddr-thermal {
-			polling-delay-passive = <0>;
-			polling-delay = <0>;
-			thermal-sensors = <&ths 3>;
-
-			trips {
-				ddr_temp_critical: ddr-trip-0 {
-					temperature = <110000>;
-					type = "critical";
-					hysteresis = <0>;
-				};
-			};
 		};
 	};
 
