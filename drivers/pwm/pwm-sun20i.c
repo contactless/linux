@@ -448,7 +448,7 @@ static int sun20i_pwm_probe(struct platform_device *pdev)
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to deassert reset\n");
 
-	sun20i_chip->chip.dev = &pdev->dev;
+	sun20i_chip->chip.dev = pdev->dev;
 	sun20i_chip->chip.ops = &sun20i_pwm_ops;
 
 	mutex_init(&sun20i_chip->mutex);
@@ -479,7 +479,7 @@ static struct platform_driver sun20i_pwm_driver = {
 		.of_match_table = sun20i_pwm_dt_ids,
 	},
 	.probe = sun20i_pwm_probe,
-	.remove_new = sun20i_pwm_remove,
+	.remove = sun20i_pwm_remove,
 };
 module_platform_driver(sun20i_pwm_driver);
 
