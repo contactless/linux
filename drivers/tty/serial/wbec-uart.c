@@ -24,6 +24,8 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/device/bus.h>
+#include <linux/circ_buf.h>
+#include <linux/kfifo.h>
 
 #define DRIVER_NAME				"wbec-uart"
 #define WBEC_UART_PORT_COUNT			2
@@ -140,33 +142,31 @@ static void swap_bytes(u16 *buf, int len)
 static void wbec_collect_data_for_exchange(struct wbec_uart_one_port *wbec_one_port, struct uart_tx *tx)
 {
 	struct uart_port *port = &wbec_one_port->port;
-	struct circ_buf *xmit;
-
 	if (port == NULL) {
 		tx->bytes_to_send_count = 0;
 		return;
 	}
 
-	xmit = &port->state->xmit;
+	struct tty_port *tport = &wbec_one_port->port.state->port;
 
-	if (uart_circ_empty(xmit) || uart_tx_stopped(port)) {
+
+	if (kfifo_is_empty(&tport->xmit_fifo) || uart_tx_stopped(port)) {
 		tx->bytes_to_send_count = 0;
+		return;
 	} else {
-		int i;
-		unsigned int to_send = uart_circ_chars_pending(xmit);
+		unsigned int to_send = kfifo_len(&tport->xmit_fifo);
 
-		to_send = min(to_send, WBEC_UART_REGMAP_BUFFER_SIZE);
+		to_send = min(to_send, (unsigned int)WBEC_UART_REGMAP_BUFFER_SIZE);
 
-		tx->bytes_to_send_count = to_send;
+		/* 
+		Instead of blindly using kfifo_len() for bytes_to_send_count, we now rely on the actual 
+		number of bytes returned by kfifo_out_peek(). This ensures accurate data transmission even 
+		if the buffer changes between length check and reading.
+		*/
+		unsigned int copied = kfifo_out_peek(&tport->xmit_fifo, tx->bytes_to_send, to_send);
+		tx->bytes_to_send_count = copied;
 
-		// Convert to linear buffer
-		for (i = 0; i < to_send; ++i) {
-			u8 c = xmit->buf[(xmit->tail + i) & (UART_XMIT_SIZE - 1)];
-
-			tx->bytes_to_send[i] = c;
-		}
-
-		if (to_send)
+		if (copied)
 			reinit_completion(&wbec_one_port->tx_complete);
 	}
 }
@@ -176,7 +176,7 @@ static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_p
 				      u8 bytes_sent_in_exchange)
 {
 	struct uart_port *port = &wbec_one_port->port;
-	struct circ_buf *xmit = &port->state->xmit;
+	struct tty_port *tport = &port->state->port;
 	u8 max_read_bytes = WBEC_UART_REGMAP_BUFFER_SIZE;
 
 	if (rx->data_format == 1)
@@ -223,10 +223,10 @@ static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_p
 		unsigned long flags;
 
 		if (bytes_sent_in_exchange > 0)
-			uart_xmit_advance(port, bytes_sent_in_exchange);
+			kfifo_skip_count(&tport->xmit_fifo, bytes_sent_in_exchange);
 
 		uart_port_lock_irqsave(port, &flags);
-		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+		if (kfifo_len(&tport->xmit_fifo) < WAKEUP_CHARS)
 			uart_write_wakeup(port);
 		uart_port_unlock_irqrestore(port, flags);
 	}
@@ -324,9 +324,9 @@ static void wbec_uart_start_tx(struct uart_port *port)
 	struct wbec_uart_one_port *wbec_one_port = container_of(port,
 					      struct wbec_uart_one_port,
 					      port);
-	struct circ_buf *xmit = &port->state->xmit;
+	struct tty_port *tport = &port->state->port;
 
-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(port)) {
+	if (!kfifo_is_empty(&tport->xmit_fifo) && !uart_tx_stopped(port)) {
 		reinit_completion(&wbec_one_port->tx_complete);
 		schedule_work(&wbec_one_port->start_tx_work);
 	}
@@ -721,7 +721,7 @@ static struct platform_driver wbec_uart_platform_driver = {
 		.of_match_table = wbec_uart_of_match,
 	},
 	.probe = wbec_uart_probe,
-	.remove_new = wbec_uart_remove,
+	.remove = wbec_uart_remove,
 };
 
 static int __init wbec_uart_init(void)
