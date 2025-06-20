@@ -1519,7 +1519,6 @@ static inline void __stop_tx(struct uart_8250_port *p)
 			 * Roughly estimate 1 extra bit here with / 7.
 			 */
 			stop_delay = p->port.frame_time + DIV_ROUND_UP(p->port.frame_time, 7);
-			// stop_delay = p->port.frame_time;
 		}
 
 		__stop_tx_rs485(p, stop_delay);
@@ -1742,23 +1741,15 @@ void serial8250_read_char(struct uart_8250_port *up, u16 lsr)
 	lsr |= up->lsr_saved_flags;
 	up->lsr_saved_flags = 0;
 
-	if (unlikely(up->skip_break_after_rs485 && (lsr & UART_LSR_BI) && !(lsr & UART_LSR_DR))) {
-		up->skip_break_after_rs485 = false;
-		return;
-	}
-
 	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
+		if ((lsr & UART_LSR_BI) && (lsr & UART_LSR_FE)) {
+			if (ch == 0x00){
+				return;
+			}else if(lsr & UART_LSR_DR){
+				lsr &= ~(UART_LSR_BI | UART_LSR_FE);
+			}
+		}
 		if (lsr & UART_LSR_BI) {
-			// FIXME: линия RX несколько бит удерживается лишнего - этого хватает
-			// чтобы контроллер посчитал это разрывом линии.
-			// Необходимо найти источник и поправить это, а пока подкостылил так:
-			return;
-
- 			if (port->ignore_status_mask & UART_LSR_BI) {
- 				trace_printk("UART%u BREAK ignored\n", port->line);
- 				return;
- 			}
-
 			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
 			port->icount.brk++;
 			/*
