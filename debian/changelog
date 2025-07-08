@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb139) stable; urgency=medium
+
+  * rtl8733bu: move BusyTraffic log messages to debug level
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Mon, 07 Jul 2025 14:11:00 +0400
+
 linux-wb (6.8.0-wb138) stable; urgency=medium
 
   * wb8: fix rtl8733bu client not connecting when it is the only interface bug
