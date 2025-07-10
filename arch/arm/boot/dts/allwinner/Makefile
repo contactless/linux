@@ -292,3 +292,16 @@ dtb-$(CONFIG_MACH_SUNIV) += \
 	suniv-f1c100s-licheepi-nano.dtb \
 	suniv-f1c200s-lctech-pi.dtb \
 	suniv-f1c200s-popstick-v1.1.dtb
+
+# Enables support for device-tree overlays
+DTC_FLAGS_sun8i-r40-wirenboard72x-initram := -@
+DTC_FLAGS_sun8i-r40-wirenboard72x-factory := -@
+DTC_FLAGS_sun8i-r40-wirenboard720 := -@
+DTC_FLAGS_sun8i-r40-wirenboard730 := -@
+DTC_FLAGS_sun8i-r40-wirenboard731 := -@
+DTC_FLAGS_sun8i-r40-wirenboard732 := -@
+DTC_FLAGS_sun8i-r40-wirenboard733 := -@
+DTC_FLAGS_sun8i-r40-wirenboard734-38071cb := -@
+DTC_FLAGS_sun8i-r40-wirenboard741 := -@
+DTC_FLAGS_sun8i-r40-wirenboard742 := -@
+DTC_FLAGS_sun8i-r40-wirenboard742-38071cb := -@
