@@ -353,11 +353,7 @@ int drm_gem_shmem_vmap_locked(struct drm_gem_shmem_object *shmem,
 	dma_resv_assert_held(obj->resv);
 
 	if (drm_gem_is_imported(obj)) {
-<<<<<<< HEAD
-	ret = dma_buf_vmap(obj->dma_buf, map);
-=======
-		ret = dma_buf_vmap(obj->dma_buf, map);
->>>>>>> a48040e29f39 (drm/shmem-helper: Remove obsoleted is_iomem test)
+		ret = dma_buf_vmap(obj->import_attach->dmabuf, map);
 	} else {
 		pgprot_t prot = PAGE_KERNEL;
 
