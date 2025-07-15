@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb140) stable; urgency=medium
+
+  * wb8: add netfilter modules
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Tue, 15 Jul 2025 08:52:43 +0300
+
 linux-wb (6.8.0-wb139) stable; urgency=medium
 
   * rtl8733bu: move BusyTraffic log messages to debug level
