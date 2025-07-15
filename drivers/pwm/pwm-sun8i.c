@@ -73,6 +73,14 @@
 #define CAPTURE_FALL_REG(ch)	(0x0074 + (ch) * 0x20)
 #define CAPTURE_CFLR		GENMASK(15, 0)
 
+
+struct sun8i_pwm_data {
+	bool has_prescaler_bypass;
+	bool has_direct_mod_clk_output;
+	unsigned int npwm;
+};
+
+
 struct sun8i_pwm_chip {
 	struct pwm_chip chip;
 	struct clk *clk;
@@ -133,7 +141,7 @@ static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
 	val = state->period * clk_rate;
 	do_div(val, NSEC_PER_SEC);
 
-	dev_dbg(sun8i_pwm->chip.dev, "clock source freq:%lldHz\n", clk_rate);
+	// dev_dbg(pwmchip_parent(sun8i_pwm->chip), "clock source freq:%lldHz\n", clk_rate);
 
 	/* calculate and set prescaler, div table, PWM entire cycle */
 	clk_div = val;
@@ -147,8 +155,8 @@ static int sun8i_pwm_config(struct sun8i_pwm_chip *sun8i_pwm, u8 ch,
 			prescaler = 0;
 			div_id++;
 			if (div_id == 9) {
-				dev_err(sun8i_pwm->chip.dev,
-					"unsupport period value\n");
+				// dev_err(pwmchip_parent(sun8i_pwm->chip),
+				// 	"unsupport period value\n");
 				return -EINVAL;
 			}
 		}
@@ -183,7 +191,7 @@ static int sun8i_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	ret = sun8i_pwm_config(sun8i_pwm, pwm->hwpwm, state);
 	if (ret) {
-		dev_err(chip->dev, "Failed to config PWM\n");
+		// dev_err(pwmchip_parent(chip), "Failed to config PWM\n");
 		return ret;
 	}
 
@@ -200,7 +208,7 @@ static int sun8i_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	return 0;
 }
 
-static void sun8i_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
+static int sun8i_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 				struct pwm_state *state)
 {
 	struct sun8i_pwm_chip *sun8i_pwm = to_sun8i_pwm_chip(chip);
@@ -237,6 +245,7 @@ static void sun8i_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 	state->duty_cycle = DIV_ROUND_CLOSEST_ULL(tmp, clk_rate);
 	tmp = clk_div * prescal * (1U << div_id) * NSEC_PER_SEC;
 	state->period = DIV_ROUND_CLOSEST_ULL(tmp, clk_rate);
+	return 0;
 }
 
 static const struct regmap_config sun8i_pwm_regmap_config = {
@@ -249,104 +258,97 @@ static const struct regmap_config sun8i_pwm_regmap_config = {
 static const struct pwm_ops sun8i_pwm_ops = {
 	.apply = sun8i_pwm_apply,
 	.get_state = sun8i_pwm_get_state,
-	.owner = THIS_MODULE,
+};
+
+static const struct sun8i_pwm_data pwm_data = {
+	.has_prescaler_bypass = false,
+	.has_direct_mod_clk_output = false,
+	.npwm = 8,
 };
 
 static const struct of_device_id sun8i_pwm_dt_ids[] = {
 	{
 		.compatible = "allwinner,sun8i-r40-pwm",
-		.data = NULL,
+		.data = &pwm_data,
 	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, sun8i_pwm_dt_ids);
 
+
+
 static int sun8i_pwm_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
-	struct sun8i_pwm_chip *pwm;
-	struct resource *res;
+	struct pwm_chip *chip;
+	const struct sun8i_pwm_data *data;
+	struct sun8i_pwm_chip *sun8ichip;
 	int ret;
-	const struct of_device_id *match;
-	int i;
 
-	match = of_match_device(sun8i_pwm_dt_ids, &pdev->dev);
-	if (!match) {
-		dev_err(&pdev->dev, "Error: No device match found\n");
+	data = of_device_get_match_data(&pdev->dev);
+	if (!data)
 		return -ENODEV;
-	}
 
-	pwm = devm_kzalloc(&pdev->dev, sizeof(*pwm), GFP_KERNEL);
-	if (!pwm)
-		return -ENOMEM;
+	chip = devm_pwmchip_alloc(&pdev->dev, data->npwm, sizeof(*sun8ichip));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+	sun8ichip = to_sun8i_pwm_chip(chip);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	pwm->base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(pwm->base))
-		return PTR_ERR(pwm->base);
+	sun8ichip->data = data;
+	sun8ichip->base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(sun8ichip->base))
+		return PTR_ERR(sun8ichip->base);
 
-	pwm->regmap = devm_regmap_init_mmio(&pdev->dev, pwm->base,
+	sun8ichip->regmap = devm_regmap_init_mmio(&pdev->dev, sun8ichip->base,
 					    &sun8i_pwm_regmap_config);
-	if (IS_ERR(pwm->regmap)) {
+	if (IS_ERR(sun8ichip->regmap)) {
 		dev_err(&pdev->dev, "Failed to create regmap\n");
-		return PTR_ERR(pwm->regmap);
+		return PTR_ERR(sun8ichip->regmap);
 	}
 
 	/* we use mux-0 (24M) as the only clock source */
-	pwm->clk = devm_clk_get(&pdev->dev, "mux-0");
+	sun8ichip->clk = devm_clk_get(&pdev->dev, "mux-0");
 
-	if (IS_ERR(pwm->clk)) {
+	if (IS_ERR(sun8ichip->clk)) {
 		dev_err(&pdev->dev, "Failed to get PWM clock\n");
-		return PTR_ERR(pwm->clk);
+		return PTR_ERR(sun8ichip->clk);
 	}
 
-	ret = clk_prepare_enable(pwm->clk);
+	ret = clk_prepare_enable(sun8ichip->clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to enable PWM clock\n");
 		return ret;
 	}
 
-	ret = of_property_read_u32(np, "pwm-channels", &pwm->chip.npwm);
-	if (ret && !pwm->chip.npwm) {
-		dev_err(&pdev->dev, "Can't get pwm-channels\n");
-		return ret;
-	}
-
 	/* configure all pwm pairs */
-	for (i = 0; i < pwm->chip.npwm; ++i) {
+	int i;
+	for (i = 0; i < sun8ichip->chip.npwm; ++i) {
 		/* use mux-0 */
-		sun8i_pwm_set_value(pwm, CLK_CFG_REG(i),
+		sun8i_pwm_set_value(sun8ichip, CLK_CFG_REG(i),
 					CLK_SRC_SEL, 0 << 7);
 		/* ungate clock */
-		sun8i_pwm_set_bit(pwm,
+		sun8i_pwm_set_bit(sun8ichip,
 				  CLK_CFG_REG(i), CLK_GATING);
 	}
 
-	dev_dbg(&pdev->dev, "pwm-channels:%d\n", pwm->chip.npwm);
-	pwm->data = match->data;
-	pwm->chip.dev = &pdev->dev;
-	pwm->chip.ops = &sun8i_pwm_ops;
-	pwm->chip.base = -1;
-	pwm->chip.of_xlate = of_pwm_xlate_with_flags;
-	pwm->chip.of_pwm_n_cells = 3;
+	sun8ichip->chip.ops = &sun8i_pwm_ops;
 
-	ret = pwmchip_add(&pwm->chip);
+	ret = pwmchip_add(&sun8ichip->chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to add PWM chip: %d\n", ret);
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, pwm);
+	platform_set_drvdata(pdev, sun8ichip);
 
 	return 0;
 }
 
-static int sun8i_pwm_remove(struct platform_device *pdev)
+static void sun8i_pwm_remove(struct platform_device *pdev)
 {
 	struct sun8i_pwm_chip *pwm = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(pwm->clk);
-	return pwmchip_remove(&pwm->chip);
+	pwmchip_remove(&pwm->chip);
 }
 
 static struct platform_driver sun8i_pwm_driver = {
