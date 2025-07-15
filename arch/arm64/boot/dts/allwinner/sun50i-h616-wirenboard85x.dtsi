@@ -536,6 +536,18 @@
 			};
 		};
 	};
+
+	connector {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con_in: endpoint {
+				remote-endpoint = <&hdmi_out_con>;
+			};
+		};
+	};
+
 };
 
 // override GPU, VE and DDR critical temperatures
@@ -945,6 +957,14 @@
 				under_voltage_shutdown = <1>;
 			};
 
+			reg_dcdc7: dcdc7 {
+				regulator-name = "vdd-gpu";
+				regulator-enable-ramp-delay = <32000>;
+				regulator-min-microvolt = <810000>;
+				regulator-max-microvolt = <1080000>;
+				regulator-ramp-delay = <2500>;
+			};
+
 			reg_aldo1: aldo1 {
 				regulator-name = "aldo1";
 				regulator-min-microvolt = <700000>;
@@ -1300,5 +1320,24 @@
 };
 
 &ehci3 {
+	status = "okay";
+};
+
+&de {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmi_out {
+	hdmi_out_con: endpoint {
+		remote-endpoint = <&hdmi_con_in>;
+	};
+};
+
+&gpu {
+	mali-supply = <&reg_dcdc7>;
 	status = "okay";
 };
