@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb142) stable; urgency=medium
+
+  * wb8: Disabled HDMI by default so that it could be enabled in overlays later
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 28 Jul 2025 12:48:33 +0300
+
 linux-wb (6.8.0-wb141) stable; urgency=medium
 
   * rtl8733bu: move "c2h" warning log messages to debug level
