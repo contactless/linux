@@ -824,6 +824,7 @@
 			phys = <&hdmi_phy>;
 			phy-names = "phy";
 			status = "disabled";
+			hvcc-supply = <&reg_aldo1>;
 
 			ports {
 				#address-cells = <1>;
