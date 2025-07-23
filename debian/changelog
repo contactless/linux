@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb141) stable; urgency=medium
+
+  * wb8: Disabled HDMI by default so that it could be enabled in overlays later
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Wed, 23 Jul 2025 11:13:33 +0300
+
 linux-wb (6.8.0-wb140) stable; urgency=medium
 
   * wb8: add netfilter modules
