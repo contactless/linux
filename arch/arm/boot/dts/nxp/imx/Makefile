@@ -426,3 +426,14 @@ dtb-$(CONFIG_SOC_IMX7ULP) += \
 	imx7ulp-evk.dtb
 dtb-$(CONFIG_SOC_IMXRT) += \
 	imxrt1050-evk.dtb
+
+# Enables support for device-tree overlays
+DTC_FLAGS_imx6ul-wirenboard-evk := -@
+DTC_FLAGS_imx6ul-wirenboard61 := -@
+DTC_FLAGS_imx6ul-wirenboard65 := -@
+DTC_FLAGS_imx6ul-wirenboard660 := -@
+DTC_FLAGS_imx6ul-wirenboard670 := -@
+DTC_FLAGS_imx6ul-wirenboard670 := -@
+DTC_FLAGS_imx6ul-wirenboard680 := -@
+DTC_FLAGS_imx6ul-wirenboard690 := -@
+DTC_FLAGS_imx6ul-wirenboard6x-init := -@
