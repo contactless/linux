@@ -1,3 +1,9 @@
+linux-wb (5.10.35-wb180) stable; urgency=medium
+
+  * wb7 defconfig: enable audit module
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 01 Sep 2025 03:24:12 +0300
+
 linux-wb (5.10.35-wb179) stable; urgency=medium
 
   * rtl8733bu: move "c2h" warning log messages to debug level
