@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb144) stable; urgency=medium
+
+  * wb8 defconfig: enable audit module
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Tue, 02 Aug 2025 15:15:00 +0400
+
 linux-wb (6.8.0-wb143) stable; urgency=medium
 
   * Revert "Disabled HDMI by default so that it could be enabled in overlays later"
