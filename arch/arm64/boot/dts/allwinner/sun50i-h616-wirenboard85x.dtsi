@@ -8,6 +8,7 @@
 
 #include "sun50i-h616.dtsi"
 #include "sun50i-h616-cpu-opp.dtsi"
+#include "sun50i-h616-gpu-opp.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -930,12 +931,15 @@
 
 			reg_dcdc4: dcdc4 {
 				regulator-name = "dcdc4";
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1540000>;
+				regulator-min-microvolt = <810000>;
+				regulator-init-microvolt = <900000>;
+				regulator-max-microvolt = <990000>;
 				regulator-step-delay-us = <25>;
 				regulator-final-delay-us = <50>;
 				regulator-enable-ramp-delay = <1000>;
 				under_voltage_shutdown = <1>;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 
 			reg_dcdc5: dcdc5 {
@@ -1338,6 +1342,8 @@
 };
 
 &gpu {
-	mali-supply = <&reg_dcdc7>;
+	operating-points-v2 = <&gpu_opp_table>;
 	status = "okay";
+	mali-supply = <&reg_dcdc4>;
+	power-domains = <&prcm_ppu 2>;
 };
