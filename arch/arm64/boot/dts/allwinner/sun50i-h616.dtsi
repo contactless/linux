@@ -99,6 +99,7 @@
 
 	de: display-engine {
 		compatible = "allwinner,sun50i-h6-display-engine";
+        memory-region = <&de_cma>;
 		allwinner,pipelines = <&mixer0>;
 		status = "disabled";
 	};
@@ -117,6 +118,22 @@
 			reg = <0x0 0x40000000 0x0 0x40000>;
 			no-map;
 		};
+
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x08000000>;
+            alignment = <0x0 0x00400000>;
+            linux,cma-default;
+        };
+
+        de_cma: de-cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x10000000>;           // 256 MiB
+            alignment = <0x0 0x00800000>;
+        };
+
 	};
 
 	osc24M: osc24M-clk {
@@ -224,6 +241,7 @@
 			clocks = <&ccu CLK_GPU0>, <&ccu CLK_BUS_GPU>;
 			clock-names = "core", "bus";
 			resets = <&ccu RST_BUS_GPU>;
+			#cooling-cells = <2>;
 			status = "disabled";
 		};
 
@@ -1253,12 +1271,50 @@
 			sustainable-power = <1100>;
 
 			trips {
-				gpu_temp_critical: gpu-trip-0 {
+				gpu_temp_threshold: gpu-trip-0 {
+					temperature = <65000>;
+					type = "passive";
+					hysteresis = <2000>;
+				};
+				gpu_temp_target: gpu-trip-1 {
+					temperature = <75000>;
+					type = "hot";
+					hysteresis = <2000>;
+				};
+				gpu_temp_hot: gpu-trip-2 {
+					temperature = <85000>;
+					type = "hot";
+					hysteresis = <2000>;
+				};
+				gpu_temp_critical: gpu-trip-3 {
 					temperature = <110000>;
 					type = "critical";
 					hysteresis = <0>;
 				};
 			};
+
+            cooling-maps {
+                map0 {
+                    trip = <&gpu_temp_threshold>;
+                    cooling-device = <&gpu THERMAL_NO_LIMIT 15>;
+                };
+
+                map1 {
+                    trip = <&gpu_temp_target>;
+                    cooling-device = <&gpu THERMAL_NO_LIMIT 10>;
+                };
+
+                map2 {
+                    trip = <&gpu_temp_hot>;
+                    cooling-device = <&gpu THERMAL_NO_LIMIT 5>;
+                };
+
+                map3 {
+                    trip = <&gpu_temp_critical>;
+                    cooling-device = <&gpu 0 0>;
+                };
+            };
+
 		};
 
 		ve-thermal {
