@@ -8,6 +8,7 @@
 
 #include "sun50i-h616.dtsi"
 #include "sun50i-h616-cpu-opp.dtsi"
+#include "sun50i-h616-gpu-opp.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -203,6 +204,12 @@
 			pcbtemp {
 				title = "Board Temperature";
 				hwmon-node-name = "iio-hwmon-pcb-temp";
+				hwmon-channel = "temp1";
+			};
+
+			gputemp {
+				title = "GPU Temperature";
+				hwmon-node-name = "gpu_thermal";
 				hwmon-channel = "temp1";
 			};
 		};
@@ -412,6 +419,51 @@
 			*/
 			status = "disabled";
 		};
+
+		bus@1000000 {
+			compatible = "allwinner,sun50i-h616-de33",
+				     "allwinner,sun50i-a64-de2";
+			reg = <0x1000000 0x400000>;
+			allwinner,sram = <&de3_sram 1>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x1000000 0x400000>;
+
+			display_clocks: clock@8000 {
+				compatible = "allwinner,sun50i-h616-de33-clk";
+				reg = <0x8000 0x100>;
+				clocks = <&ccu CLK_DE>, <&ccu CLK_BUS_DE>;
+				clock-names = "mod", "bus";
+				resets = <&ccu RST_BUS_DE>;
+				#clock-cells = <1>;
+				#reset-cells = <1>;
+			};
+
+			mixer0: mixer@100000 {
+				compatible = "allwinner,sun50i-h616-de33-mixer-0";
+				reg = <0x100000 0x100000>,
+				      <0x8100 0x40>,
+				      <0x280000 0x20000>;
+				clocks = <&display_clocks CLK_BUS_MIXER0>,
+					 <&display_clocks CLK_MIXER0>;
+				clock-names = "bus", "mod";
+				resets = <&display_clocks RST_MIXER0>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					mixer0_out: port@1 {
+						reg = <1>;
+
+						mixer0_out_tcon_top_mixer0: endpoint {
+							remote-endpoint = <&tcon_top_mixer0_in_mixer0>;
+						};
+					};
+				};
+			};
+		}; /* bus */
+
 	};
 
 	thermal-zones {
@@ -534,14 +586,109 @@
 									 <&cpu3 5 THERMAL_NO_LIMIT>;
 				};
 			};
-		};
-	};
+		}; /* cpu-thermal */
+
+
+		gpu-thermal {
+			/*
+				source: T507_Linux_v2.1.tar.gz
+				kernel/linux-4.9/arch/arm64/boot/dts/sunxi/sun50iw9p1.dtsi
+			*/
+			polling-delay-passive = <500>;
+			polling-delay = <1000>;
+			thermal-sensors = <&ths 0>;
+			sustainable-power = <1100>;
+			/delete-node/ trips;
+
+			trips {
+				/*
+				 * Keep the steps spaced out by voltage groups but trim only a
+				 * couple of OPPs per zone for smoother throttling. Temperatures
+				 * stay aggressive to prioritise thermal relief.
+				 */
+				gpu_max_600mhz: gpu-trip-0 {
+					temperature = <75000>;
+					type = "passive";
+					hysteresis = <2000>;
+				};
+				gpu_max_504mhz: gpu-trip-1 {
+					temperature = <80000>;
+					type = "passive";
+					hysteresis = <2000>;
+				};
+				gpu_max_420mhz: gpu-trip-2 {
+					temperature = <85000>;
+					type = "passive";
+					hysteresis = <3000>;
+				};
+				gpu_max_384mhz: gpu-trip-3 {
+					temperature = <95000>;
+					type = "hot";
+					hysteresis = <3000>;
+				};
+				gpu_max_336mhz: gpu-trip-4 {
+					temperature = <105000>;
+					type = "hot";
+					hysteresis = <4000>;
+				};
+				gpu_critical: gpu-trip-5 {
+					/*
+						120C is the maximum recommended Tj,
+						temperature sensor accuracy is +/-5C @ Tj>100C
+						so we should not exceed 115C just in case
+					*/
+					temperature = <115000>;
+					type = "critical";
+					hysteresis = <0>;
+				};
+			};
+
+			cooling-maps {
+				/* 75°C: drop only the 648 MHz OPP, keep performance otherwise */
+				map0 {
+					trip = <&gpu_max_600mhz>;
+					cooling-device = <&gpu 1 THERMAL_NO_LIMIT>;
+				};
+
+				/* 80°C: shave off the 600/552 MHz steps, cap at 504 MHz */
+				map1 {
+					trip = <&gpu_max_504mhz>;
+					cooling-device = <&gpu 3 THERMAL_NO_LIMIT>;
+				};
+
+				/* 85°C: remove the 504/456 MHz pair, cap at 420 MHz */
+				map2 {
+					trip = <&gpu_max_420mhz>;
+					cooling-device = <&gpu 5 THERMAL_NO_LIMIT>;
+				};
+
+				/* 95°C: get rid of the 420 MHz OPP, cap at 384 MHz */
+				map3 {
+					trip = <&gpu_max_384mhz>;
+					cooling-device = <&gpu 6 THERMAL_NO_LIMIT>;
+				};
+
+				/* 105°C: leave only the 336/306 MHz group */
+				map4 {
+					trip = <&gpu_max_336mhz>;
+					cooling-device = <&gpu 8 THERMAL_NO_LIMIT>;
+				};
+
+				/* critical: force the minimum OPP (306 MHz) */
+				map5 {
+					trip = <&gpu_critical>;
+					cooling-device = <&gpu 9 9>;
+				};
+
+			}; /* cooling-maps */
+
+		}; /* gpu-thermal */
+
+	}; /* thermal-zones */
+
 };
 
 // override GPU, VE and DDR critical temperatures
-&gpu_temp_critical {
-	temperature = <115000>;
-};
 &ve_temp_critical {
 	temperature = <115000>;
 };
@@ -916,12 +1063,15 @@
 
 			reg_dcdc4: dcdc4 {
 				regulator-name = "dcdc4";
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1540000>;
+				regulator-min-microvolt = <810000>;
+				regulator-init-microvolt = <900000>;
+				regulator-max-microvolt = <990000>;
 				regulator-step-delay-us = <25>;
 				regulator-final-delay-us = <50>;
 				regulator-enable-ramp-delay = <1000>;
 				under_voltage_shutdown = <1>;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 
 			reg_dcdc5: dcdc5 {

@@ -60,7 +60,15 @@
 		};
 	};
 
-	de: display-engine {
+	display_engine: display-engine {
+		/*
+		* Logical (glue) node without registers.
+		* Used by the DRM driver to represent the whole display pipeline.
+		* The 'allwinner,pipelines' property points to which mixers
+		* participate in the pipeline.
+		* This node does not map to a standalone hardware IP block,
+		* but ties together several DE sub-blocks into one logical entity.
+		*/
 		compatible = "allwinner,sun50i-h6-display-engine";
 		allwinner,pipelines = <&mixer0>;
 		status = "disabled";
@@ -122,7 +130,13 @@
 		#size-cells = <1>;
 		ranges = <0x0 0x0 0x0 0x40000000>;
 
-		bus@1000000 {
+		de: bus@1000000 {
+			/*
+			* Display Engine (DE3.3) hardware block.
+			* This is the top-level container for DE registers
+			* and sub-nodes (clocks, mixers, etc.).
+			* It represents an actual hardware IP block in the SoC.
+			*/
 			compatible = "allwinner,sun50i-h616-de33",
 				     "allwinner,sun50i-a64-de2";
 			reg = <0x1000000 0x400000>;
@@ -131,7 +145,12 @@
 			#size-cells = <1>;
 			ranges = <0 0x1000000 0x400000>;
 
-			display_clocks: clock@8000 {
+			de_clk: clock@8000 {
+				/*
+				* DE clock/reset controller sub-block.
+				* Provides bus and module clocks, as well as reset lines
+				* for the internal DE units (mixers, etc.).
+				*/
 				compatible = "allwinner,sun50i-h616-de33-clk";
 				reg = <0x8000 0x100>;
 				clocks = <&ccu CLK_DE>, <&ccu CLK_BUS_DE>;
@@ -142,14 +161,19 @@
 			};
 
 			mixer0: mixer@100000 {
+				/*
+				* Mixer0 — one of the video mixers inside DE3.
+				* Handles layer composition (planes, overlays) and
+				* produces a final video stream passed to a TCON.
+				*/
 				compatible = "allwinner,sun50i-h616-de33-mixer-0";
 				reg = <0x100000 0x100000>,
 				      <0x8100 0x40>,
 				      <0x280000 0x20000>;
-				clocks = <&display_clocks CLK_BUS_MIXER0>,
-					 <&display_clocks CLK_MIXER0>;
+				clocks = <&de_clk CLK_BUS_MIXER0>,
+					 <&de_clk CLK_MIXER0>;
 				clock-names = "bus", "mod";
-				resets = <&display_clocks RST_MIXER0>;
+				resets = <&de_clk RST_MIXER0>;
 
 				ports {
 					#address-cells = <1>;
@@ -166,6 +190,12 @@
 			};
 		};
 
+		prcm_ppu: power-controller@7010250 {
+			compatible = "allwinner,sun50i-h616-prcm-ppu";
+			reg = <0x07010250 0x10>;
+			#power-domain-cells = <1>;
+		};
+
 		gpu: gpu@1800000 {
 			compatible = "allwinner,sun50i-h616-mali",
 				     "arm,mali-bifrost";
@@ -177,7 +207,9 @@
 			clocks = <&ccu CLK_GPU0>, <&ccu CLK_BUS_GPU>;
 			clock-names = "core", "bus";
 			resets = <&ccu RST_BUS_GPU>;
+			#cooling-cells = <2>;
 			status = "disabled";
+			power-domains = <&prcm_ppu 2>;
 		};
 
 		video-codec@1c0e000 {
@@ -1079,12 +1111,50 @@
 			sustainable-power = <1100>;
 
 			trips {
-				gpu_temp_critical: gpu-trip-0 {
+				gpu_temp_threshold: gpu-trip-0 {
+					temperature = <65000>;
+					type = "passive";
+					hysteresis = <2000>;
+				};
+				gpu_temp_target: gpu-trip-1 {
+					temperature = <75000>;
+					type = "hot";
+					hysteresis = <2000>;
+				};
+				gpu_temp_hot: gpu-trip-2 {
+					temperature = <85000>;
+					type = "hot";
+					hysteresis = <2000>;
+				};
+				gpu_temp_critical: gpu-trip-3 {
 					temperature = <110000>;
 					type = "critical";
 					hysteresis = <0>;
 				};
 			};
+
+			cooling-maps {
+				map0 {
+					trip = <&gpu_temp_threshold>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT 15>;
+				};
+
+				map1 {
+					trip = <&gpu_temp_target>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT 10>;
+				};
+
+				map2 {
+					trip = <&gpu_temp_hot>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT 5>;
+				};
+
+				map3 {
+					trip = <&gpu_temp_critical>;
+					cooling-device = <&gpu 0 0>;
+				};
+			};
+
 		};
 
 		ve-thermal {
