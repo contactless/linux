@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// Copyright (C) 2024 Wiren Board
+
+/ {
+	/*
+		source:
+			T507_Linux_v2.1.tar.gz
+			kernel/linux-4.9/arch/arm64/boot/dts/sunxi/sun50iw9p1.dtsi
+				operating-points = <
+				// KHz   uV
+				648000 960000
+				600000 900000
+				552000 900000
+				504000 900000
+				456000 900000
+				420000 900000
+				384000 820000
+				360000 810000
+				336000 810000
+				306000 810000
+		>;
+	*/
+	gpu_opp_table: opp-table-gpu {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-306000000 {
+			opp-hz = /bits/ 64 <306000000>;
+			opp-microvolt = <810000>;
+		};
+
+		opp-336000000 {
+			opp-hz = /bits/ 64 <336000000>;
+			opp-microvolt = <810000>;
+		};
+
+		opp-360000000 {
+			opp-hz = /bits/ 64 <360000000>;
+			opp-microvolt = <810000>;
+		};
+
+		opp-384000000 {
+			opp-hz = /bits/ 64 <384000000>;
+			opp-microvolt = <820000>;
+		};
+
+		opp-420000000 {
+			opp-hz = /bits/ 64 <420000000>;
+			opp-microvolt = <900000>;
+		};
+
+		opp-456000000 {
+			opp-hz = /bits/ 64 <456000000>;
+			opp-microvolt = <900000>;
+		};
+
+		opp-504000000 {
+			opp-hz = /bits/ 64 <504000000>;
+			opp-microvolt = <900000>;
+		};
+
+		opp-552000000 {
+			opp-hz = /bits/ 64 <552000000>;
+			opp-microvolt = <900000>;
+		};
+
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <900000>;
+		};
+
+		opp-648000000 {
+			opp-hz = /bits/ 64 <648000000>;
+			opp-microvolt = <960000>;
+		};
+
+	};
+
+};
+

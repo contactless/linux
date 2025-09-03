@@ -52,9 +52,29 @@
 		};
 	};
 
+	reserved-memory {
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/*
+			 * Allocate 256 MiB specifically for the display engine: this easily
+			 * covers 4K @ 32 bpp with double/triple buffering and DE overhead
+			 */
+			size = <0x0 0x10000000>;           // 256 MiB
+
+			/*
+			 * Constrain the pool to the first 2 GiB because a number of peripherals
+			 * on H616 can only DMA within the 32-bit address space.
+			 */
+			alloc-ranges = <0x0 0x00000000 0x0 0x80000000>; /* 0 … 2 GiB */
+			linux,cma-default;
+		};
+	};
+
+
 };
 
-&de {
+&display_engine {
 	status = "okay";
 };
 
@@ -67,4 +87,10 @@
 	hdmi_out_con: endpoint {
 		remote-endpoint = <&hdmi_con_in>;
 	};
+};
+
+&gpu {
+	operating-points-v2 = <&gpu_opp_table>;
+	mali-supply = <&reg_dcdc4>;
+	status = "okay";
 };
