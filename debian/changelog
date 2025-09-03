@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb146) stable; urgency=medium
+
+  * wb8 HDMI: Add GPU support for WB8.5
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Wed, 03 Sep 2025 11:13:38 +0300
+
 linux-wb (6.8.0-wb145) stable; urgency=medium
 
   * wb8.5: add 38071cb support
