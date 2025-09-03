@@ -590,9 +590,6 @@
 };
 
 // override GPU, VE and DDR critical temperatures
-&gpu_temp_critical {
-	temperature = <115000>;
-};
 &ve_temp_critical {
 	temperature = <115000>;
 };
