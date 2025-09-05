@@ -849,7 +849,7 @@
 
 	linux,rs485-enabled-at-boot-time;
 	rts-gpios = <&pio PD 15 GPIO_ACTIVE_HIGH>;
-	rs485-rts-delay = <2 0>;
+	rs485-rts-delay = <0 0>;
 
 	status = "okay";
 };
@@ -860,7 +860,7 @@
 
 	linux,rs485-enabled-at-boot-time;
 	rts-gpios = <&pio PD 16 GPIO_ACTIVE_HIGH>;
-	rs485-rts-delay = <2 0>;
+	rs485-rts-delay = <0 0>;
 
 	status = "okay";
 };
