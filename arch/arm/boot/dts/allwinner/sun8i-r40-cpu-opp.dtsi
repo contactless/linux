@@ -84,17 +84,21 @@
 };
 
 &cpu0 {
+	clock-frequency = <0>;
 	operating-points-v2 = <&cpu0_opp_table>;
 };
 
 &cpu1 {
+	clock-frequency = <0>;
 	operating-points-v2 = <&cpu0_opp_table>;
 };
 
 &cpu2 {
+	clock-frequency = <0>;
 	operating-points-v2 = <&cpu0_opp_table>;
 };
 
 &cpu3 {
+	clock-frequency = <0>;
 	operating-points-v2 = <&cpu0_opp_table>;
 };
