@@ -1,8 +1,80 @@
-linux-wb (6.8.0-wb133) stable; urgency=medium
+linux-wb (6.8.0-wb145) stable; urgency=medium
 
   * wb8.5: add 38071cb support
 
- -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 14 Mar 2025 18:29:40 +0300
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Mon, 22 Sep 2025 15:58:40 +0300
+
+linux-wb (6.8.0-wb144) stable; urgency=medium
+
+  * wb8 defconfig: enable audit module
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Tue, 02 Aug 2025 15:15:00 +0400
+
+linux-wb (6.8.0-wb143) stable; urgency=medium
+
+  * Revert "Disabled HDMI by default so that it could be enabled in overlays later"
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Fri, 15 Aug 2025 10:57:17 +0300
+
+linux-wb (6.8.0-wb142) stable; urgency=medium
+
+  * wb8: Disabled HDMI by default so that it could be enabled in overlays later
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 28 Jul 2025 12:48:33 +0300
+
+linux-wb (6.8.0-wb141) stable; urgency=medium
+
+  * rtl8733bu: move "c2h" warning log messages to debug level
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Thu, 24 Jul 2025 13:14:02 +0300
+
+linux-wb (6.8.0-wb140) stable; urgency=medium
+
+  * wb8: add netfilter modules
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Tue, 15 Jul 2025 08:52:43 +0300
+
+linux-wb (6.8.0-wb139) stable; urgency=medium
+
+  * rtl8733bu: move BusyTraffic log messages to debug level
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Mon, 07 Jul 2025 14:11:00 +0400
+
+linux-wb (6.8.0-wb138) stable; urgency=medium
+
+  * wb8: fix rtl8733bu client not connecting when it is the only interface bug
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Sat, 31 May 2025 08:16:02 +0300
+
+linux-wb (6.8.0-wb137) stable; urgency=medium
+
+  * wb8: disallow scan on buddy interface for rtl8733bu if configured as client
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Fri, 30 May 2025 13:01:27 +0300
+
+linux-wb (6.8.0-wb136) stable; urgency=medium
+
+  * wb8: add RNDIS host module
+
+ -- Petr Krasnoshchekov <petr.krasnoshchekov@wirenboard.com>  Wed, 23 Apr 2025 15:02:56 +0500
+
+linux-wb (6.8.0-wb135) stable; urgency=medium
+
+  * wb8: enable all usb-serial drivers (as were in wb7)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 15 Apr 2025 15:54:39 +0300
+
+linux-wb (6.8.0-wb134) stable; urgency=medium
+
+  * wb8 dts: add eth phy reset-post-delay-us: 150000 (as datasheet says)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Tue, 08 Apr 2025 13:13:14 +0300
+
+linux-wb (6.8.0-wb133) stable; urgency=medium
+
+  * Add a delay before turning i2c on bus error
+
+ -- Anton <anton.tarasov@wirenboard.com>  Tue, 25 Mar 2025 09:49:03 +0300
 
 linux-wb (6.8.0-wb132) stable; urgency=medium
 
