@@ -23,8 +23,10 @@
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_probe_helper.h>
 
+#include <uapi/linux/media-bus-format.h>
+
 #include "sun4i_drv.h"
-#include "sun4i_tcon.h"
+#include "sun50i_fmt.h"
 #include "sun8i_mixer.h"
 #include "sun8i_ui_layer.h"
 #include "sun8i_vi_layer.h"
@@ -34,8 +36,6 @@ struct de2_fmt_info {
 	u32	drm_fmt;
 	u32	de2_fmt;
 };
-
-static bool hw_preconfigured;
 
 static const struct de2_fmt_info de2_formats[] = {
 	{
@@ -277,39 +277,10 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
 {
 	struct sun8i_mixer *mixer = engine_to_sun8i_mixer(engine);
 	u32 bld_base = sun8i_blender_base(mixer);
+	struct regmap *bld_regs = sun8i_blender_regmap(mixer);
 	struct drm_plane_state *plane_state;
 	struct drm_plane *plane;
 	u32 route = 0, pipe_en = 0;
-	struct regmap *bld_regs;
-
-	bld_regs = sun8i_blender_regmap(mixer);
-
-	if (mixer->hw_preconfigured && engine->id == 0) {
-		struct sun4i_tcon* tcon;
-		u32 val, saved, ret;
-
-		/*
-		 * This is the first commit, wait for vblank on tcon0 before continuing.
-		 */
-		list_for_each_entry(tcon, &mixer->drv->tcon_list, list) {
-			if (tcon->id == 0) {
-				regmap_read(tcon->regs, SUN4I_TCON_GINT0_REG, &saved);
-				saved &= 0xffff0000;
-
-				regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, 0);
-
-				ret = regmap_read_poll_timeout(tcon->regs, SUN4I_TCON_GINT0_REG, val,
-							 val & (SUN4I_TCON_GINT0_VBLANK_INT(0) |
-								SUN4I_TCON_GINT0_VBLANK_INT(1) |
-								SUN4I_TCON_GINT0_TCON0_TRI_FINISH_INT),
-							 100, 40000);
-
-				regmap_write(tcon->regs, SUN4I_TCON_GINT0_REG, saved);
-			}
-		}
-
-		mixer->hw_preconfigured = false;
-	}
 
 	DRM_DEBUG_DRIVER("Committing changes\n");
 
@@ -332,40 +303,30 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
 				 plane->base.id, layer->channel, layer->overlay,
 				 enable, zpos);
 
-		/* We always update the layer enable bit, because it can clear
-		 * spontaneously for unknown reasons. */
+		/*
+		 * We always update the layer enable bit, because it can clear
+		 * spontaneously for unknown reasons.
+		 */
 		sun8i_layer_enable(layer, enable);
 
 		if (!enable)
 			continue;
 
-		/* Route layer to pipe based on zpos */	
+		/* Route layer to pipe based on zpos */
 		route |= layer->channel << SUN8I_MIXER_BLEND_ROUTE_PIPE_SHIFT(zpos);
 		pipe_en |= SUN8I_MIXER_BLEND_PIPE_CTL_EN(zpos);
 	}
 
-	regmap_update_bits(bld_regs,
-			   SUN8I_MIXER_BLEND_ROUTE(bld_base),
-			   SUN8I_MIXER_BLEND_ROUTE_PIPE_MSK(0) |
-			   SUN8I_MIXER_BLEND_ROUTE_PIPE_MSK(1) |
-			   SUN8I_MIXER_BLEND_ROUTE_PIPE_MSK(2) |
-			   SUN8I_MIXER_BLEND_ROUTE_PIPE_MSK(3),
-			   route);
+	regmap_write(bld_regs, SUN8I_MIXER_BLEND_ROUTE(bld_base), route);
+	regmap_write(bld_regs, SUN8I_MIXER_BLEND_PIPE_CTL(bld_base),
+		     pipe_en | SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0));
 
-	regmap_update_bits(bld_regs,
-			   SUN8I_MIXER_BLEND_PIPE_CTL(bld_base),
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN(0) |
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN(1) |
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN(2) |
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN(3),
-			   pipe_en);
-
-	if (mixer->cfg->is_de33)
+	if (mixer->cfg->de_type == sun8i_mixer_de33)
 		regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_DBUFF,
-			   SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
+			     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 	else
 		regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_DBUFF,
-			   SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
+			     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 }
 
 static struct drm_plane **sun8i_layers_init(struct drm_device *drm,
@@ -414,7 +375,7 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 				 const struct drm_display_mode *mode)
 {
 	struct sun8i_mixer *mixer = engine_to_sun8i_mixer(engine);
-	struct regmap *bld_regs;
+	struct regmap *bld_regs, *disp_regs;
 	u32 bld_base, size, val;
 	bool interlaced;
 
@@ -426,11 +387,13 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 	DRM_DEBUG_DRIVER("Updating global size W: %u H: %u\n",
 			 mode->hdisplay, mode->vdisplay);
 
-	if (mixer->cfg->is_de33)
+	if (mixer->cfg->de_type == sun8i_mixer_de33) {
+		disp_regs = mixer->disp_regs;
 		regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_SIZE, size);
-	else
-		regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_SIZE, size);
-
+	} else {
+		disp_regs = mixer->engine.regs;
+		regmap_write(mixer->engine.regs, SUN8I_MIXER_GLOBAL_SIZE, size);
+	}
 	regmap_write(bld_regs, SUN8I_MIXER_BLEND_OUTSIZE(bld_base), size);
 
 	if (interlaced)
@@ -443,15 +406,54 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
 
 	DRM_DEBUG_DRIVER("Switching display mixer interlaced mode %s\n",
 			 interlaced ? "on" : "off");
+
+	if (engine->format == MEDIA_BUS_FMT_RGB888_1X24)
+		val = SUN8I_MIXER_BLEND_COLOR_BLACK;
+	else
+		val = 0xff108080;
+
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_BKCOLOR(bld_base), val);
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(bld_base, 0), val);
+
+	if (mixer->cfg->has_formatter)
+		sun50i_fmt_setup(mixer, mode->hdisplay,
+				 mode->vdisplay, mixer->engine.format);
+}
+
+static u32 *sun8i_mixer_get_supported_fmts(struct sunxi_engine *engine, u32 *num)
+{
+	struct sun8i_mixer *mixer = engine_to_sun8i_mixer(engine);
+	u32 *formats, count;
+
+	count = 0;
+
+	formats = kcalloc(5, sizeof(*formats), GFP_KERNEL);
+	if (!formats)
+		return NULL;
+
+	if (mixer->cfg->has_formatter) {
+		formats[count++] = MEDIA_BUS_FMT_UYYVYY10_0_5X30;
+		formats[count++] = MEDIA_BUS_FMT_YUV8_1X24;
+		formats[count++] = MEDIA_BUS_FMT_UYVY8_1X16;
+		formats[count++] = MEDIA_BUS_FMT_UYYVYY8_0_5X24;
+	}
+
+	formats[count++] = MEDIA_BUS_FMT_RGB888_1X24;
+
+	*num = count;
+
+	return formats;
 }
 
 static const struct sunxi_engine_ops sun8i_engine_ops = {
-	.commit		= sun8i_mixer_commit,
-	.layers_init	= sun8i_layers_init,
-	.mode_set	= sun8i_mixer_mode_set,
+	.commit			= sun8i_mixer_commit,
+	.layers_init		= sun8i_layers_init,
+	.mode_set		= sun8i_mixer_mode_set,
+	.get_supported_fmts	= sun8i_mixer_get_supported_fmts,
 };
 
 static const struct regmap_config sun8i_mixer_regmap_config = {
+	.name		= "layers",
 	.reg_bits	= 32,
 	.val_bits	= 32,
 	.reg_stride	= 4,
@@ -459,6 +461,7 @@ static const struct regmap_config sun8i_mixer_regmap_config = {
 };
 
 static const struct regmap_config sun8i_top_regmap_config = {
+	.name		= "top",
 	.reg_bits	= 32,
 	.val_bits	= 32,
 	.reg_stride	= 4,
@@ -466,6 +469,7 @@ static const struct regmap_config sun8i_top_regmap_config = {
 };
 
 static const struct regmap_config sun8i_disp_regmap_config = {
+	.name		= "display",
 	.reg_bits	= 32,
 	.val_bits	= 32,
 	.reg_stride	= 4,
@@ -492,82 +496,48 @@ static int sun8i_mixer_of_get_id(struct device_node *node)
 	return of_ep.id;
 }
 
-static void sun8i_mixer_de2_init(struct sun8i_mixer *mixer)
+static void sun8i_mixer_init(struct sun8i_mixer *mixer)
 {
-	unsigned int base;
+	struct regmap *top_regs, *disp_regs;
+	unsigned int base = sun8i_blender_base(mixer);
 	int plane_cnt, i;
 
-	base = sun8i_blender_base(mixer);
+	if (mixer->cfg->de_type == sun8i_mixer_de33) {
+		top_regs = mixer->top_regs;
+		disp_regs = mixer->disp_regs;
+	} else {
+		top_regs = mixer->engine.regs;
+		disp_regs = mixer->engine.regs;
+	}
 
-	if (!mixer->hw_preconfigured) {
 	/* Enable the mixer */
-	regmap_write(mixer->engine.regs, SUN8I_MIXER_GLOBAL_CTL,
+	regmap_write(top_regs, SUN8I_MIXER_GLOBAL_CTL,
 		     SUN8I_MIXER_GLOBAL_CTL_RT_EN);
-	} /* hw_preconfigured */
+
+	if (mixer->cfg->de_type == sun8i_mixer_de33)
+		regmap_write(top_regs, SUN50I_MIXER_GLOBAL_CLK, 1);
 
 	/* Set background color to black */
-	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_BKCOLOR(base),
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_BKCOLOR(base),
 		     SUN8I_MIXER_BLEND_COLOR_BLACK);
 
 	/*
 	 * Set fill color of bottom plane to black. Generally not needed
 	 * except when VI plane is at bottom (zpos = 0) and enabled.
 	 */
-	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
 		     SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0));
-	regmap_write(mixer->engine.regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(base, 0),
+	regmap_write(disp_regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(base, 0),
 		     SUN8I_MIXER_BLEND_COLOR_BLACK);
 
 	plane_cnt = mixer->cfg->vi_num + mixer->cfg->ui_num;
 	for (i = 0; i < plane_cnt; i++)
-		regmap_write(mixer->engine.regs,
+		regmap_write(disp_regs,
 			     SUN8I_MIXER_BLEND_MODE(base, i),
 			     SUN8I_MIXER_BLEND_MODE_DEF);
 
-	if (!mixer->hw_preconfigured) {
-	regmap_update_bits(mixer->engine.regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
+	regmap_update_bits(disp_regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
 			   SUN8I_MIXER_BLEND_PIPE_CTL_EN_MSK, 0);
-	} /* hw_preconfigured */
-}
-
-static void sun8i_mixer_de33_init(struct sun8i_mixer *mixer)
-{
-	unsigned int base;
-	int plane_cnt, i;
-
-	base = sun8i_blender_base(mixer);
-
-	if (!mixer->hw_preconfigured) {
-	/* Enable the mixer */
-	regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_CTL,
-		     SUN8I_MIXER_GLOBAL_CTL_RT_EN);
-	} /* hw_preconfigured */
-
-	regmap_write(mixer->top_regs, SUN50I_MIXER_GLOBAL_CLK, 1);
-
-	/* Set background color to black */
-	regmap_write(mixer->disp_regs, SUN8I_MIXER_BLEND_BKCOLOR(base),
-		     SUN8I_MIXER_BLEND_COLOR_BLACK);
-
-	/*
-	 * Set fill color of bottom plane to black. Generally not needed
-	 * except when VI plane is at bottom (zpos = 0) and enabled.
-	 */
-	regmap_write(mixer->disp_regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
-		     SUN8I_MIXER_BLEND_PIPE_CTL_FC_EN(0));
-	regmap_write(mixer->disp_regs, SUN8I_MIXER_BLEND_ATTR_FCOLOR(base, 0),
-		     SUN8I_MIXER_BLEND_COLOR_BLACK);
-
-	plane_cnt = mixer->cfg->vi_num + mixer->cfg->ui_num;
-	for (i = 0; i < plane_cnt; i++)
-		regmap_write(mixer->disp_regs,
-			     SUN8I_MIXER_BLEND_MODE(base, i),
-			     SUN8I_MIXER_BLEND_MODE_DEF);
-
-	if (!mixer->hw_preconfigured) {
-	regmap_update_bits(mixer->disp_regs, SUN8I_MIXER_BLEND_PIPE_CTL(base),
-			   SUN8I_MIXER_BLEND_PIPE_CTL_EN_MSK, 0);
-	} /* hw_preconfigured */
 }
 
 static int sun8i_mixer_bind(struct device *dev, struct device *master,
@@ -578,8 +548,6 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	struct sun4i_drv *drv = drm->dev_private;
 	struct sun8i_mixer *mixer;
 	void __iomem *regs;
-	unsigned int base;
-	int plane_cnt;
 	int i, ret;
 
 	/*
@@ -601,7 +569,10 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	dev_set_drvdata(dev, mixer);
 	mixer->engine.ops = &sun8i_engine_ops;
 	mixer->engine.node = dev->of_node;
-	mixer->drv = drv;
+	/* default output format, supported by all mixers */
+	mixer->engine.format = MEDIA_BUS_FMT_RGB888_1X24;
+	/* default color encoding, ignored with RGB I/O */
+	mixer->engine.encoding = DRM_COLOR_YCBCR_BT601;
 
 	if (of_property_present(dev->of_node, "iommus")) {
 		/*
@@ -626,11 +597,6 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	 */
 	mixer->engine.id = sun8i_mixer_of_get_id(dev->of_node);
 
-	if (mixer->engine.id == 0) {
-		mixer->hw_preconfigured = hw_preconfigured;
-		hw_preconfigured = false;
-	}
-
 	mixer->cfg = of_device_get_match_data(dev);
 	if (!mixer->cfg)
 		return -EINVAL;
@@ -646,7 +612,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 		return PTR_ERR(mixer->engine.regs);
 	}
 
-	if (mixer->cfg->is_de33) {
+	if (mixer->cfg->de_type == sun8i_mixer_de33) {
 		regs = devm_platform_ioremap_resource(pdev, 1);
 		if (IS_ERR(regs))
 			return PTR_ERR(regs);
@@ -663,7 +629,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 			return PTR_ERR(regs);
 
 		mixer->disp_regs = devm_regmap_init_mmio(dev, regs,
-							&sun8i_disp_regmap_config);
+							 &sun8i_disp_regmap_config);
 		if (IS_ERR(mixer->disp_regs)) {
 			dev_err(dev, "Couldn't create the disp regmap\n");
 			return PTR_ERR(mixer->disp_regs);
@@ -702,21 +668,15 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 	 * reason for the mixer to be functional. Make sure it's the
 	 * case.
 	 */
-
-	if (!mixer->hw_preconfigured) {
 	if (mixer->cfg->mod_rate)
 		clk_set_rate(mixer->mod_clk, mixer->cfg->mod_rate);
-	}
 
 	clk_prepare_enable(mixer->mod_clk);
 
 	list_add_tail(&mixer->engine.list, &drv->engine_list);
 
 	/* Reset registers and disable unused sub-engines */
-	if (mixer->cfg->is_de33) {
-		sun8i_mixer_de33_init(mixer);
-	} else if (mixer->cfg->is_de3) {
-		if (!mixer->hw_preconfigured) {
+	if (mixer->cfg->de_type == sun8i_mixer_de3) {
 		for (i = 0; i < DE3_MIXER_UNIT_SIZE; i += 4)
 			regmap_write(mixer->engine.regs, i, 0);
 
@@ -730,10 +690,7 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 		regmap_write(mixer->engine.regs, SUN50I_MIXER_FMT_EN, 0);
 		regmap_write(mixer->engine.regs, SUN50I_MIXER_CDC0_EN, 0);
 		regmap_write(mixer->engine.regs, SUN50I_MIXER_CDC1_EN, 0);
-		} /* hw_preconfigured */
-		sun8i_mixer_de2_init(mixer);
-	} else {
-		if (!mixer->hw_preconfigured) {
+	} else if (mixer->cfg->de_type == sun8i_mixer_de2) {
 		for (i = 0; i < DE2_MIXER_UNIT_SIZE; i += 4)
 			regmap_write(mixer->engine.regs, i, 0);
 
@@ -744,9 +701,9 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
 		regmap_write(mixer->engine.regs, SUN8I_MIXER_ASE_EN, 0);
 		regmap_write(mixer->engine.regs, SUN8I_MIXER_FCC_EN, 0);
 		regmap_write(mixer->engine.regs, SUN8I_MIXER_DCSC_EN, 0);
-		} /* hw_preconfigured */
-		sun8i_mixer_de2_init(mixer);
 	}
+
+	sun8i_mixer_init(mixer);
 
 	return 0;
 
@@ -776,15 +733,6 @@ static const struct component_ops sun8i_mixer_ops = {
 
 static int sun8i_mixer_probe(struct platform_device *pdev)
 {
-	int ret;
-	u32 fb_start;
-
-	ret = of_property_read_u32_index(of_chosen, "p-boot,framebuffer-start", 0, &fb_start);
-	if (ret == 0) {
-		/* the display pipeline is already initialized by p-boot */
-		hw_preconfigured = true;
-	}
-
 	return component_add(&pdev->dev, &sun8i_mixer_ops);
 }
 
@@ -795,6 +743,7 @@ static void sun8i_mixer_remove(struct platform_device *pdev)
 
 static const struct sun8i_mixer_cfg sun8i_a83t_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 2048,
 	.ui_num		= 3,
@@ -803,6 +752,7 @@ static const struct sun8i_mixer_cfg sun8i_a83t_mixer0_cfg = {
 
 static const struct sun8i_mixer_cfg sun8i_a83t_mixer1_cfg = {
 	.ccsc		= CCSC_MIXER1_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.scaler_mask	= 0x3,
 	.scanline_yuv	= 2048,
 	.ui_num		= 1,
@@ -811,6 +761,7 @@ static const struct sun8i_mixer_cfg sun8i_a83t_mixer1_cfg = {
 
 static const struct sun8i_mixer_cfg sun8i_h3_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 432000000,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 2048,
@@ -818,8 +769,17 @@ static const struct sun8i_mixer_cfg sun8i_h3_mixer0_cfg = {
 	.vi_num		= 1,
 };
 
+static const struct sun8i_mixer_cfg sun8i_h3_mixer1_cfg = {
+	.ccsc		= CCSC_MIXER1_LAYOUT,
+	.mod_rate	= 432000000,
+	.scaler_mask	= 0xf,
+	.ui_num		= 3,
+	.vi_num		= 1,
+};
+
 static const struct sun8i_mixer_cfg sun8i_r40_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 2048,
@@ -829,6 +789,7 @@ static const struct sun8i_mixer_cfg sun8i_r40_mixer0_cfg = {
 
 static const struct sun8i_mixer_cfg sun8i_r40_mixer1_cfg = {
 	.ccsc		= CCSC_MIXER1_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0x3,
 	.scanline_yuv	= 2048,
@@ -837,6 +798,7 @@ static const struct sun8i_mixer_cfg sun8i_r40_mixer1_cfg = {
 };
 
 static const struct sun8i_mixer_cfg sun8i_v3s_mixer_cfg = {
+	.de_type = sun8i_mixer_de2,
 	.vi_num = 2,
 	.ui_num = 1,
 	.scaler_mask = 0x3,
@@ -847,6 +809,7 @@ static const struct sun8i_mixer_cfg sun8i_v3s_mixer_cfg = {
 
 static const struct sun8i_mixer_cfg sun20i_d1_mixer0_cfg = {
 	.ccsc		= CCSC_D1_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0x3,
 	.scanline_yuv	= 2048,
@@ -856,6 +819,7 @@ static const struct sun8i_mixer_cfg sun20i_d1_mixer0_cfg = {
 
 static const struct sun8i_mixer_cfg sun20i_d1_mixer1_cfg = {
 	.ccsc		= CCSC_MIXER1_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0x1,
 	.scanline_yuv	= 1024,
@@ -865,6 +829,7 @@ static const struct sun8i_mixer_cfg sun20i_d1_mixer1_cfg = {
 
 static const struct sun8i_mixer_cfg sun50i_a64_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 4096,
@@ -874,6 +839,7 @@ static const struct sun8i_mixer_cfg sun50i_a64_mixer0_cfg = {
 
 static const struct sun8i_mixer_cfg sun50i_a64_mixer1_cfg = {
 	.ccsc		= CCSC_MIXER1_LAYOUT,
+	.de_type	= sun8i_mixer_de2,
 	.mod_rate	= 297000000,
 	.scaler_mask	= 0x3,
 	.scanline_yuv	= 2048,
@@ -883,7 +849,8 @@ static const struct sun8i_mixer_cfg sun50i_a64_mixer1_cfg = {
 
 static const struct sun8i_mixer_cfg sun50i_h6_mixer0_cfg = {
 	.ccsc		= CCSC_MIXER0_LAYOUT,
-	.is_de3		= true,
+	.de_type	= sun8i_mixer_de3,
+	.has_formatter	= 1,
 	.mod_rate	= 600000000,
 	.scaler_mask	= 0xf,
 	.scanline_yuv	= 4096,
@@ -892,14 +859,15 @@ static const struct sun8i_mixer_cfg sun50i_h6_mixer0_cfg = {
 };
 
 static const struct sun8i_mixer_cfg sun50i_h616_mixer0_cfg = {
-    .ccsc = 0,
-    .is_de33 = true,
-    .mod_rate = 600000000,
-    .scaler_mask = 0xf,
-    .scanline_yuv = 4096,
-    .ui_num = 3,
-    .vi_num = 1,
-    .map = {0, 6, 7, 8},
+	.ccsc		= CCSC_MIXER0_LAYOUT,
+	.de_type	= sun8i_mixer_de33,
+	.has_formatter	= 1,
+	.mod_rate	= 600000000,
+	.scaler_mask	= 0xf,
+	.scanline_yuv	= 4096,
+	.ui_num		= 3,
+	.vi_num		= 1,
+	.map		= {0, 6, 7, 8},
 };
 
 static const struct of_device_id sun8i_mixer_of_table[] = {
@@ -914,6 +882,10 @@ static const struct of_device_id sun8i_mixer_of_table[] = {
 	{
 		.compatible = "allwinner,sun8i-h3-de2-mixer-0",
 		.data = &sun8i_h3_mixer0_cfg,
+	},
+	{
+		.compatible = "allwinner,sun8i-h3-de2-mixer-1",
+		.data = &sun8i_h3_mixer1_cfg,
 	},
 	{
 		.compatible = "allwinner,sun8i-r40-de2-mixer-0",
@@ -957,7 +929,7 @@ MODULE_DEVICE_TABLE(of, sun8i_mixer_of_table);
 
 static struct platform_driver sun8i_mixer_platform_driver = {
 	.probe		= sun8i_mixer_probe,
-	.remove_new	= sun8i_mixer_remove,
+	.remove		= sun8i_mixer_remove,
 	.driver		= {
 		.name		= "sun8i-mixer",
 		.of_match_table	= sun8i_mixer_of_table,
