@@ -21,8 +21,6 @@
 #define SUN8I_MIXER_GLOBAL_DBUFF		0x8
 #define SUN8I_MIXER_GLOBAL_SIZE			0xc
 
-#define SUN50I_MIXER_GLOBAL_CTL			0x0
-#define SUN50I_MIXER_GLOBAL_STATUS		0x4
 #define SUN50I_MIXER_GLOBAL_SIZE		0x8
 #define SUN50I_MIXER_GLOBAL_CLK			0xc
 #define SUN50I_MIXER_GLOBAL_DBUFF		0x10
@@ -157,6 +155,12 @@ enum {
 	CCSC_D1_MIXER0_LAYOUT,
 };
 
+enum sun8i_mixer_type {
+	sun8i_mixer_de2,
+	sun8i_mixer_de3,
+	sun8i_mixer_de33,
+};
+
 /**
  * struct sun8i_mixer_cfg - mixer HW configuration
  * @vi_num: number of VI channels
@@ -169,7 +173,7 @@ enum {
  * @mod_rate: module clock rate that needs to be set in order to have
  *	a functional block.
  * @is_de3: true, if this is next gen display engine 3.0, false otherwise.
- * @is_de33: true, if this is next gen display engine 3.3, false otherwise.
+ * @has_formatter: true, if mixer has formatter core, for 10-bit and YUV handling
  * @scaline_yuv: size of a scanline for VI scaler for YUV formats.
  */
 struct sun8i_mixer_cfg {
@@ -178,8 +182,8 @@ struct sun8i_mixer_cfg {
 	int		scaler_mask;
 	int		ccsc;
 	unsigned long	mod_rate;
-	unsigned int	is_de3 : 1;
-	unsigned int	is_de33 : 1;
+	unsigned int	de_type;
+	unsigned int    has_formatter : 1;
 	unsigned int	scanline_yuv;
 	unsigned int	map[6];
 };
@@ -194,10 +198,8 @@ struct sun8i_mixer {
 	struct clk			*bus_clk;
 	struct clk			*mod_clk;
 
-	struct sun4i_drv		*drv;
-	bool				hw_preconfigured;
-	struct regmap		*top_regs;
-	struct regmap		*disp_regs;
+	struct regmap			*top_regs;
+	struct regmap			*disp_regs;
 };
 
 enum {
@@ -228,22 +230,22 @@ engine_to_sun8i_mixer(struct sunxi_engine *engine)
 static inline u32
 sun8i_blender_base(struct sun8i_mixer *mixer)
 {
-	return mixer->cfg->is_de3 ? DE3_BLD_BASE : DE2_BLD_BASE;
+	return mixer->cfg->de_type == sun8i_mixer_de3 ? DE3_BLD_BASE : DE2_BLD_BASE;
 }
 
 static inline struct regmap *
 sun8i_blender_regmap(struct sun8i_mixer *mixer)
 {
-	return mixer->cfg->is_de33 ?
+	return mixer->cfg->de_type == sun8i_mixer_de33 ?
 		mixer->disp_regs : mixer->engine.regs;
 }
 
 static inline u32
 sun8i_channel_base(struct sun8i_mixer *mixer, int channel)
 {
-	if (mixer->cfg->is_de33)
+	if (mixer->cfg->de_type == sun8i_mixer_de33)
 		return mixer->cfg->map[channel] * 0x20000 + DE2_CH_SIZE;
-	else if (mixer->cfg->is_de3)
+	else if (mixer->cfg->de_type == sun8i_mixer_de3)
 		return DE3_CH_BASE + channel * DE3_CH_SIZE;
 	else
 		return DE2_CH_BASE + channel * DE2_CH_SIZE;
