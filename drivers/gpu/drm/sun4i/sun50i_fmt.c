@@ -51,19 +51,6 @@ static void sun50i_fmt_de3_limits(u32 *limits, u32 colorspace, bool bit10)
 	}
 }
 
-static void sun50i_fmt_de33_limits(u32 *limits, u32 colorspace)
-{
-	if (colorspace == SUN50I_FMT_CS_YUV444RGB) {
-		limits[0] = SUN50I_FMT_LIMIT(0, 4095);
-		limits[1] = SUN50I_FMT_LIMIT(0, 4095);
-		limits[2] = SUN50I_FMT_LIMIT(0, 4095);
-	} else {
-		limits[0] = SUN50I_FMT_LIMIT(256, 3840);
-		limits[1] = SUN50I_FMT_LIMIT(256, 3840);
-		limits[2] = SUN50I_FMT_LIMIT(256, 3840);
-	}
-}
-
 void sun50i_fmt_setup(struct sun8i_mixer *mixer, u16 width,
 		      u16 height, u32 format)
 {
@@ -73,14 +60,10 @@ void sun50i_fmt_setup(struct sun8i_mixer *mixer, u16 width,
 
 	colorspace = sun50i_fmt_get_colorspace(format);
 	bit10 = sun50i_fmt_is_10bit(format);
-	base = mixer->cfg->de_type == sun8i_mixer_de3 ?
-		SUN50I_FMT_DE3 : SUN50I_FMT_DE33;
+	base = SUN50I_FMT_DE3;
 	regs = sun8i_blender_regmap(mixer);
 
-	if (mixer->cfg->de_type == sun8i_mixer_de3)
-		sun50i_fmt_de3_limits(limit, colorspace, bit10);
-	else
-		sun50i_fmt_de33_limits(limit, colorspace);
+	sun50i_fmt_de3_limits(limit, colorspace, bit10);
 
 	regmap_write(regs, SUN50I_FMT_CTRL(base), 0);
 
