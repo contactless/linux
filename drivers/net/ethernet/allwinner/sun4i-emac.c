@@ -940,9 +940,16 @@ static int emac_configure_dma(struct emac_board_info *db)
 
 	db->rx_chan = dma_request_chan(&pdev->dev, "rx");
 	if (IS_ERR(db->rx_chan)) {
-		netdev_err(ndev,
-			   "failed to request dma channel. dma is disabled\n");
 		err = PTR_ERR(db->rx_chan);
+		if (err == -ENODEV || err == -ENOSYS) {
+			netdev_dbg(ndev,
+				   "DMA controller not available, falling back to PIO\n");
+			err = 0;
+		} else if (err != -EPROBE_DEFER) {
+			netdev_err(ndev,
+				   "failed to request dma channel (%pe)\n",
+				   ERR_PTR(err));
+		}
 		goto out_clear_chan;
 	}
 
