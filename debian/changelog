@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb147) stable; urgency=medium
+
+  * wb8.5 HDMI: enable HDMI audio
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 20 Oct 2025 13:59:03 +0300
+
 linux-wb (6.8.0-wb146) stable; urgency=medium
 
   * wb8 HDMI: Add GPU support for WB8.5
