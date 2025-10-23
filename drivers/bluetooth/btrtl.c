@@ -127,6 +127,14 @@ static const struct id_table ic_id_table[] = {
 	  .cfg_name = "rtl_bt/rtl8723b_config",
 	  .hw_info  = "rtl8723bu" },
 
+	/* 8723FU */
+	{ IC_INFO(RTL_ROM_LMP_8723B, 0xf, 0x8, HCI_USB),
+	  .config_needed = true,
+	  .has_rom_version = true,
+	  .fw_name  = "rtl_bt/rtl8723fu_fw",
+	  .cfg_name = "rtl_bt/rtl8723fu_config",
+	  .hw_info  = "rtl8723fu" },
+
 	/* 8723CS-CG */
 	{ .match_flags = IC_MATCH_FL_LMPSUBV | IC_MATCH_FL_CHIP_TYPE |
 			 IC_MATCH_FL_HCIBUS,
@@ -653,6 +661,7 @@ static int rtlbt_parse_firmware(struct hci_dev *hdev,
 		{ RTL_ROM_LMP_8703B, 7 },
 		{ RTL_ROM_LMP_8822B, 8 },
 		{ RTL_ROM_LMP_8723B, 9 },	/* 8723D */
+		{ RTL_ROM_LMP_8723B, 19 },	/* 8723FU */
 		{ RTL_ROM_LMP_8821A, 10 },	/* 8821C */
 		{ RTL_ROM_LMP_8822B, 13 },	/* 8822C */
 		{ RTL_ROM_LMP_8761A, 14 },	/* 8761B */
