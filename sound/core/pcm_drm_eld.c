@@ -332,6 +332,11 @@ int snd_parse_eld(struct device *dev, struct snd_parsed_hdmi_eld *e,
 
 	memset(e, 0, sizeof(*e));
 	e->eld_ver = GRAB_BITS(buf, 0, 3, 5);
+	if (!e->eld_ver) {
+		dev_warn_once(dev,
+			      "HDMI: treating unversioned ELD as CEA-861D compatible\n");
+		e->eld_ver = ELD_VER_CEA_861D;
+	}
 	if (e->eld_ver != ELD_VER_CEA_861D &&
 	    e->eld_ver != ELD_VER_PARTIAL) {
 		dev_info(dev, "HDMI: Unknown ELD version %d\n", e->eld_ver);
