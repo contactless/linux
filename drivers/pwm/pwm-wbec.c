@@ -20,29 +20,38 @@
 
 struct wbec_pwm {
 	struct regmap *regmap;
-	struct pwm_chip chip;
 };
+
+static inline struct wbec_pwm *to_wbec_pwm(struct pwm_chip *chip)
+{
+	return pwmchip_get_drvdata(chip);
+}
 
 static int wbec_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 			   const struct pwm_state *state)
 {
-	struct wbec_pwm *wbec_pwm = container_of(chip, struct wbec_pwm, chip);
+	struct wbec_pwm *wbec_pwm = to_wbec_pwm(chip);
+	struct device *parent = pwmchip_parent(chip);
 	u16 regs[3] = {};
 	u32 duty_percent;
 	int ret;
 
 	if (state->period > 1000000000) {
 		// Minimum frequency is 1 Hz
-		dev_err(&chip->dev, "Period %llu ns is not supported: bigger than 1 second\n", state->period);
+		dev_err(parent,
+			"Period %llu ns is not supported: bigger than 1 second\n",
+			state->period);
 		return -EINVAL;
 	}
 	if (state->period < 100000) {
 		// Maximum frequency is 10 kHz
-		dev_err(&chip->dev, "Period %llu ns is not supported: less than 100 us\n", state->period);
+		dev_err(parent,
+			"Period %llu ns is not supported: less than 100 us\n",
+			state->period);
 		return -EINVAL;
 	}
 	if (state->polarity == PWM_POLARITY_INVERSED) {
-		dev_err(&chip->dev, "Polarity inverted is not supported\n");
+		dev_err(parent, "Polarity inverted is not supported\n");
 		return -EINVAL;
 	}
 
@@ -59,7 +68,7 @@ static int wbec_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 			 regs, ARRAY_SIZE(regs));
 
 	if (ret < 0) {
-		dev_err(&chip->dev, "Failed to write PWM regs: %d\n", ret);
+		dev_err(parent, "Failed to write PWM regs: %d\n", ret);
 		return ret;
 	}
 
@@ -70,7 +79,8 @@ static int wbec_pwm_get_state(struct pwm_chip *chip,
 				struct pwm_device *pwm,
 				struct pwm_state *state)
 {
-	struct wbec_pwm *wbec_pwm = container_of(chip, struct wbec_pwm, chip);
+	struct wbec_pwm *wbec_pwm = to_wbec_pwm(chip);
+	struct device *parent = pwmchip_parent(chip);
 	u16 regs[3];
 	int ret;
 
@@ -78,7 +88,7 @@ static int wbec_pwm_get_state(struct pwm_chip *chip,
 			 regs, ARRAY_SIZE(regs));
 
 	if (ret < 0) {
-		dev_err(&chip->dev, "Failed to read PWM regs: %d\n", ret);
+		dev_err(parent, "Failed to read PWM regs: %d\n", ret);
 		return ret;
 	}
 
@@ -110,39 +120,35 @@ static int wbec_pwm_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct wbec *wbec;
+	struct pwm_chip *chip;
 	struct wbec_pwm *wbec_pwm;
 	int ret;
 
 	if (!dev->parent)
 		return -ENODEV;
 
-	wbec_pwm = devm_kzalloc(dev, sizeof(*wbec_pwm), GFP_KERNEL);
-	if (!wbec_pwm)
-		return -ENOMEM;
-
 	wbec = dev_get_drvdata(dev->parent);
+	if (!wbec)
+		return -EPROBE_DEFER;
+
+	chip = devm_pwmchip_alloc(dev, 1, sizeof(*wbec_pwm));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+
+	wbec_pwm = to_wbec_pwm(chip);
 	wbec_pwm->regmap = wbec->regmap;
 
-	wbec_pwm->chip.dev = *dev;
-	wbec_pwm->chip.ops = &wbec_pwm_ops;
-	wbec_pwm->chip.npwm = 1;
+	chip->ops = &wbec_pwm_ops;
 
-	ret = pwmchip_add(&wbec_pwm->chip);
+	ret = devm_pwmchip_add(dev, chip);
 	if (ret < 0) {
 		dev_err(dev, "Failed to add PWM chip: %d\n", ret);
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, wbec_pwm);
+	platform_set_drvdata(pdev, chip);
 
 	return 0;
-}
-
-static void wbec_pwm_remove(struct platform_device *pdev)
-{
-	struct wbec_pwm *wbec_pwm = platform_get_drvdata(pdev);
-
-	pwmchip_remove(&wbec_pwm->chip);
 }
 
 static const struct of_device_id wbec_pwm_of_match[] = {
@@ -153,7 +159,6 @@ MODULE_DEVICE_TABLE(of, wbec_pwm_of_match);
 
 static struct platform_driver wbec_pwm_driver = {
 	.probe = wbec_pwm_probe,
-	.remove = wbec_pwm_remove,
 	.driver = {
 		.name = "wbec-pwm",
 		.of_match_table = wbec_pwm_of_match,
