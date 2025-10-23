@@ -1564,6 +1564,7 @@
 
 			ext_rmii_phy0: ethernet-phy {
 				compatible = "ethernet-phy-ieee802.3-c22";
+				reg = <0>;
 			};
 		};
 
@@ -1581,6 +1582,7 @@
 
 			ext_rmii_phy1: ethernet-phy {
 				compatible = "ethernet-phy-ieee802.3-c22";
+				reg = <0>;
 			};
 		};
 	};
@@ -1701,4 +1703,3 @@
 &iommu {
 	status = "okay";
 };
-
