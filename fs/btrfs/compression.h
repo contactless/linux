@@ -14,7 +14,6 @@
 #include <linux/pagemap.h>
 #include "bio.h"
 #include "fs.h"
-#include "btrfs_inode.h"
 
 struct address_space;
 struct inode;
