@@ -621,6 +621,7 @@
 &usbotg1 {
 	vbus-supply = <&reg_usb1_vbus>;
 	dr_mode = "host";
+	disable-over-current;
 	status = "okay";
 };
 
