@@ -1031,10 +1031,12 @@
 
 				fec1_mac_addr: mac-addr@88 {
 					reg = <0x88 6>;
+					bits = <0 48>;
 				};
 
 				fec2_mac_addr: mac-addr@8e {
 					reg = <0x8e 6>;
+					bits = <0 48>;
 				};
 			};
 
