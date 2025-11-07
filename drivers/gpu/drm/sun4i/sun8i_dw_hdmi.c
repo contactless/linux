@@ -45,6 +45,12 @@ sun8i_dw_hdmi_mode_valid_h6(struct dw_hdmi *hdmi, void *data,
 			    const struct drm_display_info *info,
 			    const struct drm_display_mode *mode)
 {
+	unsigned int refresh = drm_mode_vrefresh(mode);
+
+	if (mode->hdisplay == 3840 && mode->vdisplay == 2160 &&
+	    refresh > 40)
+		return MODE_CLOCK_HIGH;
+
 	/*
 	 * Controller support maximum of 594 MHz, which correlates to
 	 * 4K@60Hz 4:4:4 or RGB.
