@@ -1,3 +1,9 @@
+linux-wb (6.15.11-wb4) stable; urgency=medium
+
+  * drm/sun4i: reject >30Hz 4K modes on H616 since T507-H can’t drive 4K60 reliably
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Fri, 07 Nov 2025 12:16:35 +0300
+
 linux-wb (6.15.11-wb3) stable; urgency=medium
 
   * Add sound to HDMI
