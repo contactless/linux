@@ -1,3 +1,9 @@
+linux-wb (6.15.11-wb5) stable; urgency=medium
+
+  * wb8.4: Add post‑reset delay for external RMII PHYs on WB8.4.x so mdio‑gpio can see the PHYs and stmmac stops failing to attach.
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 24 Nov 2025 10:45:03 +0300
+
 linux-wb (6.15.11-wb4) stable; urgency=medium
 
   * drm/sun4i: reject >30Hz 4K modes on H616 since T507-H can’t drive 4K60 reliably
