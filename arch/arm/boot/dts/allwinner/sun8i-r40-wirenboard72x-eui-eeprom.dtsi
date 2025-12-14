@@ -18,9 +18,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c_eeprom1_pins>;
 
-		/* Disabled by default to avoid conflicts with WBEC on PB14–PB17. */
-		status = "disabled";
-
 		eeprom@50 {
 			compatible = "atmel,24c02";
 			reg = <0x50>;
@@ -47,9 +44,6 @@
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c_eeprom2_pins>;
-
-		/* Disabled by default to avoid conflicts with WBEC on PB14–PB17. */
-		status = "disabled";
 
 		eeprom@50 {
 			compatible = "atmel,24c02";
@@ -81,4 +75,13 @@
 };
 
 /* Ethernet ports */
-/* MAC addresses may be supplied by other providers if needed. */
+/* To make it work make sure local-mac-address property is not set by U-Boot */
+&gmac {
+	nvmem-cells = <&eth0_mac_address>;
+	nvmem-cell-names = "mac-address";
+};
+
+&emac {
+	nvmem-cells = <&eth1_mac_address>;
+	nvmem-cell-names = "mac-address";
+};
