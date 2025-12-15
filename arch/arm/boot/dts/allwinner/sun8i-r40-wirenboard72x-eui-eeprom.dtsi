@@ -22,11 +22,14 @@
 			compatible = "atmel,24c02";
 			reg = <0x50>;
 
-			#address-cells = <1>;
-			#size-cells = <1>;
+			nvmem-layout {
+				compatible = "fixed-layout";
+				#address-cells = <1>;
+				#size-cells = <1>;
 
-			eth0_mac_address: mac@80 {
-				reg = <0xfa 0x6>;
+				eth0_mac_address: mac@80 {
+					reg = <0xfa 0x6>;
+				};
 			};
 		};
 	};
@@ -49,12 +52,15 @@
 			compatible = "atmel,24c02";
 			reg = <0x50>;
 
-			#address-cells = <1>;
-			#size-cells = <1>;
+			nvmem-layout {
+				compatible = "fixed-layout";
+				#address-cells = <1>;
+				#size-cells = <1>;
 
-			/* To make it work make sure local-mac-address property is not set by U-Boot */
-			eth1_mac_address: mac@80 {
-				reg = <0xfa 0x6>;
+				/* To make it work make sure local-mac-address property is not set by U-Boot */
+				eth1_mac_address: mac@80 {
+					reg = <0xfa 0x6>;
+				};
 			};
 		};
 	};
