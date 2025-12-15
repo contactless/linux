@@ -753,7 +753,6 @@ static int at24_probe(struct i2c_client *client)
 	nvmem_config.stride = 1;
 	nvmem_config.word_size = 1;
 	nvmem_config.size = byte_len;
-	nvmem_config.add_legacy_fixed_of_cells = true;
 
 	i2c_set_clientdata(client, at24);
 
