@@ -1820,42 +1820,6 @@ issue:
 	return 0;
 }
 
-static int ata_scsi_qc_issue(struct ata_port *ap, struct ata_queued_cmd *qc)
-{
-	int ret;
-
-	if (!ap->ops->qc_defer)
-		goto issue;
-
-	/* Check if the command needs to be deferred. */
-	ret = ap->ops->qc_defer(qc);
-	switch (ret) {
-	case 0:
-		break;
-	case ATA_DEFER_LINK:
-		ret = SCSI_MLQUEUE_DEVICE_BUSY;
-		break;
-	case ATA_DEFER_PORT:
-		ret = SCSI_MLQUEUE_HOST_BUSY;
-		break;
-	default:
-		WARN_ON_ONCE(1);
-		ret = SCSI_MLQUEUE_HOST_BUSY;
-		break;
-	}
-
-	if (ret) {
-		/* Force a requeue of the command to defer its execution. */
-		ata_qc_free(qc);
-		return ret;
-	}
-
-issue:
-	ata_qc_issue(qc);
-
-	return 0;
-}
-
 /**
  *	ata_scsi_translate - Translate then issue SCSI command to ATA device
  *	@dev: ATA device to which the command is addressed
