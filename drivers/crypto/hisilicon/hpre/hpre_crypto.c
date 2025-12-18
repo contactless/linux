@@ -385,8 +385,10 @@ static int hpre_ctx_init(struct hpre_ctx *ctx, u8 type)
 	struct hpre *hpre;
 
 	qp = hpre_create_qp(type);
-	if (!qp)
+	if (!qp) {
+		ctx->qp = NULL;
 		return -ENODEV;
+	}
 
 	qp->req_cb = hpre_alg_cb;
 	ctx->qp = qp;
