@@ -159,6 +159,27 @@ static void hpre_dfx_add_req_time(struct hpre_asym_request *hpre_req)
 		ktime_get_ts64(&hpre_req->req_time);
 }
 
+static struct hisi_qp *hpre_get_qp_and_start(u8 type)
+{
+	struct hisi_qp *qp;
+	int ret;
+
+	qp = hpre_create_qp(type);
+	if (!qp) {
+		pr_err("Can not create hpre qp!\n");
+		return ERR_PTR(-ENODEV);
+	}
+
+	ret = hisi_qm_start_qp(qp, 0);
+	if (ret < 0) {
+		hisi_qm_free_qps(&qp, 1);
+		pci_err(qp->qm->pdev, "Can not start qp!\n");
+		return ERR_PTR(-EINVAL);
+	}
+
+	return qp;
+}
+
 static int hpre_get_data_dma_addr(struct hpre_asym_request *hpre_req,
 				  struct scatterlist *data, unsigned int len,
 				  int is_src, dma_addr_t *tmp)
@@ -298,8 +319,9 @@ static int hpre_alg_res_post_hf(struct hpre_ctx *ctx, struct hpre_sqe *sqe,
 
 static void hpre_ctx_clear(struct hpre_ctx *ctx, bool is_clear_all)
 {
-	if (is_clear_all)
+	if (is_clear_all) {
 		hisi_qm_free_qps(&ctx->qp, 1);
+	}
 
 	ctx->crt_g2_mode = false;
 	ctx->key_sz = 0;
@@ -384,11 +406,9 @@ static int hpre_ctx_init(struct hpre_ctx *ctx, u8 type)
 	struct hisi_qp *qp;
 	struct hpre *hpre;
 
-	qp = hpre_create_qp(type);
-	if (!qp) {
-		ctx->qp = NULL;
-		return -ENODEV;
-	}
+	qp = hpre_get_qp_and_start(type);
+	if (IS_ERR(qp))
+		return PTR_ERR(qp);
 
 	qp->req_cb = hpre_alg_cb;
 	ctx->qp = qp;
