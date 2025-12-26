@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/can/holtek,ht42b416.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Holtek HT42B416 UART to CAN bus bridge
+
+maintainers:
+  - Anton Tarasov <anton.tarasov@wirenboard.com>
+
+description:
+  The Holtek HT42B416-x devices expose a CAN 2.0A/B controller via a UART
+  interface. The controller is configured with ASCII commands terminated by
+  carriage return characters and is normally attached to a SoC UART using the
+  serdev framework.
+
+allOf:
+  - $ref: /schemas/net/can/can-controller.yaml#
+
+properties:
+  compatible:
+    const: holtek,ht42b416
+
+  current-speed:
+    description: UART baud rate used to communicate with the bridge.
+    default: 115200
+
+  enable-gpios:
+    maxItems: 1
+    description:
+      Optional GPIO used to drive the CE pin of the bridge. The line should be
+      driven high to enable the device and low to reset or power it down.
+
+required:
+  - compatible
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    &uart4 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
+        status = "okay";
+
+        can@0 {
+            compatible = "holtek,ht42b416";
+            current-speed = <115200>;
+            enable-gpios = <&pio PG 10 GPIO_ACTIVE_HIGH>;
+        };
+    };
+...
