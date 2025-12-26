@@ -987,7 +987,12 @@
 			compatible = "wirenboard,wbec-uart";
 			reg = <0>;
 
-			status = "disabled";
+			status = "okay";
+
+			can_mod1: can@0 {
+				compatible = "holtek,ht42b416";
+				current-speed = <115200>;
+			};
 		};
 
 		wbec_uart_mod2: serial@1 {
@@ -1223,12 +1228,7 @@
 	pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
 
 	cts-override;
-	status = "okay";
-
-	can_mod3: can@0 {
-		compatible = "holtek,ht42b416";
-		current-speed = <115200>;
-	};
+	status = "disabled";
 };
 
 &uart5 { /* MOD4 */
