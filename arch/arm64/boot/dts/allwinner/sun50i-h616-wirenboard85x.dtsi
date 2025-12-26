@@ -1223,7 +1223,12 @@
 	pinctrl-0 = <&pinctrl_mod3_txrx_uart>;
 
 	cts-override;
-	status = "disabled";
+	status = "okay";
+
+	can_mod3: can@0 {
+		compatible = "holtek,ht42b416";
+		current-speed = <115200>;
+	};
 };
 
 &uart5 { /* MOD4 */

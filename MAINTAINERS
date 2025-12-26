@@ -10432,6 +10432,13 @@ M:	Alexander Shishkin <alexander.shishkin@linux.intel.com>
 S:	Maintained
 F:	drivers/hwtracing/
 
+HOLTEK HT42B416 CAN DRIVER
+M:	Anton Tarasov <ant0@mail.ru>
+L:	linux-can@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/net/can/holtek,ht42b416.yaml
+F:	drivers/net/can/ht42b416.c
+
 HARMONY SOUND DRIVER
 L:	linux-parisc@vger.kernel.org
 S:	Maintained

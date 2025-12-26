@@ -124,6 +124,17 @@ config CAN_CAN327
 
 	  If this driver is built as a module, it will be called can327.
 
+config CAN_HT42B416
+	tristate "Holtek HT42B416 UART-to-CAN bridge"
+	depends on SERIAL_DEV_BUS && OF
+	help
+	  Enable support for the Holtek HT42B416 UART to CAN bridge chips.
+	  The driver uses the serdev framework to talk to the bridge via a SoC
+	  UART and exposes a SocketCAN network interface.
+
+	  To compile this driver as a module, choose M here: the module will be
+	  called ht42b416.
+
 config CAN_FLEXCAN
 	tristate "Support for Freescale FLEXCAN based chips"
 	depends on OF || COLDFIRE || COMPILE_TEST
