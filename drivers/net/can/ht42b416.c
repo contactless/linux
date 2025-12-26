@@ -37,6 +37,10 @@
 #define HT42B416_POWERUP_DELAY_US	200
 #define HT42B416_TX_TIMEOUT		(2 * HZ)
 
+static bool ht42b416_debug;
+module_param_named(debug, ht42b416_debug, bool, 0644);
+MODULE_PARM_DESC(debug, "Enable verbose UART logging");
+
 enum ht42b416_wait_ack {
 	HT42B416_WAIT_NONE,
 	HT42B416_WAIT_CR,
@@ -95,6 +99,24 @@ static const u8 ht42b416_code_all_std[]   = { 'M', 0x00, 0x00 };
 static const u8 ht42b416_filter_all_ext[] = { 'm', 0x00, 0x00, 0x00, 0x00 };
 static const u8 ht42b416_code_all_ext[]   = { 'M', 0x00, 0x00, 0x00, 0x00 };
 
+static void ht42b416_log_uart(struct device *dev, const char *prefix,
+			      const u8 *buf, size_t len)
+{
+	char hex[HT42B416_RX_BUF_LEN * 3 + 1];
+	size_t i, pos = 0;
+
+	for (i = 0; i < len && pos + 3 < sizeof(hex); i++)
+		pos += scnprintf(hex + pos, sizeof(hex) - pos,
+				 "%02x ", buf[i]);
+
+	if (pos)
+		hex[pos - 1] = '\0';
+	else
+		hex[0] = '\0';
+
+	dev_info(dev, "%s[%zu]: %s\n", prefix, len, hex);
+}
+
 static int ht42b416_write_raw(struct ht42b416_priv *priv,
 			      const u8 *buf, size_t len)
 {
@@ -127,6 +149,9 @@ static int ht42b416_send_cmd_locked(struct ht42b416_priv *priv,
 		reinit_completion(&priv->ack_complete);
 		WRITE_ONCE(priv->wait_ack, wait);
 	}
+
+	if (ht42b416_debug)
+		ht42b416_log_uart(&priv->serdev->dev, "UART TX cmd ", buffer, len);
 
 	ret = ht42b416_write_raw(priv, buffer, len);
 	if (ret || wait == HT42B416_WAIT_NONE)
@@ -240,6 +265,9 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 
 	cmd[0] = 'S';
 	cmd[1] = code;
+	if (ht42b416_debug)
+		dev_info(&priv->serdev->dev, "CAN bitrate %u -> S 0x%02x\n",
+			 priv->can.bittiming.bitrate, code);
 	ret = ht42b416_send_cmd(priv, cmd, 2, HT42B416_WAIT_CR);
 	if (ret)
 		return ret;
@@ -507,6 +535,14 @@ static void ht42b416_process_msg(struct ht42b416_priv *priv,
 {
 	struct net_device *ndev = priv->can.dev;
 
+	if (ht42b416_debug) {
+		if (len)
+			ht42b416_log_uart(&priv->serdev->dev,
+					  "UART RX msg ", buf, len);
+		else
+			dev_info(&priv->serdev->dev, "UART RX ack <CR>\n");
+	}
+
 	if (!len) {
 		ht42b416_signal_ack(priv);
 		return;
@@ -627,6 +663,10 @@ static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 	priv->tx_busy = true;
 	priv->tx_expect = eff ? HT42B416_TX_EXPECT_CAP_Z : HT42B416_TX_EXPECT_Z;
 	priv->tx_dlc = cf->len;
+
+	if (ht42b416_debug)
+		ht42b416_log_uart(&priv->serdev->dev, "UART TX frame ",
+				  priv->tx_buf, priv->tx_len);
 
 	netif_stop_queue(ndev);
 	can_put_echo_skb(skb, ndev, 0, 0);
@@ -752,7 +792,12 @@ static int ht42b416_probe(struct serdev_device *serdev)
 	if (ret)
 		goto err_free;
 
-	serdev_device_set_baudrate(serdev, priv->uart_baud);
+	ret = serdev_device_set_baudrate(serdev, priv->uart_baud);
+	if (ret > 0 && ret != priv->uart_baud)
+		dev_warn(dev, "UART requested %u baud, got %d\n",
+			 priv->uart_baud, ret);
+	if (ret > 0)
+		priv->uart_baud = ret;
 	serdev_device_set_flow_control(serdev, false);
 	serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
 
