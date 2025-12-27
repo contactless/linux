@@ -253,6 +253,14 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 
 	priv->rx_len = 0;
 
+	/* Reset chip just in case */
+	cmd[0] = 'R';
+	cmd[1] = 'S';
+	cmd[2] = 'T';
+	ret = ht42b416_send_cmd(priv, cmd, 3, HT42B416_WAIT_CR);
+	if (ret)
+		return ret;
+
 	/* Close device to ensure clean state */
 	cmd[0] = 'C';
 	ret = ht42b416_send_cmd(priv, cmd, 1, HT42B416_WAIT_CR);
@@ -272,6 +280,20 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 	if (ret)
 		return ret;
 
+	if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK)
+		open_cmd = 'l';
+	else if (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY)
+		open_cmd = 'L';
+	else
+		open_cmd = 'O';
+
+	ret = ht42b416_send_cmd(priv, &open_cmd, 1, HT42B416_WAIT_CR);
+	if (ret)
+		return ret;
+
+	/* Filters must be set after port is open, otherwise the IC will
+	 * end up in some buggy state with a broken baudrate
+	 */
 	ret = ht42b416_send_cmd(priv, ht42b416_filter_all_std,
 				sizeof(ht42b416_filter_all_std),
 				HT42B416_WAIT_CR);
@@ -293,17 +315,6 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 	ret = ht42b416_send_cmd(priv, ht42b416_code_all_ext,
 				sizeof(ht42b416_code_all_ext),
 				HT42B416_WAIT_CR);
-	if (ret)
-		return ret;
-
-	if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK)
-		open_cmd = 'l';
-	else if (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY)
-		open_cmd = 'L';
-	else
-		open_cmd = 'O';
-
-	ret = ht42b416_send_cmd(priv, &open_cmd, 1, HT42B416_WAIT_CR);
 	if (ret)
 		return ret;
 
