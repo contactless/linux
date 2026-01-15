@@ -86,6 +86,7 @@ make_bootlet_deb() {
         --description "FIT bootlet images, $KDEB_WBDESC" \
         --maintainer "$DEBFULLNAME <$DEBEMAIL>" \
         --url "https://github.com/wirenboard/linux" \
+        --deb-dist stable \
         --deb-no-default-config-files \
         --deb-priority optional \
         "${EXTRA_ARGS[@]}" \
