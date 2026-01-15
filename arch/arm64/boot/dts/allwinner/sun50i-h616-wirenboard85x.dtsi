@@ -987,12 +987,7 @@
 			compatible = "wirenboard,wbec-uart";
 			reg = <0>;
 
-			status = "okay";
-
-			can_mod1: can@0 {
-				compatible = "holtek,ht42b416";
-				current-speed = <115200>;
-			};
+			status = "disabled";
 		};
 
 		wbec_uart_mod2: serial@1 {
