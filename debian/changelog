@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb149) stable; urgency=medium
+
+  * wb8.config: add prp hsr support
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 21 Jan 2026 13:41:28 +0300
+
 linux-wb (6.8.0-wb148) stable; urgency=medium
 
   * wb8.5 HDMI: reject >30Hz 4K modes on H616 since T507-H can’t drive 4K60 reliably
