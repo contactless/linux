@@ -751,7 +751,6 @@ static void smbd_post_send_credits(struct work_struct *work)
 	    atomic_read(&sc->send_io.bcredits.count) == 0 &&
 	    atomic_read(&sc->send_io.credits.count) == 0)
 		wake_up(&sc->send_io.credits.wait_queue);
-
 	/* Promptly send an immediate packet as defined in [MS-SMBD] 3.1.1.1 */
 	if (atomic_read(&sc->recv_io.credits.count) <
 		sc->recv_io.credits.target - 1) {
@@ -1501,6 +1500,7 @@ static int smbd_post_send_iter(struct smbdirect_socket *sc,
 
 	/* Fill in the packet header */
 	packet->credits_requested = cpu_to_le16(sp->send_credit_target);
+	new_credits = manage_credits_prior_sending(sc);
 	packet->credits_granted = cpu_to_le16(new_credits);
 
 	packet->flags = 0;
