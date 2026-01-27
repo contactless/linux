@@ -22,6 +22,7 @@
 #include <linux/serdev.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>
+#include <linux/string.h>
 #include <linux/workqueue.h>
 
 #include <linux/can/dev.h>
@@ -90,7 +91,7 @@ struct ht42b416_priv {
 };
 
 static const u32 ht42b416_bitrate_const[] = {
-	  5000,   10000,   20000,   50000,   100000,
+	5000,   10000,   20000,   50000,   100000,
 	125000,  250000,  500000,  800000, 1000000,
 };
 
@@ -106,8 +107,7 @@ static void ht42b416_log_uart(struct device *dev, const char *prefix,
 	size_t i, pos = 0;
 
 	for (i = 0; i < len && pos + 3 < sizeof(hex); i++)
-		pos += scnprintf(hex + pos, sizeof(hex) - pos,
-				 "%02x ", buf[i]);
+		pos += scnprintf(hex + pos, sizeof(hex) - pos, "%02x ", buf[i]);
 
 	if (pos)
 		hex[pos - 1] = '\0';
@@ -122,8 +122,7 @@ static int ht42b416_write_raw(struct ht42b416_priv *priv,
 {
 	int ret;
 
-	ret = serdev_device_write(priv->serdev, buf, len,
-				  msecs_to_jiffies(HT42B416_CMD_TIMEOUT_MS));
+	ret = serdev_device_write(priv->serdev, buf, len, msecs_to_jiffies(HT42B416_CMD_TIMEOUT_MS));
 	if (ret < 0)
 		return ret;
 	if (ret != len)
@@ -212,6 +211,10 @@ static const struct ethtool_ops ht42b416_ethtool_ops = {
 	.get_ts_info = ethtool_op_get_ts_info,
 };
 
+/**
+ * ht42b416_hw_stop - stop the UART-to-CAN bridge and disable the port
+ * @priv: device private data
+ */
 static int ht42b416_hw_stop(struct ht42b416_priv *priv)
 {
 	static const u8 close_cmd[] = { 'C' };
@@ -222,8 +225,7 @@ static int ht42b416_hw_stop(struct ht42b416_priv *priv)
 	netif_stop_queue(priv->can.dev);
 	ht42b416_abort_tx(priv);
 
-	ht42b416_send_cmd(priv, close_cmd, sizeof(close_cmd),
-			  HT42B416_WAIT_CR);
+	ht42b416_send_cmd(priv, close_cmd, sizeof(close_cmd), HT42B416_WAIT_CR);
 	priv->running = false;
 
 disable_gpio:
@@ -235,6 +237,10 @@ disable_gpio:
 	return 0;
 }
 
+/**
+ * ht42b416_hw_start - initialize and open the UART-to-CAN bridge
+ * @priv: device private data
+ */
 static int ht42b416_hw_start(struct ht42b416_priv *priv)
 {
 	struct net_device *ndev = priv->can.dev;
@@ -402,6 +408,11 @@ static void ht42b416_finish_tx(struct ht42b416_priv *priv, u8 ack_byte)
 	netif_wake_queue(ndev);
 }
 
+/**
+ * ht42b416_handle_status - handle status/error notifications from the chip
+ * @priv: device private data
+ * @status: status code returned by the bridge
+ */
 static void ht42b416_handle_status(struct ht42b416_priv *priv, s8 status)
 {
 	struct net_device *ndev = priv->can.dev;
@@ -474,6 +485,12 @@ static void ht42b416_signal_ack(struct ht42b416_priv *priv)
 	}
 }
 
+/**
+ * ht42b416_parse_frame - decode a complete CAN frame from UART payload
+ * @priv: device private data
+ * @buf: message payload (no trailing CR/LF)
+ * @len: payload length
+ */
 static int ht42b416_parse_frame(struct ht42b416_priv *priv,
 				const u8 *buf, size_t len)
 {
@@ -541,6 +558,15 @@ static int ht42b416_parse_frame(struct ht42b416_priv *priv,
 	return 0;
 }
 
+/**
+ * ht42b416_process_msg - handle one complete message from the device
+ * @priv: device private data
+ * @buf: message payload (without trailing CR/LF)
+ * @len: payload length
+ *
+ * The function expects a fully assembled message. It does not try to
+ * reassemble fragmented UART data; that is done by ht42b416_try_parse().
+ */
 static void ht42b416_process_msg(struct ht42b416_priv *priv,
 				 const u8 *buf, size_t len)
 {
@@ -582,6 +608,106 @@ static void ht42b416_process_msg(struct ht42b416_priv *priv,
 	}
 }
 
+/**
+ * ht42b416_rx_consume - drop consumed bytes from the RX buffer
+ * @priv: device private data
+ * @len: number of bytes to remove from the front
+ */
+static void ht42b416_rx_consume(struct ht42b416_priv *priv, size_t len)
+{
+	if (len >= priv->rx_len) {
+		priv->rx_len = 0;
+		return;
+	}
+
+	memmove(priv->rx_buf, priv->rx_buf + len, priv->rx_len - len);
+	priv->rx_len -= len;
+}
+
+/**
+ * ht42b416_try_parse - attempt to parse one complete message from RX buffer
+ * @priv: device private data
+ *
+ * Why it is needed: the UART delivers a byte stream in uneven chunks, and
+ * under load a single CAN response can be split across multiple receive
+ * callbacks. The old logic treated each chunk as a full message and ended
+ * up parsing partial frames (leading to "invalid frame len" and data shifts).
+ *
+ * What it does: it looks at the first byte, derives the expected message
+ * length (using DLC for CAN frames), and only passes a message to
+ * ht42b416_process_msg() once the full payload is present. Otherwise it
+ * keeps the data in the buffer and waits for more bytes.
+ *
+ * Return: true if a message was consumed (success or drop), false if more
+ * data is needed.
+ */
+static bool ht42b416_try_parse(struct ht42b416_priv *priv)
+{
+	struct net_device *ndev = priv->can.dev;
+	struct device *dev = &priv->serdev->dev;
+	size_t msg_len = 0;
+	size_t hdr_len;
+	bool is_eff, is_rtr;
+	u8 start;
+	u8 dlc;
+
+	if (!priv->rx_len)
+		return false;
+
+	start = priv->rx_buf[0];
+
+	if (start == '\r' || start == '\n') {
+		ht42b416_process_msg(priv, priv->rx_buf, 0);
+		ht42b416_rx_consume(priv, 1);
+		return true;
+	}
+
+	switch (start) {
+	case 'z':
+	case 'Z':
+		msg_len = 1;
+		break;
+	case 'F':
+		msg_len = 2;
+		break;
+	case 't':
+	case 'r':
+	case 'T':
+	case 'R':
+		is_eff = start == 'T' || start == 'R';
+		is_rtr = start == 'r' || start == 'R';
+		hdr_len = is_eff ? (1 + 4 + 1) : (1 + 2 + 1);
+		if (priv->rx_len < hdr_len)
+			return false;
+		dlc = priv->rx_buf[hdr_len - 1];
+		if (dlc > CAN_MAX_DLEN) {
+			if (net_ratelimit())
+				netdev_warn(ndev, "invalid DLC %u\n", dlc);
+			ht42b416_rx_consume(priv, 1);
+			return true;
+		}
+		msg_len = hdr_len + (is_rtr ? 0 : dlc);
+		break;
+	default:
+		if (net_ratelimit())
+			netdev_dbg(ndev, "dropping response 0x%02x len=%zu\n",
+				start, priv->rx_len);
+		ht42b416_rx_consume(priv, 1);
+		return true;
+	}
+
+	if (priv->rx_len < msg_len) {
+		if (ht42b416_debug && net_ratelimit())
+			dev_info(dev, "UART RX partial type %c have %zu need %zu\n",
+				start, priv->rx_len, msg_len);
+		return false;
+	}
+
+	ht42b416_process_msg(priv, priv->rx_buf, msg_len);
+	ht42b416_rx_consume(priv, msg_len);
+	return true;
+}
+
 static size_t ht42b416_receive(struct serdev_device *serdev,
 			       const u8 *data, size_t count)
 {
@@ -589,27 +715,17 @@ static size_t ht42b416_receive(struct serdev_device *serdev,
 	size_t i;
 
 	for (i = 0; i < count; i++) {
-		u8 byte = data[i];
-
-		if (byte == '\r' || byte == '\n') {
-			if (priv->rx_len < HT42B416_RX_BUF_LEN)
-				ht42b416_process_msg(priv,
-						     priv->rx_buf,
-						     priv->rx_len);
-			else
-				netdev_warn(priv->can.dev,
-					    "RX buffer overflow (%zu bytes)\n",
-					    priv->rx_len);
-			priv->rx_len = 0;
-			continue;
-		}
-
 		if (priv->rx_len >= HT42B416_RX_BUF_LEN) {
-			priv->rx_len = HT42B416_RX_BUF_LEN;
-			continue;
+			if (net_ratelimit())
+				netdev_warn(priv->can.dev,
+					"RX buffer overflow (%zu bytes)\n",
+					priv->rx_len);
+			priv->rx_len = 0;
 		}
 
-		priv->rx_buf[priv->rx_len++] = byte;
+		priv->rx_buf[priv->rx_len++] = data[i];
+		while (ht42b416_try_parse(priv))
+			;
 	}
 
 	return count;
@@ -620,6 +736,11 @@ static const struct serdev_device_ops ht42b416_serdev_ops = {
 	.write_wakeup = ht42b416_tx_wakeup,
 };
 
+/**
+ * ht42b416_start_xmit - enqueue a CAN frame for UART transmission
+ * @skb: CAN skb to transmit
+ * @ndev: net device
+ */
 static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 				       struct net_device *ndev)
 {
@@ -677,7 +798,7 @@ static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 
 	if (ht42b416_debug)
 		ht42b416_log_uart(&priv->serdev->dev, "UART TX frame ",
-				  priv->tx_buf, priv->tx_len);
+				priv->tx_buf, priv->tx_len);
 
 	netif_stop_queue(ndev);
 	can_put_echo_skb(skb, ndev, 0, 0);
@@ -805,16 +926,14 @@ static int ht42b416_probe(struct serdev_device *serdev)
 
 	ret = serdev_device_set_baudrate(serdev, priv->uart_baud);
 	if (ret > 0 && ret != priv->uart_baud)
-		dev_warn(dev, "UART requested %u baud, got %d\n",
-			 priv->uart_baud, ret);
+		dev_warn(dev, "UART requested %u baud, got %d\n", priv->uart_baud, ret);
 	if (ret > 0)
 		priv->uart_baud = ret;
 	serdev_device_set_flow_control(serdev, false);
 	serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
 
 	priv->can.clock.freq = 0;
-	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
-				       CAN_CTRLMODE_LISTENONLY;
+	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK | CAN_CTRLMODE_LISTENONLY;
 	priv->can.do_set_mode = ht42b416_set_mode;
 	priv->can.bitrate_const = ht42b416_bitrate_const;
 	priv->can.bitrate_const_cnt = ARRAY_SIZE(ht42b416_bitrate_const);
