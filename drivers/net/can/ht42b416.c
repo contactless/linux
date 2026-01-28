@@ -33,10 +33,15 @@
 #define HT42B416_MAX_CMD_LEN		16
 #define HT42B416_MAX_FRAME_LEN		(1 + 4 + 1 + HT42B416_MAX_DATA_LEN + 1)
 #define HT42B416_RX_BUF_LEN		64
+#define HT42B416_ECHO_SKB_MAX		8
+#define HT42B416_ECHO_SIZE		1
 
 #define HT42B416_CMD_TIMEOUT_MS		250
 #define HT42B416_POWERUP_DELAY_US	200
 #define HT42B416_TX_TIMEOUT		(2 * HZ)
+
+/* Fixed TX delay (us) to keep WBEC UART stable under load. */
+#define HT42B416_TX_DELAY_US		5000
 
 static bool ht42b416_debug;
 module_param_named(debug, ht42b416_debug, bool, 0644);
@@ -71,13 +76,17 @@ struct ht42b416_priv {
 	struct gpio_desc *enable_gpiod;
 
 	struct work_struct tx_work;
+	struct work_struct tx_wake_work;
 	spinlock_t tx_lock;	/* protects below fields */
 	u8 tx_buf[HT42B416_MAX_FRAME_LEN];
 	size_t tx_len;
 	size_t tx_pos;
-	enum ht42b416_tx_expect tx_expect;
-	u8 tx_dlc;
 	bool tx_busy;
+	u8 tx_window;
+	u8 tx_fifo_head;
+	u8 tx_fifo_tail;
+	u8 tx_fifo_len;
+	enum ht42b416_tx_expect tx_expect_fifo[HT42B416_ECHO_SKB_MAX];
 
 	u8 rx_buf[HT42B416_RX_BUF_LEN];
 	size_t rx_len;
@@ -195,15 +204,19 @@ static void ht42b416_abort_tx(struct ht42b416_priv *priv)
 {
 	struct net_device *ndev = priv->can.dev;
 	unsigned long flags;
+	u8 i;
 
 	spin_lock_irqsave(&priv->tx_lock, flags);
 	priv->tx_len = 0;
 	priv->tx_pos = 0;
-	priv->tx_expect = HT42B416_TX_NONE;
 	priv->tx_busy = false;
+	priv->tx_fifo_head = 0;
+	priv->tx_fifo_tail = 0;
+	priv->tx_fifo_len = 0;
 	spin_unlock_irqrestore(&priv->tx_lock, flags);
 
-	can_free_echo_skb(ndev, 0, NULL);
+	for (i = 0; i < priv->tx_window; i++)
+		can_free_echo_skb(ndev, i, NULL);
 	netif_wake_queue(ndev);
 }
 
@@ -222,6 +235,7 @@ static int ht42b416_hw_stop(struct ht42b416_priv *priv)
 	if (!priv->running)
 		goto disable_gpio;
 
+	cancel_work_sync(&priv->tx_wake_work);
 	netif_stop_queue(priv->can.dev);
 	ht42b416_abort_tx(priv);
 
@@ -326,8 +340,10 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 
 	priv->tx_pos = 0;
 	priv->tx_len = 0;
-	priv->tx_expect = HT42B416_TX_NONE;
 	priv->tx_busy = false;
+	priv->tx_fifo_head = 0;
+	priv->tx_fifo_tail = 0;
+	priv->tx_fifo_len = 0;
 	priv->running = true;
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	netif_wake_queue(ndev);
@@ -337,6 +353,8 @@ static int ht42b416_hw_start(struct ht42b416_priv *priv)
 
 static int ht42b416_tx_kick_locked(struct ht42b416_priv *priv)
 {
+	struct net_device *ndev = priv->can.dev;
+
 	while (priv->tx_pos < priv->tx_len) {
 		int written;
 
@@ -356,6 +374,12 @@ static int ht42b416_tx_kick_locked(struct ht42b416_priv *priv)
 		priv->tx_pos += written;
 	}
 
+	if (priv->tx_pos >= priv->tx_len) {
+		priv->tx_busy = false;
+		if (priv->tx_fifo_len < priv->tx_window)
+			netif_wake_queue(ndev);
+	}
+
 	return 0;
 }
 
@@ -371,6 +395,33 @@ static void ht42b416_tx_work(struct work_struct *work)
 	spin_unlock_irqrestore(&priv->tx_lock, flags);
 }
 
+/**
+ * ht42b416_tx_wake_work - re-enable TX queue after a pacing delay
+ * @work: work item embedded in the driver private data
+ *
+ * This worker enforces a small inter-frame pause, then checks (under
+ * tx_lock) that the device is still running and the TX window has room,
+ * and finally wakes the netdev queue outside the lock.
+ */
+static void ht42b416_tx_wake_work(struct work_struct *work)
+{
+	struct ht42b416_priv *priv =
+		container_of(work, struct ht42b416_priv, tx_wake_work);
+	struct net_device *ndev = priv->can.dev;
+	unsigned long flags;
+	bool wake = false;
+
+	usleep_range(HT42B416_TX_DELAY_US, HT42B416_TX_DELAY_US + 50);
+
+	spin_lock_irqsave(&priv->tx_lock, flags);
+	if (priv->running && priv->tx_fifo_len < priv->tx_window)
+		wake = true;
+	spin_unlock_irqrestore(&priv->tx_lock, flags);
+
+	if (wake)
+		netif_wake_queue(ndev);
+}
+
 static void ht42b416_tx_wakeup(struct serdev_device *serdev)
 {
 	struct ht42b416_priv *priv = serdev_device_get_drvdata(serdev);
@@ -384,28 +435,32 @@ static void ht42b416_finish_tx(struct ht42b416_priv *priv, u8 ack_byte)
 	struct net_device *ndev = priv->can.dev;
 	unsigned long flags;
 	unsigned int tx_bytes;
+	enum ht42b416_tx_expect expect;
+	u8 slot;
 
 	spin_lock_irqsave(&priv->tx_lock, flags);
-	if (!priv->tx_busy || priv->tx_pos < priv->tx_len) {
+	if (!priv->tx_fifo_len) {
 		spin_unlock_irqrestore(&priv->tx_lock, flags);
 		return;
 	}
 
-	if ((ack_byte != 'z' || priv->tx_expect != HT42B416_TX_EXPECT_Z) &&
-	    (ack_byte != 'Z' || priv->tx_expect != HT42B416_TX_EXPECT_CAP_Z))
+	slot = priv->tx_fifo_tail;
+	expect = priv->tx_expect_fifo[slot];
+	priv->tx_fifo_tail = (priv->tx_fifo_tail + 1) % priv->tx_window;
+	priv->tx_fifo_len--;
+
+	if ((ack_byte != 'z' || expect != HT42B416_TX_EXPECT_Z) &&
+	    (ack_byte != 'Z' || expect != HT42B416_TX_EXPECT_CAP_Z))
 		netdev_warn(ndev, "unexpected TX ack 0x%02x\n", ack_byte);
 
-	priv->tx_busy = false;
-	priv->tx_expect = HT42B416_TX_NONE;
-	priv->tx_len = 0;
-	priv->tx_pos = 0;
 	spin_unlock_irqrestore(&priv->tx_lock, flags);
 
-	tx_bytes = can_get_echo_skb(ndev, 0, NULL);
+	tx_bytes = can_get_echo_skb(ndev, slot, NULL);
 	ndev->stats.tx_packets++;
 	ndev->stats.tx_bytes += tx_bytes;
 
-	netif_wake_queue(ndev);
+	if (priv->tx_fifo_len < priv->tx_window)
+		schedule_work(&priv->tx_wake_work);
 }
 
 /**
@@ -748,6 +803,8 @@ static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 	struct can_frame *cf = (struct can_frame *)skb->data;
 	unsigned long flags;
 	bool eff, rtr;
+	enum ht42b416_tx_expect expect;
+	u8 slot;
 	u8 *pos;
 	int err;
 
@@ -756,13 +813,19 @@ static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 
 	eff = cf->can_id & CAN_EFF_FLAG;
 	rtr = cf->can_id & CAN_RTR_FLAG;
+	expect = eff ? HT42B416_TX_EXPECT_CAP_Z : HT42B416_TX_EXPECT_Z;
 
 	spin_lock_irqsave(&priv->tx_lock, flags);
-	if (priv->tx_busy) {
+	if (priv->tx_busy || priv->tx_fifo_len >= priv->tx_window) {
 		netif_stop_queue(ndev);
 		spin_unlock_irqrestore(&priv->tx_lock, flags);
 		return NETDEV_TX_BUSY;
 	}
+
+	slot = priv->tx_fifo_head;
+	priv->tx_fifo_head = (priv->tx_fifo_head + 1) % priv->tx_window;
+	priv->tx_fifo_len++;
+	priv->tx_expect_fifo[slot] = expect;
 
 	pos = priv->tx_buf;
 	if (eff) {
@@ -793,25 +856,25 @@ static netdev_tx_t ht42b416_start_xmit(struct sk_buff *skb,
 	priv->tx_len = pos - priv->tx_buf;
 	priv->tx_pos = 0;
 	priv->tx_busy = true;
-	priv->tx_expect = eff ? HT42B416_TX_EXPECT_CAP_Z : HT42B416_TX_EXPECT_Z;
-	priv->tx_dlc = cf->len;
 
 	if (ht42b416_debug)
 		ht42b416_log_uart(&priv->serdev->dev, "UART TX frame ",
 				priv->tx_buf, priv->tx_len);
 
-	netif_stop_queue(ndev);
-	can_put_echo_skb(skb, ndev, 0, 0);
+	if (priv->tx_fifo_len >= priv->tx_window)
+		netif_stop_queue(ndev);
+	can_put_echo_skb(skb, ndev, slot, 0);
 
 	err = ht42b416_tx_kick_locked(priv);
 	if (err) {
 		priv->tx_busy = false;
 		priv->tx_len = 0;
 		priv->tx_pos = 0;
-		priv->tx_expect = HT42B416_TX_NONE;
+		priv->tx_fifo_head = slot;
+		priv->tx_fifo_len--;
 		spin_unlock_irqrestore(&priv->tx_lock, flags);
 		ndev->stats.tx_errors++;
-		can_free_echo_skb(ndev, 0, NULL);
+		can_free_echo_skb(ndev, slot, NULL);
 		netif_wake_queue(ndev);
 		return NETDEV_TX_OK;
 	}
@@ -892,7 +955,13 @@ static int ht42b416_probe(struct serdev_device *serdev)
 	u32 baud = 115200;
 	int ret;
 
-	ndev = alloc_candev(sizeof(*priv), 1);
+	/*
+	 * WBEC UART can deliver uneven RX chunks under load, so we keep a
+	 * single-frame TX window and reassemble RX data. For simplicity the
+	 * same policy is used for all UARTs; if higher throughput is needed on
+	 * SoC UARTs, consider applying the small TX window only to WBEC.
+	 */
+	ndev = alloc_candev(sizeof(*priv), HT42B416_ECHO_SIZE);
 	if (!ndev)
 		return -ENOMEM;
 
@@ -903,10 +972,15 @@ static int ht42b416_probe(struct serdev_device *serdev)
 	priv->uart_baud = baud;
 	priv->running = false;
 	priv->rx_len = 0;
+	priv->tx_window = HT42B416_ECHO_SIZE;
+	priv->tx_fifo_head = 0;
+	priv->tx_fifo_tail = 0;
+	priv->tx_fifo_len = 0;
 	mutex_init(&priv->cmd_lock);
 	init_completion(&priv->ack_complete);
 	spin_lock_init(&priv->tx_lock);
 	INIT_WORK(&priv->tx_work, ht42b416_tx_work);
+	INIT_WORK(&priv->tx_wake_work, ht42b416_tx_wake_work);
 	priv->wait_ack = HT42B416_WAIT_NONE;
 
 	priv->enable_gpiod = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_LOW);
@@ -962,6 +1036,7 @@ static void ht42b416_remove(struct serdev_device *serdev)
 	struct ht42b416_priv *priv = serdev_device_get_drvdata(serdev);
 	struct net_device *ndev = priv->can.dev;
 
+	cancel_work_sync(&priv->tx_wake_work);
 	cancel_work_sync(&priv->tx_work);
 	ht42b416_hw_stop(priv);
 	unregister_candev(ndev);
@@ -985,6 +1060,6 @@ static struct serdev_device_driver ht42b416_driver = {
 
 module_serdev_device_driver(ht42b416_driver);
 
-MODULE_AUTHOR("Anton Tarasov <ant0@mail.ru>");
+MODULE_AUTHOR("Anton Tarasov <anton.tarasov@wirenboard.com>");
 MODULE_DESCRIPTION("Holtek HT42B416 UART-to-CAN bridge driver");
 MODULE_LICENSE("GPL");
