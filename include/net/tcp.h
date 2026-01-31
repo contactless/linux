@@ -1353,7 +1353,6 @@ static inline bool tcp_ca_no_fallback_rfc3168(const struct sock *sk)
 
 	return icsk->icsk_ca_ops->flags & TCP_CONG_NO_FALLBACK_RFC3168;
 }
-
 static inline void tcp_ca_event(struct sock *sk, const enum tcp_ca_event event)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
