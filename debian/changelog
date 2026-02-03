@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb150) stable; urgency=medium
+
+  * wb8: change error in case of axp20x capacity reading error
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Tue, 03 Feb 2026 16:09:38 +0300
+
 linux-wb (6.8.0-wb149) stable; urgency=medium
 
   * wb8.config: add prp hsr support
