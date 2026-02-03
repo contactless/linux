@@ -415,7 +415,7 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
 			return ret;
 
 		if (axp20x_batt->data->has_fg_valid && !(reg & AXP22X_FG_VALID))
-			return -EINVAL;
+			return -ENODATA;
 
 		/*
 		 * Fuel Gauge data takes 7 bits but the stored value seems to be
