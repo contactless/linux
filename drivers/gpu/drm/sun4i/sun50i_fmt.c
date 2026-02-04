@@ -73,11 +73,11 @@ void sun50i_fmt_setup(struct sun8i_mixer *mixer, u16 width,
 
 	colorspace = sun50i_fmt_get_colorspace(format);
 	bit10 = sun50i_fmt_is_10bit(format);
-	base = mixer->cfg->de_type == sun8i_mixer_de3 ?
+	base = mixer->cfg->de_type == SUN8I_MIXER_DE3 ?
 		SUN50I_FMT_DE3 : SUN50I_FMT_DE33;
 	regs = sun8i_blender_regmap(mixer);
 
-	if (mixer->cfg->de_type == sun8i_mixer_de3)
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE3)
 		sun50i_fmt_de3_limits(limit, colorspace, bit10);
 	else
 		sun50i_fmt_de33_limits(limit, colorspace);

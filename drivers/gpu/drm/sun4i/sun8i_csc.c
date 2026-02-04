@@ -240,7 +240,7 @@ static const u32 yuv2yuv_de3[2][3][3][12] = {
 
 static u32 sun8i_csc_base(struct sun8i_mixer *mixer, int layer)
 {
-	if (mixer->cfg->de_type == sun8i_mixer_de33)
+	if (mixer->cfg->de_type == SUN8I_MIXER_DE33)
 		return sun8i_channel_base(mixer, layer) - 0x800;
 	else
 		return ccsc_base[mixer->cfg->ccsc][layer];
@@ -461,7 +461,7 @@ void sun8i_csc_set_ccsc(struct sun8i_mixer *mixer, int layer,
 		sun8i_de3_ccsc_setup(&mixer->engine, layer,
 				     fmt_type, encoding, range);
 		return;
-	} else if (mixer->cfg->de_type == sun8i_mixer_de33) {
+	} else if (mixer->cfg->de_type == SUN8I_MIXER_DE33) {
 		sun8i_de33_ccsc_setup(mixer, layer, fmt_type,
 				      encoding, range);
 		return;

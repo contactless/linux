@@ -90,7 +90,7 @@ static int wbec_power_probe(struct platform_device *pdev)
 	wbec = dev_get_drvdata(dev->parent);
 	wbec_power->regmap = wbec->regmap;
 
-	psy_cfg.of_node = dev->of_node;
+	psy_cfg.fwnode = dev_fwnode(dev);
 	psy_cfg.drv_data = wbec_power;
 
 	wbec_power->charger = devm_power_supply_register(dev, &wbec_power_desc,

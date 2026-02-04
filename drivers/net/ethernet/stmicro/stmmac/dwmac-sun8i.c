@@ -138,7 +138,6 @@ static const struct emac_variant emac_variant_a64 = {
 };
 
 static const struct emac_variant emac_variant_t507_emac1 = {
-	.default_syscon_value = 0,
 	.syscon_field = &sun50i_t507_emac1_syscon_reg_field,
 	.soc_has_internal_phy = false,
 	.support_mii = true,

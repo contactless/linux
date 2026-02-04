@@ -224,7 +224,7 @@ static int wbec_battery_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, wbec_battery);
 
 	psy_cfg.drv_data = wbec_battery;
-	psy_cfg.of_node = pdev->dev.of_node;
+	psy_cfg.fwnode = dev_fwnode(dev);
 
 	wbec_battery->batt = devm_power_supply_register(&pdev->dev,
 						       &wbec_battery_desc,
