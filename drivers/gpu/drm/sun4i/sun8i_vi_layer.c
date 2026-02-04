@@ -363,7 +363,7 @@ static void sun8i_vi_layer_atomic_update(struct drm_plane *plane,
 	bool afbc = drm_is_afbc(fb->modifier);
 
 	if (!new_state->crtc || !new_state->visible) {
-		if (mixer->cfg->de_type >= sun8i_mixer_de3)
+		if (mixer->cfg->de_type >= SUN8I_MIXER_DE3)
 			sun50i_afbc_disable(mixer, layer->channel);
 		return;
 	}
@@ -541,7 +541,7 @@ struct sun8i_layer *sun8i_vi_layer_init_one(struct drm_device *drm,
 	layer->channel = index;
 	layer->overlay = 0;
 
-	if (mixer->cfg->de_type >= sun8i_mixer_de3) {
+	if (mixer->cfg->de_type >= SUN8I_MIXER_DE3) {
 		formats = sun8i_vi_layer_de3_formats;
 		format_count = ARRAY_SIZE(sun8i_vi_layer_de3_formats);
 		modifiers = sun50i_layer_de3_modifiers;
