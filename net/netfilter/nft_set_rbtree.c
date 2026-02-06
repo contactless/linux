@@ -334,7 +334,6 @@ static bool nft_rbtree_insert_same_interval(const struct net *net,
 
 	return false;
 }
-
 static int __nft_rbtree_insert(const struct net *net, const struct nft_set *set,
 			       struct nft_rbtree_elem *new,
 			       struct nft_elem_priv **elem_priv, u64 tstamp)
