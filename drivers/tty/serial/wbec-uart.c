@@ -589,30 +589,43 @@ static int wbec_uart_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, -EINVAL, "Failed to get parent node\n");
 
 	parent_dev = bus_find_device_by_of_node(&spi_bus_type, parent_node);
+	of_node_put(parent_node);
 	if (!parent_dev)
 		return dev_err_probe(dev, -EINVAL, "Failed to get parent SPI device\n");
 
 	wbec = dev_get_drvdata(parent_dev);
-	if (!wbec)
-		return dev_err_probe(dev, -EINVAL, "Failed to get parent device data\n");
+	if (!wbec) {
+		ret = dev_err_probe(dev, -EINVAL, "Failed to get parent device data\n");
+		goto put_parent_dev;
+	}
 
-	if (!wbec->spi->irq || !wbec->support_v2_protocol)
-		return dev_err_probe(dev, -EINVAL, "WBEC firmware does not support UART\n");
+	if (!wbec->spi->irq || !wbec->support_v2_protocol) {
+		ret = dev_err_probe(dev, -EINVAL, "WBEC firmware does not support UART\n");
+		goto put_parent_dev;
+	}
 
-	if (device_property_read_u32(dev, "reg", &reg))
-		return dev_err_probe(dev, -EINVAL, "Failed to read 'reg' property\n");
+	if (device_property_read_u32(dev, "reg", &reg)) {
+		ret = dev_err_probe(dev, -EINVAL, "Failed to read 'reg' property\n");
+		goto put_parent_dev;
+	}
 
-	if (reg >= WBEC_UART_PORT_COUNT)
-		return dev_err_probe(dev, -EINVAL, "Invalid reg value: %u\n", reg);
+	if (reg >= WBEC_UART_PORT_COUNT) {
+		ret = dev_err_probe(dev, -EINVAL, "Invalid reg value: %u\n", reg);
+		goto put_parent_dev;
+	}
 
 	p = devm_kzalloc(&pdev->dev, sizeof(struct wbec_uart_one_port),
 				GFP_KERNEL);
-	if (!p)
-		return -ENOMEM;
+	if (!p) {
+		ret = -ENOMEM;
+		goto put_parent_dev;
+	}
 
 	p->regmap = dev_get_regmap(parent_dev, NULL);
-	if (!p->regmap)
-		return dev_err_probe(dev, -ENODEV, "Failed to get regmap\n");
+	if (!p->regmap) {
+		ret = dev_err_probe(dev, -ENODEV, "Failed to get regmap\n");
+		goto put_parent_dev;
+	}
 
 	mutex_lock(&wbec_uart_mutex);
 
@@ -685,6 +698,9 @@ static int wbec_uart_probe(struct platform_device *pdev)
 
 mutex_release:
 	mutex_unlock(&wbec_uart_mutex);
+
+put_parent_dev:
+	put_device(parent_dev);
 
 	return ret;
 }
