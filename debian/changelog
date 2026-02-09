@@ -1,0 +1,6 @@
+linux-wb (6.18.8-wb1) stable; urgency=medium
+
+  * Initial release.
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 09 Feb 2026 11:27:56 +0300
+
