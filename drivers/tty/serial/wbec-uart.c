@@ -59,7 +59,7 @@ static const struct wbec_uart_regmap_address wbec_uart_regmap_address[WBEC_UART_
 
 struct wbec_uart_one_port {
 	struct uart_port port;
-	struct wbec_uart *wbec_uart;
+	struct wbec *wbec;
 	struct work_struct start_tx_work;
 	struct completion tx_complete;
 	struct regmap *regmap;
@@ -67,6 +67,18 @@ struct wbec_uart_one_port {
 
 static struct wbec_uart_one_port *wbec_uart_ports[WBEC_UART_PORT_COUNT] = {};
 static struct mutex wbec_uart_mutex;
+
+static bool wbec_uart_has_active_ports(void)
+{
+	int i;
+
+	for (i = 0; i < WBEC_UART_PORT_COUNT; i++) {
+		if (wbec_uart_ports[i])
+			return true;
+	}
+
+	return false;
+}
 
 struct wbec_regmap_header {
 	u16 address : 15;
@@ -620,6 +632,7 @@ static int wbec_uart_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto put_parent_dev;
 	}
+	p->wbec = wbec;
 
 	p->regmap = dev_get_regmap(parent_dev, NULL);
 	if (!p->regmap) {
@@ -720,6 +733,8 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	regmap_update_bits(p->regmap, WBEC_REG_GPIO_AF, gpio_af_mask, gpio_af_mode);
 
 	wbec_uart_ports[line] = NULL;
+	if (!wbec_uart_has_active_ports())
+		p->wbec->irq_handler = NULL;
 	mutex_unlock(&wbec_uart_mutex);
 
 	/*
@@ -727,6 +742,7 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	 * wbec_uart_mutex. Keep mutex unlocked here to avoid self-deadlock.
 	 */
 	uart_remove_one_port(&wbec_uart_driver, &p->port);
+	cancel_work_sync(&p->start_tx_work);
 }
 
 static const struct of_device_id wbec_uart_of_match[] = {
