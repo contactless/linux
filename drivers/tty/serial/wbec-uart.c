@@ -704,9 +704,13 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	regmap_update_bits(p->regmap, WBEC_REG_GPIO_AF, gpio_af_mask, gpio_af_mode);
 
 	wbec_uart_ports[line] = NULL;
-	uart_remove_one_port(&wbec_uart_driver, &p->port);
-
 	mutex_unlock(&wbec_uart_mutex);
+
+	/*
+	 * uart_remove_one_port() calls into ->shutdown(), which also takes
+	 * wbec_uart_mutex. Keep mutex unlocked here to avoid self-deadlock.
+	 */
+	uart_remove_one_port(&wbec_uart_driver, &p->port);
 }
 
 static const struct of_device_id wbec_uart_of_match[] = {
