@@ -280,9 +280,11 @@ static inline void wbec_clean_debugfs(struct wbec *wbec)
 static irqreturn_t wbec_irq_handler(int irq, void *dev_id)
 {
 	struct wbec *wbec = dev_id;
+	void (*handler)(struct wbec *wbec);
 
-	if (wbec->irq_handler)
-		wbec->irq_handler(wbec);
+	handler = READ_ONCE(wbec->irq_handler);
+	if (handler)
+		handler(wbec);
 	else {
 		dev_warn_ratelimited(wbec->dev, "Unhandled IRQ\n");
 		// dummy uart exchange

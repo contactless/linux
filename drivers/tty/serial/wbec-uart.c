@@ -705,7 +705,7 @@ static int wbec_uart_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, p);
 	wbec_uart_ports[reg] = p;
 
-	wbec->irq_handler = wbec_spi_exchange_sync;
+	WRITE_ONCE(wbec->irq_handler, wbec_spi_exchange_sync);
 
 	dev_dbg(&pdev->dev, "port %s registered\n", p->port.name);
 
@@ -734,7 +734,7 @@ static void wbec_uart_remove(struct platform_device *pdev)
 
 	wbec_uart_ports[line] = NULL;
 	if (!wbec_uart_has_active_ports())
-		p->wbec->irq_handler = NULL;
+		WRITE_ONCE(p->wbec->irq_handler, NULL);
 	mutex_unlock(&wbec_uart_mutex);
 
 	/*
