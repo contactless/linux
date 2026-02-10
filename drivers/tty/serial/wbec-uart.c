@@ -61,6 +61,7 @@ struct wbec_uart_one_port {
 	struct uart_port port;
 	struct wbec *wbec;
 	struct work_struct start_tx_work;
+	struct work_struct rs485_work;
 	struct completion tx_complete;
 	struct regmap *regmap;
 };
@@ -533,27 +534,46 @@ static int wbec_uart_config_rs485(struct uart_port *port,
 	struct wbec_uart_one_port *p = container_of(port,
 					      struct wbec_uart_one_port,
 					      port);
+
+	/*
+	 * serial_core invokes rs485_config() under uart_port_lock_irqsave().
+	 * Do not perform sleeping regmap/SPI I/O here.
+	 */
+	schedule_work(&p->rs485_work);
+
+	return 0;
+}
+
+static void wbec_rs485_work_handler(struct work_struct *work)
+{
+	struct wbec_uart_one_port *p = container_of(work,
+						     struct wbec_uart_one_port,
+						     rs485_work);
+	struct uart_port *port = &p->port;
+	struct serial_rs485 rs485;
+	unsigned long flags;
 	int ret = 0;
 
-	if (rs485->flags & SER_RS485_ENABLED) {
+	uart_port_lock_irqsave(port, &flags);
+	rs485 = port->rs485;
+	uart_port_unlock_irqrestore(port, flags);
+
+	if (rs485.flags & SER_RS485_ENABLED) {
 		u16 gpio_af_mode = 0b010000 << (port->line * 6);
 		u16 gpio_af_mask = 0b110000 << (port->line * 6);
 		union uart_ctrl_regs ctrl_regs;
 		u16 ctrl_reg = wbec_uart_regmap_address[port->line].ctrl;
 		int val;
 
-		// gpio mode
+		/* gpio mode */
+		mutex_lock(&wbec_uart_mutex);
 		regmap_update_bits(p->regmap, WBEC_REG_GPIO_AF, gpio_af_mask, gpio_af_mode);
 
 		regmap_bulk_read(p->regmap, ctrl_reg, ctrl_regs.buf, ARRAY_SIZE(ctrl_regs.buf));
 
 		ctrl_regs.ctrl.ctrl_applyed = 0;
 		ctrl_regs.ctrl.rs485_enabled = 1;
-
-		if (rs485->flags & SER_RS485_RX_DURING_TX)
-			ctrl_regs.ctrl.rs485_rx_during_tx = 1;
-		else
-			ctrl_regs.ctrl.rs485_rx_during_tx = 0;
+		ctrl_regs.ctrl.rs485_rx_during_tx = !!(rs485.flags & SER_RS485_RX_DURING_TX);
 
 		regmap_bulk_write(p->regmap, ctrl_reg, ctrl_regs.buf, ARRAY_SIZE(ctrl_regs.buf));
 
@@ -563,9 +583,9 @@ static int wbec_uart_config_rs485(struct uart_port *port,
 				       1000, 1000000);
 		if (ret)
 			dev_err(port->dev, "Failed to set rs485 config: ctrl applyed timeout\n");
-	}
 
-	return ret;
+		mutex_unlock(&wbec_uart_mutex);
+	}
 }
 
 static const struct serial_rs485 wbec_uart_rs485_supported = {
@@ -633,6 +653,7 @@ static int wbec_uart_probe(struct platform_device *pdev)
 		goto put_parent_dev;
 	}
 	p->wbec = wbec;
+	INIT_WORK(&p->rs485_work, wbec_rs485_work_handler);
 
 	p->regmap = dev_get_regmap(parent_dev, NULL);
 	if (!p->regmap) {
@@ -712,6 +733,9 @@ static int wbec_uart_probe(struct platform_device *pdev)
 mutex_release:
 	mutex_unlock(&wbec_uart_mutex);
 
+	if (ret)
+		cancel_work_sync(&p->rs485_work);
+
 put_parent_dev:
 	put_device(parent_dev);
 
@@ -743,6 +767,7 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	 */
 	uart_remove_one_port(&wbec_uart_driver, &p->port);
 	cancel_work_sync(&p->start_tx_work);
+	cancel_work_sync(&p->rs485_work);
 }
 
 static const struct of_device_id wbec_uart_of_match[] = {
