@@ -1556,15 +1556,16 @@ static int axp20x_restart_notify(struct notifier_block *this,
 {
 	struct axp20x_dev *axp20x =
 		container_of(this, struct axp20x_dev, restart_handler);
+	int ret;
 
 	mdelay(10);
 
-	regmap_set_bits(axp20x->regmap, AXP20X_V_OFF, BIT(6));
+	ret = regmap_set_bits(axp20x->regmap, AXP20X_V_OFF, BIT(6));
+	if (ret)
+		dev_err(axp20x->dev, "failed to request PMIC reboot: %d\n", ret);
 
 	/* give it some time */
 	mdelay(100);
-
-	WARN_ON(1);
 
 	return NOTIFY_DONE;
 }
