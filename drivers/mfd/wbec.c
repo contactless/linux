@@ -315,12 +315,14 @@ static int wbec_restart(struct sys_off_data *data)
 	struct wbec *wbec = data->cb_data;
 
 	ret = regmap_write(wbec->regmap, WBEC_REG_POWER_CTRL, WBEC_REG_POWER_CTRL_REBOOT_MSK);
-	if (ret)
+	if (ret) {
 		dev_err(wbec->dev, "Failed to reboot device!\n");
+		return NOTIFY_DONE;
+	}
 
 	/* Give capacitors etc. time to drain to avoid kernel panic msg. */
 	msleep(WBEC_POWER_RESET_DELAY_MS);
-	dev_err(wbec->dev, "Device not actually rebooted. Check EC and FETs!\n");
+	dev_warn(wbec->dev, "WBEC reboot timeout, trying next restart handler\n");
 
 	return NOTIFY_DONE;
 }
