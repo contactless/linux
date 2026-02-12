@@ -282,6 +282,7 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 	unsigned int start, end, tx_time;
 	unsigned int trig_level;
 	unsigned int tx_len = 0, rx_len = 0, nbits = 0;
+	bool dma_fallback = false;
 	bool use_dma;
 	int ret = 0;
 	u32 reg;
@@ -289,6 +290,11 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 	if (tfr->len > SUN6I_MAX_XFER_SIZE)
 		return -EINVAL;
 
+retry:
+	/*
+	 * If DMA setup/transfer fails, retry the same transfer once in PIO
+	 * and keep DMA disabled for this controller as a safety fallback.
+	 */
 	reinit_completion(&sspi->done);
 	reinit_completion(&sspi->dma_rx_done);
 	sspi->tx_buf = tfr->tx_buf;
@@ -467,6 +473,14 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 			dev_warn(&host->dev,
 				 "%s: prepare DMA failed, ret=%d",
 				 dev_name(&spi->dev), ret);
+			if (!dma_fallback) {
+				dma_fallback = true;
+				host->can_dma = NULL;
+				dev_warn(&host->dev,
+					 "%s: disabling DMA and retrying in PIO mode\n",
+					 dev_name(&spi->dev));
+				goto retry;
+			}
 			return ret;
 		}
 	}
@@ -521,6 +535,14 @@ static int sun6i_spi_transfer_one(struct spi_controller *host,
 	if (ret && use_dma) {
 		dmaengine_terminate_sync(host->dma_rx);
 		dmaengine_terminate_sync(host->dma_tx);
+		if (!dma_fallback) {
+			dma_fallback = true;
+			host->can_dma = NULL;
+			dev_warn(&host->dev,
+				 "%s: DMA transfer failed, retrying in PIO mode\n",
+				 dev_name(&spi->dev));
+			goto retry;
+		}
 	}
 
 	return ret;
