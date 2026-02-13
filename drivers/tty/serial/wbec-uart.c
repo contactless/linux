@@ -105,7 +105,8 @@ struct uart_ctrl {
 	uint16_t stop_bits : 2;
 	uint16_t rs485_enabled : 1;
 	uint16_t rs485_rx_during_tx : 1;
-	uint16_t res2 : 10;
+	uint16_t data_width : 2;
+	uint16_t res2 : 8;
 } __packed;
 
 union uart_ctrl_regs {
@@ -425,6 +426,20 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 		ctrl_regs.ctrl.stop_bits = 2; /* 2 */
 	else
 		ctrl_regs.ctrl.stop_bits = 0; /* 1 */
+
+	/* Data width (character size) */
+	switch (new->c_cflag & CSIZE) {
+	case CS7:
+		ctrl_regs.ctrl.data_width = 0; /* 7 data bits */
+		break;
+	case CS9:
+		ctrl_regs.ctrl.data_width = 2; /* 9 data bits */
+		break;
+	default:
+	case CS8:
+		ctrl_regs.ctrl.data_width = 1; /* 8 data bits (default) */
+		break;
+	}
 
 	/* Baud rate */
 	baud = uart_get_baud_rate(port, new, old, 1200, 115200);
