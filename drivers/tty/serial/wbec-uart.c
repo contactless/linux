@@ -429,15 +429,15 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 
 	/* Data width (character size) */
 	switch (new->c_cflag & CSIZE) {
-	case CS7:
-		ctrl_regs.ctrl.data_width = 0; /* 7 data bits */
+	case CS6:
+		ctrl_regs.ctrl.data_width = 0; /* 6 data bits */
 		break;
-	case CS9:
-		ctrl_regs.ctrl.data_width = 2; /* 9 data bits */
+	case CS7:
+		ctrl_regs.ctrl.data_width = 1; /* 7 data bits */
 		break;
 	default:
 	case CS8:
-		ctrl_regs.ctrl.data_width = 1; /* 8 data bits (default) */
+		ctrl_regs.ctrl.data_width = 2; /* 8 data bits (default) */
 		break;
 	}
 
