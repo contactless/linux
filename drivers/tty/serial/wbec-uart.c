@@ -450,7 +450,7 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	speed_t requested_speed = tty_termios_baud_rate(new);
 	int baud = uart_get_baud_rate(port, new, old, WBEC_UART_MIN_BAUD_RATE, WBEC_UART_MAX_BAUD_RATE);
 	if (baud != requested_speed) {
-		// The values differ if the user attempts to set speed that out of range.
+		// The values differ if the user attempts to set a speed that is out of range.
 		// In that case uart_get_baud_rate may return 9600 baud rate and we use
 		// tty_termios_baud_rate to detect invalid speed and report an error.
 		dev_err(port->dev, "Requested baudrate %d is out of supported range [" __stringify(WBEC_UART_MIN_BAUD_RATE) "-"
