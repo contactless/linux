@@ -1,6 +1,6 @@
 linux-wb (6.8.0-wb151) stable; urgency=medium
 
-  * Added cs6 and cs7 to wbec_uart
+  * Added CS7 to wbec_uart
 
  -- HomePC <egor.panchenko@wirenboard.com>  Tue, 17 Feb 2026 16:30:20 +0300
 
