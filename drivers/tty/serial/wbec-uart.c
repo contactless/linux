@@ -105,7 +105,7 @@ struct uart_ctrl {
 	uint16_t stop_bits : 2;
 	uint16_t rs485_enabled : 1;
 	uint16_t rs485_rx_during_tx : 1;
-	uint16_t data_width : 2; // reserve 2 bits for 0/1 value for optional adding 6-,9-data bits modes in future
+	uint16_t data_width : 2; // reserve 2 bits for 0/1 value for optional adding 6-,9-data bits modes in future 
 	uint16_t res2 : 8;
 } __packed;
 
