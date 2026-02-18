@@ -36,6 +36,9 @@
 #define WBEC_UART_RX_BYTE_ERROR_NE		BIT(2)
 #define WBEC_UART_RX_BYTE_ERROR_ORE		BIT(3)
 
+#define WBEC_UART_MIN_BAUD_RATE 1200
+#define WBEC_UART_MAX_BAUD_RATE 115200
+
 struct wbec_uart_regmap_address {
 	u16 ctrl;
 	u16 tx_start;
@@ -432,6 +435,8 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	// Older versions will ignore this setting and use 8 data bits.
 	switch (new->c_cflag & CSIZE) {
 	default:
+		dev_err(port->dev, "Failed to set termios: CS value not applied, WBEC-UART supports only CS7 and CS8. 
+			The default value is set - CS8\n");
 	case CS8:
 		ctrl_regs.ctrl.data_width = 0; /* 8 data bits (default) */
 		break;
@@ -441,7 +446,15 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	}
 
 	/* Baud rate */
-	baud = uart_get_baud_rate(port, new, old, 1200, 115200);
+	speed_t requested_speed = tty_termios_baud_rate(new);
+	int baud = uart_get_baud_rate(port, new, old, WBEC_UART_MIN_BAUD_RATE, WBEC_UART_MAX_BAUD_RATE);
+	if (baud != requested_speed) {
+		// The values differ if the user attempts to set speed that out of range.
+		// In that case uart_get_baud_rate may return 9600 baud rate and we use
+		// tty_termios_baud_rate to avoid this case to be applyed without error message.
+		dev_err(port->dev, "Requested baudrate %d is out of supported range ["WBEC_UART_MIN_BAUD_RATE"-"WBEC_UART_MAX_BAUD_RATE"], set to default %d\n",
+				requested_speed, baud);
+	}
 	ctrl_regs.ctrl.baud_x100 = baud / 100;
 
 	regmap_bulk_write(regmap, ctrl_reg, ctrl_regs.buf, ARRAY_SIZE(ctrl_regs.buf));
