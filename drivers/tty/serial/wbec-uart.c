@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/device/bus.h>
+#include <linux/stringify.h>
 
 #define DRIVER_NAME				"wbec-uart"
 #define WBEC_UART_PORT_COUNT			2
@@ -451,9 +452,9 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	if (baud != requested_speed) {
 		// The values differ if the user attempts to set speed that out of range.
 		// In that case uart_get_baud_rate may return 9600 baud rate and we use
-		// tty_termios_baud_rate to avoid this case to be applyed without error message.
-		dev_err(port->dev, "Requested baudrate %d is out of supported range ["WBEC_UART_MIN_BAUD_RATE"-"WBEC_UART_MAX_BAUD_RATE"], set to default %d\n",
-				requested_speed, baud);
+		// tty_termios_baud_rate to detect invalid speed and report an error.
+		dev_err(port->dev, "Requested baudrate %d is out of supported range [" __stringify(WBEC_UART_MIN_BAUD_RATE) "-"
+			 __stringify(WBEC_UART_MAX_BAUD_RATE) "], set to default %d\n", requested_speed, baud);
 	}
 	ctrl_regs.ctrl.baud_x100 = baud / 100;
 
