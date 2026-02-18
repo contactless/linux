@@ -436,7 +436,7 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	// Older versions will ignore this setting and use 8 data bits.
 	switch (new->c_cflag & CSIZE) {
 	default:
-		dev_err(port->dev, "Failed to set termios: CS value not applied, WBEC-UART supports only CS7 and CS8. 
+		dev_err(port->dev, "Failed to set termios: CS value not applied, WBEC-UART supports only CS7 and CS8. \
 			The default value is set - CS8\n");
 	case CS8:
 		ctrl_regs.ctrl.data_width = 0; /* 8 data bits (default) */
