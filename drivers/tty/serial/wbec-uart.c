@@ -431,15 +431,12 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	// Supported in WBEC starting from firmware version 2.1.0.
 	// Older versions will ignore this setting and use 8 data bits.
 	switch (new->c_cflag & CSIZE) {
-	case CS6:
-		ctrl_regs.ctrl.data_width = 0; /* 6 data bits */
+	default:
+	case CS8:
+		ctrl_regs.ctrl.data_width = 0; /* 8 data bits (default) */
 		break;
 	case CS7:
 		ctrl_regs.ctrl.data_width = 1; /* 7 data bits */
-		break;
-	default:
-	case CS8:
-		ctrl_regs.ctrl.data_width = 2; /* 8 data bits (default) */
 		break;
 	}
 
