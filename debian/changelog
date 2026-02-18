@@ -1,4 +1,4 @@
-linux-wb (6.8.0-wb151) UNRELEASED; urgency=medium
+linux-wb (6.8.0-wb151) stable; urgency=medium
 
   * Added cs6 and cs7 to wbec_uart
 

@@ -428,6 +428,8 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 		ctrl_regs.ctrl.stop_bits = 0; /* 1 */
 
 	/* Data width (character size) */
+	// Supported in WBEC starting from firmware version 2.1.0.
+	// Older versions will ignore this setting and use 8 data bits.
 	switch (new->c_cflag & CSIZE) {
 	case CS6:
 		ctrl_regs.ctrl.data_width = 0; /* 6 data bits */
