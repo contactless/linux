@@ -26,6 +26,7 @@
 #include <linux/device/bus.h>
 #include <linux/circ_buf.h>
 #include <linux/kfifo.h>
+#include <linux/stringify.h>
 
 #define DRIVER_NAME				"wbec-uart"
 #define WBEC_UART_PORT_COUNT			2
@@ -37,6 +38,9 @@
 #define WBEC_UART_RX_BYTE_ERROR_FE		BIT(1)
 #define WBEC_UART_RX_BYTE_ERROR_NE		BIT(2)
 #define WBEC_UART_RX_BYTE_ERROR_ORE		BIT(3)
+
+#define WBEC_UART_MIN_BAUD_RATE 1200
+#define WBEC_UART_MAX_BAUD_RATE 115200
 
 struct wbec_uart_regmap_address {
 	u16 ctrl;
@@ -120,7 +124,8 @@ struct uart_ctrl {
 	uint16_t stop_bits : 2;
 	uint16_t rs485_enabled : 1;
 	uint16_t rs485_rx_during_tx : 1;
-	uint16_t res2 : 10;
+	uint16_t data_width : 2; // reserve 2 bits for 0/1 value for optional adding 6-,9-data bits modes in future 
+	uint16_t res2 : 8;
 } __packed;
 
 union uart_ctrl_regs {
@@ -438,8 +443,31 @@ static void wbec_uart_set_termios(struct uart_port *port, struct ktermios *new,
 	else
 		ctrl_regs.ctrl.stop_bits = 0; /* 1 */
 
+	/* Data width (character size) */
+	// Supported in WBEC starting from firmware version 2.1.0.
+	// Older versions will ignore this setting and use 8 data bits.
+	switch (new->c_cflag & CSIZE) {
+	default:
+		dev_err(port->dev, "Failed to set termios: CS value not applied, WBEC-UART supports only CS7 and CS8. \
+The default value is set - CS8\n");
+	case CS8:
+		ctrl_regs.ctrl.data_width = 0; /* 8 data bits (default) */
+		break;
+	case CS7:
+		ctrl_regs.ctrl.data_width = 1; /* 7 data bits */
+		break;
+	}
+
 	/* Baud rate */
-	baud = uart_get_baud_rate(port, new, old, 1200, 115200);
+	speed_t requested_speed = tty_termios_baud_rate(new);
+	baud = uart_get_baud_rate(port, new, old, WBEC_UART_MIN_BAUD_RATE, WBEC_UART_MAX_BAUD_RATE);
+	if (baud != requested_speed) {
+		// The values differ if the user attempts to set a speed that is out of range.
+		// In that case uart_get_baud_rate may return 9600 baud rate and we use
+		// tty_termios_baud_rate to detect invalid speed and report an error.
+		dev_err(port->dev, "Requested baudrate %d is out of supported range [" __stringify(WBEC_UART_MIN_BAUD_RATE) "-"
+			 __stringify(WBEC_UART_MAX_BAUD_RATE) "], set to default %d\n", requested_speed, baud);
+	}
 	ctrl_regs.ctrl.baud_x100 = baud / 100;
 
 	regmap_bulk_write(regmap, ctrl_reg, ctrl_regs.buf, ARRAY_SIZE(ctrl_regs.buf));
