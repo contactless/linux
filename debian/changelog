@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb151) stable; urgency=medium
+
+  * Added CS7 to wbec_uart
+
+ -- Egor Panchenko <egor.panchenko@wirenboard.com>  Tue, 19 Feb 2026 18:01:35 +0300
+
 linux-wb (6.8.0-wb150) stable; urgency=medium
 
   * wb8: change error in case of axp20x capacity reading error
