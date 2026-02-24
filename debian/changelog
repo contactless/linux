@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb152) stable; urgency=medium
+
+  *  wb8: wbe2-i-can: add support for CAN-module based on Holtek ht42b41
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Tue, 24 Feb 2026 14:09:42 +0300
+
 linux-wb (6.8.0-wb151) stable; urgency=medium
 
   * Added CS7 to wbec_uart
