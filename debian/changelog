@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb153) stable; urgency=medium
+
+  * wb8.config: add slcan as module
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Wed, 04 Mar 2026 15:32:33 +0300
+
 linux-wb (6.8.0-wb152) stable; urgency=medium
 
   *  wb8: wbe2-i-can: add support for CAN-module based on Holtek ht42b41
