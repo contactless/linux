@@ -462,7 +462,7 @@
 
 			ahub1_cpu: soundcard-mach,cpu {
 				sound-dai = <&ahub1_plat>;
-				soundcard-mach,pll-fs = <1>;
+				soundcard-mach,pll-fs = <4>;
 				soundcard-mach,mclk-fs = <0>;
 			};
 
