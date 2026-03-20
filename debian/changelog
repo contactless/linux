@@ -1,3 +1,9 @@
+linux-wb (5.10.35-wb182) stable; urgency=medium
+
+  * wb7: scripts/package/wb/builddeb: fix linux-headers package contents
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Fri, 20 Mar 2026 15:24:28 +0300
+
 linux-wb (5.10.35-wb181) stable; urgency=medium
 
   *  wb7: add prp hsr as module
