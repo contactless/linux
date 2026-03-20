@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb154) stable; urgency=medium
+
+  * wb8: scripts/package/wb/builddeb: fix linux-headers package contents
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Fri, 20 Mar 2026 15:59:29 +0300
+
 linux-wb (6.8.0-wb153) stable; urgency=medium
 
   * wb8.config: add slcan as module
