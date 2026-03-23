@@ -87,6 +87,85 @@ set_debarch() {
 
 }
 
+build_target_headers_scripts() {
+	local destdir="$1"
+	local target_cc="${CC:-${CROSS_COMPILE}gcc}"
+	local common_cflags="-Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu11"
+
+	$MAKE -f $srctree/Makefile scripts/basic/fixdep scripts/mod/modpost
+	if is_enabled CONFIG_GENKSYMS; then
+		$MAKE -f $srctree/Makefile scripts/genksyms/genksyms
+	fi
+
+	cp "$objtree/scripts/mod/elfconfig.h" "$destdir/scripts/mod/"
+	cp "$objtree/scripts/mod/devicetable-offsets.h" "$destdir/scripts/mod/"
+	if is_enabled CONFIG_GENKSYMS; then
+		cp "$objtree/scripts/genksyms/parse.tab.c" "$destdir/scripts/genksyms/"
+		cp "$objtree/scripts/genksyms/parse.tab.h" "$destdir/scripts/genksyms/"
+		cp "$objtree/scripts/genksyms/lex.lex.c" "$destdir/scripts/genksyms/"
+	fi
+
+	(
+		cd "$destdir"
+
+		"$target_cc" $common_cflags \
+			-I scripts/include \
+			-I scripts/basic \
+			-o scripts/basic/fixdep \
+			scripts/basic/fixdep.c
+
+		"$target_cc" $common_cflags \
+			-I scripts/include \
+			-I scripts/mod \
+			-c -o scripts/mod/modpost.o \
+			scripts/mod/modpost.c
+		"$target_cc" $common_cflags \
+			-I scripts/include \
+			-I scripts/mod \
+			-c -o scripts/mod/file2alias.o \
+			scripts/mod/file2alias.c
+		"$target_cc" $common_cflags \
+			-I scripts/include \
+			-I scripts/mod \
+			-c -o scripts/mod/sumversion.o \
+			scripts/mod/sumversion.c
+		"$target_cc" $common_cflags \
+			-I scripts/include \
+			-I scripts/mod \
+			-c -o scripts/mod/symsearch.o \
+			scripts/mod/symsearch.c
+		"$target_cc" \
+			-o scripts/mod/modpost \
+			scripts/mod/modpost.o \
+			scripts/mod/file2alias.o \
+			scripts/mod/sumversion.o \
+			scripts/mod/symsearch.o
+
+		if is_enabled CONFIG_GENKSYMS; then
+			"$target_cc" $common_cflags \
+				-I scripts/include \
+				-I scripts/genksyms \
+				-c -o scripts/genksyms/genksyms.o \
+				scripts/genksyms/genksyms.c
+			"$target_cc" $common_cflags \
+				-I scripts/include \
+				-I scripts/genksyms \
+				-c -o scripts/genksyms/parse.tab.o \
+				scripts/genksyms/parse.tab.c
+			"$target_cc" $common_cflags \
+				-I scripts/include \
+				-I scripts/genksyms \
+				-c -o scripts/genksyms/lex.lex.o \
+				scripts/genksyms/lex.lex.c
+			"$target_cc" \
+				-o scripts/genksyms/genksyms \
+				scripts/genksyms/genksyms.o \
+				scripts/genksyms/parse.tab.o \
+				scripts/genksyms/lex.lex.o
+		fi
+	)
+}
+
 # Some variables and settings used throughout the script
 if [ -z "$KDEB_WBTARGET" ]; then
     echo "Please set KDEB_WBTARGET to build Wirenboard debian package" >&2
@@ -355,10 +434,13 @@ EOF
 fi
 
 # Build kernel header package
-(cd $srctree; find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl) > "$objtree/debian/hdrsrcfiles"
-(cd $srctree; find arch/*/include include scripts -type f) >> "$objtree/debian/hdrsrcfiles"
-(cd $srctree; find arch/$SRCARCH -name module.lds -o -name Kbuild.platforms -o -name Platform) >> "$objtree/debian/hdrsrcfiles"
-(cd $srctree; find $(find arch/$SRCARCH -name include -o -name scripts -type d) -type f) >> "$objtree/debian/hdrsrcfiles"
+(
+	cd $srctree
+	find . arch/$SRCARCH -maxdepth 1 -name Makefile\*
+	find include scripts -type f -o -type l
+	find arch/$SRCARCH -name Kbuild.platforms -o -name Platform
+	find $(find arch/$SRCARCH -name include -o -name scripts -type d) -type f
+) > "$objtree/debian/hdrsrcfiles"
 if grep -q '^CONFIG_STACK_VALIDATION=y' $KCONFIG_CONFIG ; then
 	(cd $objtree; find tools/objtool -type f -executable) >> "$objtree/debian/hdrobjfiles"
 fi
@@ -371,6 +453,7 @@ mkdir -p "$destdir"
 (cd $srctree; tar -c -f - -T -) < "$objtree/debian/hdrsrcfiles" | (cd $destdir; tar -xf -)
 (cd $objtree; tar -c -f - -T -) < "$objtree/debian/hdrobjfiles" | (cd $destdir; tar -xf -)
 (cd $objtree; cp $KCONFIG_CONFIG $destdir/.config) # copy .config manually to be where it's expected to be
+build_target_headers_scripts "$destdir"
 ln -sf "/usr/src/linux-headers-$version" "$kernel_headers_dir/lib/modules/$version/build"
 rm -f "$objtree/debian/hdrsrcfiles" "$objtree/debian/hdrobjfiles"
 
