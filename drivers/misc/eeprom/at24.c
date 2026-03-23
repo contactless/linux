@@ -747,6 +747,12 @@ static int at24_probe(struct i2c_client *client)
 	nvmem_config.owner = THIS_MODULE;
 	nvmem_config.compat = true;
 	nvmem_config.base_dev = dev;
+	/*
+	 * WB7 legacy DTBs define fixed NVMEM cells directly under at24
+	 * provider nodes. Keep legacy parsing enabled to preserve MAC
+	 * address lookup from EEPROM across old and new DT bindings.
+	 */
+	nvmem_config.add_legacy_fixed_of_cells = true;
 	nvmem_config.reg_read = at24_read;
 	nvmem_config.reg_write = at24_write;
 	nvmem_config.priv = at24;
