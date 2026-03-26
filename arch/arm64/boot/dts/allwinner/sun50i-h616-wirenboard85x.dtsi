@@ -386,19 +386,25 @@
 
 	de: display-engine {
 		compatible = "allwinner,sun50i-h6-display-engine";
-        memory-region = <&de_cma>;
+		memory-region = <&de_cma>;
 		allwinner,pipelines = <&mixer0>;
 		status = "disabled";
 	};
 
 	reserved-memory {
-        de_cma: de-cma {
-            compatible = "shared-dma-pool";
-            reusable;
-            size = <0x0 0x10000000>;           // 256 MiB
-            alignment = <0x0 0x00800000>;
-        };
-    };
+		de_cma: de-cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/*
+			 * Constrain the pool to the first 2 GiB because a number of
+			 * peripherals on H616 can only DMA within the 32-bit address
+			 * space.
+			 */
+			size = <0x0 0x10000000>;           // 256 MiB
+			alloc-ranges = <0x0 0x00000000 0x0 0x80000000>;
+			linux,cma-default;
+		};
+	};
 
 	soc {
 		dma: dma-controller@3002000 {

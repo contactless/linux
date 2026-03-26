@@ -112,14 +112,6 @@
 			no-map;
 		};
 
-        linux,cma {
-            compatible = "shared-dma-pool";
-            reusable;
-            size = <0x0 0x08000000>;
-            alignment = <0x0 0x00400000>;
-            linux,cma-default;
-        };
-
 	};
 
 	osc24M: osc24M-clk {
