@@ -1,3 +1,9 @@
+linux-wb (6.18.8-wb2) stable; urgency=medium
+
+  * Restore stable H616 GPU/CMA configuration from v6.8 to reduce graphics-related system hangs.
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Thu, 26 Mar 2026 09:29:18 +0300
+
 linux-wb (6.18.8-wb1) stable; urgency=medium
 
   * Initial release.
