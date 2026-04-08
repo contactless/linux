@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb154) stable; urgency=medium
+
+  * wb8: dts: Add support for SDNAND
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Wed, 08 Apr 2026 11:07:11 +0300
+
 linux-wb (6.8.0-wb153) stable; urgency=medium
 
   * wb8.config: add slcan as module
