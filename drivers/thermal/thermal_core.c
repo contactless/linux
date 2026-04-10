@@ -327,14 +327,14 @@ static void thermal_zone_device_halt(struct thermal_zone_device *tz, bool shutdo
 	int poweroff_delay_ms = CONFIG_THERMAL_EMERGENCY_POWEROFF_DELAY_MS;
 	const char *msg = "Temperature too high";
 
-	dev_emerg(&tz->device, "%s: critical temperature reached\n Doing nothing", tz->type);
+	//dev_emerg(&tz->device, "%s: critical temperature reached\n Doing nothing", tz->type);
 
 	if (shutdown)
 		// hw_protection_shutdown(msg, poweroff_delay_ms);
-		dev_emerg(&tz->device, "shutdown was here");
+		//dev_emerg(&tz->device, "shutdown was here");
 	else
 		// hw_protection_reboot(msg, poweroff_delay_ms);
-		dev_emerg(&tz->device, "reboot was here");
+		//dev_emerg(&tz->device, "reboot was here");
 }
 
 void thermal_zone_device_critical(struct thermal_zone_device *tz)
