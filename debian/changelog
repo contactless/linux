@@ -1,3 +1,9 @@
+linux-wb (6.18.8-wb3) stable; urgency=medium
+
+  * pwm: sun20i: Correct work pwm for bootlet-mode
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Wed, 15 Apr 2026 12:51:31 +0300
+
 linux-wb (6.18.8-wb2) stable; urgency=medium
 
   * Restore stable H616 GPU/CMA configuration from v6.8 to reduce graphics-related system hangs.
