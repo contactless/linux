@@ -103,7 +103,6 @@ struct sun20i_pwm_data {
 struct sun20i_pwm_chip {
 	struct clk *clk_bus, *clk_hosc, *clk_apb0;
 	struct reset_control *rst;
-	struct pwm_chip chip;
 	void __iomem *base;
 	/* Mutex to protect pwm apply state */
 	struct mutex mutex;
@@ -112,7 +111,7 @@ struct sun20i_pwm_chip {
 
 static inline struct sun20i_pwm_chip *to_sun20i_pwm_chip(struct pwm_chip *chip)
 {
-	return container_of(chip, struct sun20i_pwm_chip, chip);
+	return pwmchip_get_drvdata(chip);
 }
 
 static inline u32 sun20i_pwm_readl(struct sun20i_pwm_chip *chip,
@@ -397,16 +396,28 @@ MODULE_DEVICE_TABLE(of, sun20i_pwm_dt_ids);
 
 static int sun20i_pwm_probe(struct platform_device *pdev)
 {
+	struct pwm_chip *chip;
 	struct sun20i_pwm_chip *sun20i_chip;
+	const struct sun20i_pwm_data *data;
+	unsigned int npwm;
 	int ret;
 
-	sun20i_chip = devm_kzalloc(&pdev->dev, sizeof(*sun20i_chip), GFP_KERNEL);
-	if (!sun20i_chip)
-		return -ENOMEM;
-
-	sun20i_chip->data = of_device_get_match_data(&pdev->dev);
-	if (!sun20i_chip->data)
+	data = of_device_get_match_data(&pdev->dev);
+	if (!data)
 		return -ENODEV;
+
+	npwm = data->npwm;
+	ret = of_property_read_u32(pdev->dev.of_node, "allwinner,pwm-channels",
+				   &npwm);
+	if (!ret && npwm > 16)
+		npwm = 16;
+
+	chip = devm_pwmchip_alloc(&pdev->dev, npwm, sizeof(*sun20i_chip));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+
+	sun20i_chip = to_sun20i_pwm_chip(chip);
+	sun20i_chip->data = data;
 
 	sun20i_chip->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(sun20i_chip->base))
@@ -432,28 +443,16 @@ static int sun20i_pwm_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, PTR_ERR(sun20i_chip->rst),
 				     "failed to get bus reset\n");
 
-	ret = of_property_read_u32(pdev->dev.of_node, "allwinner,pwm-channels",
-				   &sun20i_chip->chip.npwm);
-	if (!ret) {
-		sun20i_chip->chip.npwm = 8;
-
-        if (sun20i_chip->chip.npwm > 16)
-            sun20i_chip->chip.npwm = 16;
-    } else {
-        sun20i_chip->chip.npwm = sun20i_chip->data->npwm;
-    }
-
 	/* Deassert reset */
 	ret = reset_control_deassert(sun20i_chip->rst);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to deassert reset\n");
 
-	sun20i_chip->chip.dev = pdev->dev;
-	sun20i_chip->chip.ops = &sun20i_pwm_ops;
+	chip->ops = &sun20i_pwm_ops;
 
 	mutex_init(&sun20i_chip->mutex);
 
-	ret = pwmchip_add(&sun20i_chip->chip);
+	ret = devm_pwmchip_add(&pdev->dev, chip);
 	if (ret < 0) {
 		reset_control_assert(sun20i_chip->rst);
 		return dev_err_probe(&pdev->dev, ret, "failed to add PWM chip\n");
@@ -467,8 +466,6 @@ static int sun20i_pwm_probe(struct platform_device *pdev)
 static void sun20i_pwm_remove(struct platform_device *pdev)
 {
 	struct sun20i_pwm_chip *sun20i_chip = platform_get_drvdata(pdev);
-
-	pwmchip_remove(&sun20i_chip->chip);
 
 	reset_control_assert(sun20i_chip->rst);
 }
