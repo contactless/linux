@@ -1,4 +1,4 @@
-linux-wb (6.18.8-wb3) stable; urgency=medium
+linux-wb (6.18.22-wb3) stable; urgency=medium
 
   * pwm: sun20i: Correct work pwm for bootlet-mode
 
