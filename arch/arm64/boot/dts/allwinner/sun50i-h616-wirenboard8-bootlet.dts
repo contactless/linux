@@ -83,6 +83,9 @@
 };
 
 &wbec {
+	spi-max-frequency = <500000>;
+	spi-cs-inactive-delay-ns = <100000>;
+
 	wbec_pwm: pwm@0 {
 		compatible = "wirenboard,wbec-pwm";
 		reg = <0>;
