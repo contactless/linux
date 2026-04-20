@@ -1,3 +1,9 @@
+linux-wb (6.18.22-wb4) stable; urgency=medium
+
+  * dts: wbec: Add support wbec for 8xx (for bootlet-mode)
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Mon, 20 Apr 2026 12:43:45 +0300
+
 linux-wb (6.18.22-wb3) stable; urgency=medium
 
   * pwm: sun20i: Correct work pwm for bootlet-mode
