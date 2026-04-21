@@ -1,3 +1,9 @@
+linux-wb (6.18.22-wb5) stable; urgency=medium
+
+  * config: Add support DMA for bootlet
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Tue, 21 Apr 2026 10:58:56 +0300
+
 linux-wb (6.18.22-wb4) stable; urgency=medium
 
   * dts: wbec: Add support wbec for 8xx (for bootlet-mode)
