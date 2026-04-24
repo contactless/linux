@@ -17,7 +17,7 @@ setup_kernel_vars() {
 		wb67-bootlet|wb6x-bootlet)
 			DEBARCH=armhf
 			KERNEL_DEFCONFIG=imx6_wirenboard_initramfs_defconfig
-			BOOTLET_DTB=allwinner/imx6ul-wirenboard6x-init.dtb
+			BOOTLET_DTB=nxp/imx/imx6ul-wirenboard6x-init.dtb
 			BOOTLET_DEPS=linux-image-wb6
 			PROVIDES_BOOTLET_FOR_FITS=y
 			KDEB_WBDESC="Wiren Board 6 (bootlet)"
