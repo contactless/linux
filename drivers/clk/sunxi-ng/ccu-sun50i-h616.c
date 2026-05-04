@@ -1158,12 +1158,6 @@ static struct ccu_mux_nb sun50i_h616_gpu_nb = {
 	.bypass_index	= 1, /* GPU_CLK1@400MHz */
 };
 
-static struct ccu_pll_nb sun50i_h616_pll_gpu_nb = {
-	.common		= &pll_gpu_clk.common,
-	.enable		= BIT(29),	/* LOCK_ENABLE */
-	.lock		= BIT(28),
-};
-
 static int sun50i_h616_ccu_probe(struct platform_device *pdev)
 {
 	void __iomem *reg;
@@ -1246,8 +1240,11 @@ static int sun50i_h616_ccu_probe(struct platform_device *pdev)
 	ccu_mux_notifier_register(pll_gpu_clk.common.hw.clk,
 				  &sun50i_h616_gpu_nb);
 
-	/* Re-lock the GPU PLL after any rate changes */
-	ccu_pll_notifier_register(&sun50i_h616_pll_gpu_nb);
+	/*
+	 * Do not re-lock the GPU PLL here: on T507/WB8 the documented lock bit
+	 * never becomes set after GPU OPP transitions, which makes every rate
+	 * change wait for a timeout and can destabilize the graphics stack.
+	 */
 
 	return 0;
 }
