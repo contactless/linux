@@ -155,14 +155,11 @@ static void mdio_gpio_bus_deinit(struct device *dev)
 static void mdio_gpio_bus_destroy(struct device *dev)
 {
 	struct mii_bus *bus = dev_get_drvdata(dev);
-	struct mdiobb_ctrl* ctrl = bus->priv;
-	struct mdio_gpio_info *bitbang =
-		container_of(ctrl, struct mdio_gpio_info, ctrl);
-
-	clk_disable_unprepare(bitbang->clk);
 
 	mdiobus_unregister(bus);
 	mdio_gpio_bus_deinit(dev);
+	/* clk_disable_unprepare() is handled by the devm action registered
+	 * via devm_clk_get_optional_enabled() in probe. */
 }
 
 static int mdio_gpio_probe(struct platform_device *pdev)
@@ -186,15 +183,13 @@ static int mdio_gpio_probe(struct platform_device *pdev)
 			bus_id = 0;
 		}
 
-		bitbang->clk = devm_clk_get_optional(&pdev->dev, "ephy");
+		/* devm_clk_get_optional_enabled() prepares, enables and registers
+		 * clk_disable_unprepare() as a devm action — all error paths
+		 * including a failed of_mdiobus_register() are covered. */
+		bitbang->clk = devm_clk_get_optional_enabled(&pdev->dev, "ephy");
 		if (IS_ERR(bitbang->clk)) {
-			return PTR_ERR(bitbang->clk);
-		}
-
-		ret = clk_prepare_enable(bitbang->clk);
-		if (ret) {
 			dev_err(&pdev->dev, "failed to enable clock\n");
-			return ret;
+			return PTR_ERR(bitbang->clk);
 		}
 	} else {
 		bus_id = pdev->id;
