@@ -141,6 +141,15 @@ config CAN_GRCAN
 	  endian syntheses of the cores would need some modifications on
 	  the hardware level to work.
 
+config CAN_HT42B416
+	tristate "Holtek HT42B416 UART-to-CAN bridge"
+	depends on OF && SERIAL_DEV_BUS
+	help
+	  Driver for the Holtek HT42B416 UART-to-CAN bridge.
+
+	  This driver can also be built as a module. If so, the module will
+	  be called ht42b416.
+
 config CAN_JANZ_ICAN3
 	tristate "Janz VMOD-ICAN3 Intelligent CAN controller"
 	depends on MFD_JANZ_CMODIO

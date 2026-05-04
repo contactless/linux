@@ -857,8 +857,8 @@ static bool ht42b416_rx_step(struct ht42b416_priv *priv)
 	}
 }
 
-static ssize_t ht42b416_receive(struct serdev_device *serdev,
-				const u8 *data, size_t count)
+static size_t ht42b416_receive(struct serdev_device *serdev,
+			       const u8 *data, size_t count)
 {
 	struct ht42b416_priv *priv = serdev_device_get_drvdata(serdev);
 	size_t orig_count = count;
