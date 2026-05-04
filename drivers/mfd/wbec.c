@@ -390,7 +390,7 @@ static int wbec_probe(struct spi_device *spi)
 		}
 	}
 
-	ret = sysfs_create_group(&wbec->dev->kobj, &wbec_attr_group);
+	ret = devm_device_add_group(wbec->dev, &wbec_attr_group);
 	if (ret) {
 		dev_err(&spi->dev, "failed to create sysfs group\n");
 		return ret;
@@ -423,7 +423,6 @@ static void wbec_remove(struct spi_device *spi)
 {
 	struct wbec *wbec = spi_get_drvdata(spi);
 
-	sysfs_remove_group(&wbec->dev->kobj, &wbec_attr_group);
 	wbec_clean_debugfs(wbec);
 }
 
