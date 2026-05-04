@@ -8,7 +8,6 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/platform_device.h>
-#include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/regmap.h>
@@ -34,9 +33,11 @@ static int h616_regulator_set_voltage(struct regulator_dev *rdev,
 	struct regmap *regmap = rdev_get_regmap(rdev);
 	int ret;
 
-	*selector = regulator_map_voltage_iterate(rdev, min_uV, max_uV);
-	if (*selector < 0)
+	int sel = regulator_map_voltage_iterate(rdev, min_uV, max_uV);
+
+	if (sel < 0)
 		return -EINVAL;
+	*selector = sel;
 
 	// Set the withstand voltage level
 	ret = regmap_update_bits(regmap, MOD_SEL_REG, MOD_SEL_MASK,
@@ -45,10 +46,7 @@ static int h616_regulator_set_voltage(struct regulator_dev *rdev,
 		return ret;
 
 	// Update the main voltage level
-	ret = regmap_update_bits(regmap, VSEL_REG, VSEL_MASK, *selector);
-	return ret;
-
-	return 0;
+	return regmap_update_bits(regmap, VSEL_REG, VSEL_MASK, *selector);
 }
 
 static const struct regulator_ops h616_regulator_ops = {
@@ -94,8 +92,12 @@ static int h616_regulator_probe(struct platform_device *pdev)
 	if (!config.init_data)
 		return -ENOMEM;
 
-	if (IS_ERR(devm_regulator_register(&pdev->dev, desc, &config)))
-		return PTR_ERR(devm_regulator_register(&pdev->dev, desc, &config));
+	/* Store result to avoid calling devm_regulator_register() twice,
+	 * which would register the regulator twice. */
+	struct regulator_dev *rdev = devm_regulator_register(&pdev->dev, desc, &config);
+
+	if (IS_ERR(rdev))
+		return PTR_ERR(rdev);
 
 	return 0;
 }
