@@ -60,7 +60,12 @@ static const struct sun50i_h6_ppu_desc sun50i_h616_ppus[] = {
 	{ "PLL", PD_H6_VDD_SYS_REG, PD_H6_AVCC_VDD_GATE,
 		FLAG_PPU_ALWAYS_ON | FLAG_PPU_NEGATED },
 	{ "ANA", PD_H6_VDD_SYS_REG, PD_H616_ANA_VDD_GATE, FLAG_PPU_ALWAYS_ON },
-	{ "GPU", PD_H6_GPU_REG, PD_H6_GPU_GATE, FLAG_PPU_NEGATED },
+	/* FLAG_PPU_ALWAYS_ON: genpd powers the GPU on at probe and never cuts
+	 * power at runtime. Without this, genpd calls power_off() on every
+	 * runtime suspend, which can strand in-flight MBUS transactions and
+	 * cause an unrecoverable AXI deadlock on H616. Clock/reset gating via
+	 * GPU_PM_RT in panfrost is sufficient for idle power management. */
+	{ "GPU", PD_H6_GPU_REG, PD_H6_GPU_GATE, FLAG_PPU_NEGATED | FLAG_PPU_ALWAYS_ON },
 };
 
 struct sun50i_h6_ppu_data {
@@ -201,7 +206,18 @@ static struct platform_driver sun50i_h6_ppu_driver = {
 		.suppress_bind_attrs	= true,
 	},
 };
-module_platform_driver(sun50i_h6_ppu_driver);
+
+static int __init sun50i_h6_ppu_driver_init(void)
+{
+	return platform_driver_register(&sun50i_h6_ppu_driver);
+}
+postcore_initcall(sun50i_h6_ppu_driver_init);
+
+static void __exit sun50i_h6_ppu_driver_exit(void)
+{
+	platform_driver_unregister(&sun50i_h6_ppu_driver);
+}
+module_exit(sun50i_h6_ppu_driver_exit);
 
 MODULE_AUTHOR("Andre Przywara <andre.przywara@arm.com>");
 MODULE_DESCRIPTION("Allwinner H6 PRCM power domain driver");
