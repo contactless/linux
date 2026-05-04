@@ -155,33 +155,30 @@ static void swap_bytes(u16 *buf, int len)
 static void wbec_collect_data_for_exchange(struct wbec_uart_one_port *wbec_one_port, struct uart_tx *tx)
 {
 	struct uart_port *port = &wbec_one_port->port;
-	if (port == NULL) {
+	struct tty_port *tport = &port->state->port;
+	unsigned long flags;
+	bool stopped;
+	unsigned int to_send, copied;
+
+	/* uart_tx_stopped() reads port->hw_stopped and tty->flow.stopped,
+	 * both of which are protected by uart_port_lock. */
+	uart_port_lock_irqsave(port, &flags);
+	stopped = uart_tx_stopped(port);
+	uart_port_unlock_irqrestore(port, flags);
+
+	if (kfifo_is_empty(&tport->xmit_fifo) || stopped) {
 		tx->bytes_to_send_count = 0;
 		return;
 	}
 
-	struct tty_port *tport = &wbec_one_port->port.state->port;
+	to_send = min(kfifo_len(&tport->xmit_fifo), (unsigned int)WBEC_UART_REGMAP_BUFFER_SIZE);
+	/* kfifo is single-producer/single-consumer safe; no extra lock needed
+	 * for the peek itself — only the stopped check above requires port_lock. */
+	copied = kfifo_out_peek(&tport->xmit_fifo, tx->bytes_to_send, to_send);
+	tx->bytes_to_send_count = copied;
 
-
-	if (kfifo_is_empty(&tport->xmit_fifo) || uart_tx_stopped(port)) {
-		tx->bytes_to_send_count = 0;
-		return;
-	} else {
-		unsigned int to_send = kfifo_len(&tport->xmit_fifo);
-
-		to_send = min(to_send, (unsigned int)WBEC_UART_REGMAP_BUFFER_SIZE);
-
-		/* 
-		Instead of blindly using kfifo_len() for bytes_to_send_count, we now rely on the actual 
-		number of bytes returned by kfifo_out_peek(). This ensures accurate data transmission even 
-		if the buffer changes between length check and reading.
-		*/
-		unsigned int copied = kfifo_out_peek(&tport->xmit_fifo, tx->bytes_to_send, to_send);
-		tx->bytes_to_send_count = copied;
-
-		if (copied)
-			reinit_completion(&wbec_one_port->tx_complete);
-	}
+	if (copied)
+		reinit_completion(&wbec_one_port->tx_complete);
 }
 
 static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_port,
@@ -252,14 +249,16 @@ static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_p
 static void wbec_spi_exchange_sync(struct wbec *wbec)
 {
 	struct spi_device *spi = wbec->spi;
-	union uart_exchange_regs_rx rx;
-	union uart_exchange_regs_tx tx = {};
+	static union uart_exchange_regs_rx rx;
+	static union uart_exchange_regs_tx tx;
 	struct spi_message msg;
 	struct spi_transfer transfer = {};
 	int ret, port_i;
 	u8 bytes_sent_in_xfer[WBEC_UART_PORT_COUNT] = {};
 
 	mutex_lock(&wbec_uart_mutex);
+
+	memset(&tx, 0, sizeof(tx));
 
 	/* prepare tx data */
 	for (port_i = 0; port_i < WBEC_UART_PORT_COUNT; port_i++) {
@@ -661,8 +660,6 @@ static int wbec_uart_probe(struct platform_device *pdev)
 		goto put_parent_dev;
 	}
 
-	mutex_lock(&wbec_uart_mutex);
-
 	/* set RX and TX pins mode to AF */
 	gpio_af_mode |= 1 << (reg * 6 + 0);	// TX
 	gpio_af_mode |= 1 << (reg * 6 + 2);	// RX
@@ -684,10 +681,11 @@ static int wbec_uart_probe(struct platform_device *pdev)
 			       1000, 1000000);
 	if (ret) {
 		dev_err(dev, "Failed to init port: ctrl applyed timeout\n");
-		goto mutex_release;
+		goto cancel_rs485_work;
 	}
 
 	init_completion(&p->tx_complete);
+	INIT_WORK(&p->start_tx_work, wbec_start_tx_work_handler);
 
 	// Initialize the UART port
 	p->port.ops = &wbec_uart_ops;
@@ -712,29 +710,32 @@ static int wbec_uart_probe(struct platform_device *pdev)
 	ret = uart_get_rs485_mode(&p->port);
 	if (ret) {
 		dev_err(dev, "Failed to get RS485 mode\n");
-		goto mutex_release;
+		goto cancel_start_tx_work;
 	}
 
 	ret = uart_add_one_port(&wbec_uart_driver, &p->port);
 	if (ret) {
 		dev_err(dev, "Failed to register UART port\n");
-		goto mutex_release;
+		goto cancel_start_tx_work;
 	}
 
-	INIT_WORK(&p->start_tx_work, wbec_start_tx_work_handler);
-
 	platform_set_drvdata(pdev, p);
+
+	mutex_lock(&wbec_uart_mutex);
 	wbec_uart_ports[reg] = p;
 
 	WRITE_ONCE(wbec->irq_handler, wbec_spi_exchange_sync);
+	mutex_unlock(&wbec_uart_mutex);
 
 	dev_dbg(&pdev->dev, "port %s registered\n", p->port.name);
 
-mutex_release:
-	mutex_unlock(&wbec_uart_mutex);
+	goto put_parent_dev;
 
-	if (ret)
-		cancel_work_sync(&p->rs485_work);
+cancel_start_tx_work:
+	cancel_work_sync(&p->start_tx_work);
+
+cancel_rs485_work:
+	cancel_work_sync(&p->rs485_work);
 
 put_parent_dev:
 	put_device(parent_dev);
@@ -752,20 +753,27 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	dev_dbg(&pdev->dev, "port %s unregistered\n", p->port.name);
 
 	mutex_lock(&wbec_uart_mutex);
-
 	gpio_af_mask = 0b111111 << (line * 6);
 	regmap_update_bits(p->regmap, WBEC_REG_GPIO_AF, gpio_af_mask, gpio_af_mode);
+	mutex_unlock(&wbec_uart_mutex);
 
+	/*
+	 * uart_remove_one_port() calls into ->shutdown(), which waits for
+	 * tx_complete (up to 10 s). tx_complete is signaled by the IRQ handler
+	 * via wbec_process_received_exchange(). We must therefore keep
+	 * wbec_uart_ports[line] and irq_handler live until shutdown returns.
+	 *
+	 * Also keep the mutex unlocked here: ->shutdown() takes wbec_uart_mutex
+	 * internally, so holding it would self-deadlock.
+	 */
+	uart_remove_one_port(&wbec_uart_driver, &p->port);
+
+	mutex_lock(&wbec_uart_mutex);
 	wbec_uart_ports[line] = NULL;
 	if (!wbec_uart_has_active_ports())
 		WRITE_ONCE(p->wbec->irq_handler, NULL);
 	mutex_unlock(&wbec_uart_mutex);
 
-	/*
-	 * uart_remove_one_port() calls into ->shutdown(), which also takes
-	 * wbec_uart_mutex. Keep mutex unlocked here to avoid self-deadlock.
-	 */
-	uart_remove_one_port(&wbec_uart_driver, &p->port);
 	cancel_work_sync(&p->start_tx_work);
 	cancel_work_sync(&p->rs485_work);
 }
