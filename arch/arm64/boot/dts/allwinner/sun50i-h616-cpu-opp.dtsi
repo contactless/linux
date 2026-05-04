@@ -7,11 +7,18 @@
 		nvmem-cells = <&cpu_speed_grade>;
 		opp-shared;
 
+		opp-288000000 {
+			opp-hz = /bits/ 64 <288000000>;
+			opp-microvolt = <900000>;
+			clock-latency-ns = <244144>; /* 8 32k periods */
+			opp-supported-hw = <0x1f>;
+		};
+
 		opp-480000000 {
 			opp-hz = /bits/ 64 <480000000>;
 			opp-microvolt = <900000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x3f>;
+			opp-supported-hw = <0x1f>;
 		};
 
 		opp-600000000 {
@@ -25,7 +32,7 @@
 			opp-hz = /bits/ 64 <720000000>;
 			opp-microvolt = <900000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x2d>;
+			opp-supported-hw = <0x0d>;
 		};
 
 		opp-792000000 {
@@ -50,16 +57,8 @@
 			opp-microvolt-speed2 = <950000>;
 			opp-microvolt-speed3 = <950000>;
 			opp-microvolt-speed4 = <1020000>;
-			opp-microvolt-speed5 = <900000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x3f>;
-		};
-
-		opp-1032000000 {
-			opp-hz = /bits/ 64 <1032000000>;
-			opp-microvolt = <900000>;
-			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x20>;
+			opp-supported-hw = <0x1f>;
 		};
 
 		opp-1104000000 {
@@ -67,9 +66,8 @@
 			opp-microvolt-speed0 = <1000000>;
 			opp-microvolt-speed2 = <1000000>;
 			opp-microvolt-speed3 = <1000000>;
-			opp-microvolt-speed5 = <950000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x2d>;
+			opp-supported-hw = <0x0d>;
 		};
 
 		opp-1200000000 {
@@ -79,9 +77,8 @@
 			opp-microvolt-speed2 = <1050000>;
 			opp-microvolt-speed3 = <1050000>;
 			opp-microvolt-speed4 = <1100000>;
-			opp-microvolt-speed5 = <1020000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x3f>;
+			opp-supported-hw = <0x1f>;
 		};
 
 		opp-1320000000 {
@@ -95,16 +92,15 @@
 			opp-hz = /bits/ 64 <1416000000>;
 			opp-microvolt = <1100000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x2d>;
+			opp-supported-hw = <0x0d>;
 		};
 
 		opp-1512000000 {
 			opp-hz = /bits/ 64 <1512000000>;
 			opp-microvolt-speed1 = <1100000>;
 			opp-microvolt-speed3 = <1100000>;
-			opp-microvolt-speed5 = <1160000>;
 			clock-latency-ns = <244144>; /* 8 32k periods */
-			opp-supported-hw = <0x2a>;
+			opp-supported-hw = <0x0a>;
 		};
 	};
 };
