@@ -800,6 +800,7 @@ static void panfrost_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(pfdev->dev);
 	pm_runtime_disable(pfdev->dev);
+	pm_runtime_put_noidle(pfdev->dev);
 	panfrost_device_fini(pfdev);
 	pm_runtime_set_suspended(pfdev->dev);
 
