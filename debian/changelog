@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb156) stable; urgency=medium
+
+  * serial: wbec-uart: fix self-deadlock in remove() when tty is still open
+
+ -- Nikolay Oleinik <nikolay.oleinik@wirenboard.com>  Tue, 5 May 2026 13:15:30 +0700
+
 linux-wb (6.8.0-wb155) stable; urgency=medium
 
   * wb8: Add support UINPUT
