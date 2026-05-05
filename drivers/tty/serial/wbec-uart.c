@@ -732,9 +732,26 @@ static void wbec_uart_remove(struct platform_device *pdev)
 	regmap_update_bits(p->regmap, WBEC_REG_GPIO_AF, gpio_af_mask, gpio_af_mode);
 
 	wbec_uart_ports[line] = NULL;
-	uart_remove_one_port(&wbec_uart_driver, &p->port);
 
 	mutex_unlock(&wbec_uart_mutex);
+
+	/*
+	 * uart_remove_one_port() must be called with wbec_uart_mutex released:
+	 * if the tty is still open in userspace (e.g. wb-mqtt-serial holds
+	 * /dev/ttyMOD*), uart core will hang up the tty, which calls
+	 * wbec_uart_shutdown() -> mutex_lock(&wbec_uart_mutex). Linux mutexes
+	 * are non-recursive, so doing this under the mutex self-deadlocks.
+	 *
+	 * Symptom of the deadlock: an unkillable D-state in
+	 *   rmdir /sys/kernel/config/device-tree/overlays/wb85-modN
+	 * triggered by wb-hwconf-helper when a slot module type is changed
+	 * without first disabling /dev/ttyMODn. Recovery requires hard reboot.
+	 *
+	 * The IRQ handler (wbec_spi_exchange_sync) takes the same mutex and
+	 * checks wbec_uart_ports[i] for NULL, so once we have cleared the slot
+	 * above and dropped the mutex it will skip this port safely.
+	 */
+	uart_remove_one_port(&wbec_uart_driver, &p->port);
 }
 
 static const struct of_device_id wbec_uart_of_match[] = {
