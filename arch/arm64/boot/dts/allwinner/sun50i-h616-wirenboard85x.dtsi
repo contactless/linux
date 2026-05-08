@@ -1319,6 +1319,13 @@
 };
 
 &mmc2 {
+	/*
+	 * WB8.5.x may populate this soldered slot with either eMMC or SD NAND.
+	 * Keep the eMMC-capable controller profile and allow both media types:
+	 * the MMC core will probe SD first and then fall back to MMC.
+	 */
+	compatible = "allwinner,sun50i-h616-emmc",
+		     "allwinner,sun50i-a100-emmc";
 	vmmc-supply = <&reg_dcdc1>;
 	vqmmc-supply = <&reg_aldo1>;
 	bus-width = <8>;
@@ -1327,8 +1334,6 @@
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
 	no-sdio;
-	no-sd;
-	cap-mmc-highspeed;
 	status = "okay";
 };
 
