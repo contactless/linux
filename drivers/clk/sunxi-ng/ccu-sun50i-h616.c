@@ -1154,7 +1154,12 @@ static struct ccu_pll_nb sun50i_h616_pll_cpu_nb = {
 static struct ccu_mux_nb sun50i_h616_gpu_nb = {
 	.common		= &gpu0_clk.common,
 	.cm		= &gpu0_clk.mux,
-	.delay_us	= 1, /* manual doesn't really say */
+	/*
+	 * The GPU PLL lock bit never becomes set on T507 (H616 industrial
+	 * variant), so rely on a fixed settling delay instead of re-locking it
+	 * on every OPP transition.
+	 */
+	.delay_us	= 50,
 	.bypass_index	= 1, /* GPU_CLK1@400MHz */
 };
 
