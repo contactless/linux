@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb157) stable; urgency=medium
+
+  * wb8: dts: Add support for SDNAND
+
+ -- Anton Tarasov <anton.tarasov@wirenboard.com>  Thu, 09 Apr 2026 20:39:35 +0300
+
 linux-wb (6.8.0-wb156) stable; urgency=medium
 
   * serial: wbec-uart: fix self-deadlock in remove() when tty is still open
