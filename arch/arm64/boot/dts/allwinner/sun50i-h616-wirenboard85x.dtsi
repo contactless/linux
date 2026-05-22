@@ -352,7 +352,7 @@
 
 		sda-gpios = <&pio PE 19 GPIO_ACTIVE_HIGH>;
 		scl-gpios = <&pio PE 0 GPIO_ACTIVE_HIGH>;
-		i2c-gpio,delay-us = <2>;  // ~100 kHz
+		i2c-gpio,delay-us = <10>;  // ~25 kHz (all WB8 have hardware bug: too weak i2c pull-up)
 
 		#address-cells = <1>;
 		#size-cells = <0>;
