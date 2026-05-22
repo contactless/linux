@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb155) stable; urgency=medium
+
+  * wb8: slow down atecc i2c bus speed (100khz -> 25khz because of too weak i2c PU)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Fri, 22 May 2026 12:31:33 +0300
+
 linux-wb (6.8.0-wb154) stable; urgency=medium
 
   * wb8: scripts/package/wb/builddeb: fix linux-headers package contents
