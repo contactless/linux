@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb158) stable; urgency=medium
+
+  * wb8.config: add ttl module
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Wed, 27 May 2026 19:15:00 +0400
+
 linux-wb (6.8.0-wb157) stable; urgency=medium
 
   * wb8: dts: Add support for SDNAND
