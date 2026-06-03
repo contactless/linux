@@ -1312,3 +1312,16 @@
 		simselect-gpios = <&pio PE 2 GPIO_ACTIVE_HIGH>;
 	};
 };
+
+&ccu {
+	/*
+	 * APB2 clocks all UARTs and I2C controllers. Raise it from the 24 MHz
+	 * reset default to 75 MHz (PLL_PERIPH0/8): at 24 MHz the integer UART
+	 * divisor misses 230400 baud by -7%, while 75 MHz keeps 110..921600
+	 * within ~1.7% (T507 manual Table 10-5). I2C recomputes its own divider
+	 * from the parent rate; there is no on-chip CAN on H616/T507 to disturb.
+	 */
+	assigned-clocks = <&ccu CLK_APB2>;
+	assigned-clock-parents = <&ccu CLK_PLL_PERIPH0>;
+	assigned-clock-rates = <75000000>;
+};
