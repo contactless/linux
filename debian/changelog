@@ -1,3 +1,9 @@
+linux-wb (6.18.22-wb7) stable; urgency=medium
+
+  * WB8: raise APB2 to 75 MHz to support 230400 baud on RS-485 UARTs
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.com>  Thu, 04 Jun 2026 12:00:00 +0300
+
 linux-wb (6.18.22-wb6) stable; urgency=medium
 
   * scripts: fix wb6x-bootlet build
