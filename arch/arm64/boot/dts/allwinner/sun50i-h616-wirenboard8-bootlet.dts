@@ -89,3 +89,16 @@
 		#pwm-cells = <3>;
 	};
 };
+
+&mmc2 {
+	/*
+     * Soldered internal slot may carry eMMC or SD NAND. Mirror the WB8.5
+     * (wirenboard85x) fix: let the MMC core probe SD first and fall back
+     * to eMMC. wirenboard84x.dtsi still ships the eMMC-only profile, so
+     * drop the SD-blocking properties here.
+     */
+    compatible = "allwinner,sun50i-h616-emmc",
+                 "allwinner,sun50i-a100-emmc";
+    /delete-property/ no-sd;
+    /delete-property/ cap-mmc-highspeed;
+};
