@@ -31,6 +31,16 @@
 #define DEFAULT_CMD6_TIMEOUT_MS	500
 #define MIN_CACHE_EN_TIMEOUT_MS 1600
 #define CACHE_FLUSH_TIMEOUT_MS 30000 /* 30s */
+/*
+ * After PARTITION_SETTING_COMPLETED is set and a power cycle occurs, the
+ * chip performs an internal pSLC/enhanced-area conversion that can take
+ * tens of seconds on large TLC chips (e.g. FORESEE E32GCSAF1ABE00 32GB).
+ * Poll up to this long for READY_FOR_DATA before issuing any CMD6.
+ *
+ * Note: mmc_rescan retries init across 4 frequencies on failure, so a
+ * truly unresponsive chip will stall for 4 * this value before giving up.
+ */
+#define MMC_PSLC_CONVERSION_TIMEOUT_MS 120000 /* 120s */
 
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
@@ -1723,6 +1733,27 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			goto free_card;
 	}
 
+	/*
+	 * Some eMMC chips (e.g. FORESEE TLC doing pSLC/enhanced-area conversion
+	 * after power cycle) hold DAT0 busy immediately after being selected.
+	 * Detect this before attempting CMD8 (SEND_EXT_CSD), which uses DAT0
+	 * for data and will fail with a data timeout if the line is stuck low.
+	 * We cannot consult EXT_CSD yet (chicken-and-egg), so check the
+	 * physical line via card_busy if the host supports it.
+	 */
+	if (!mmc_host_is_spi(host) && host->ops->card_busy &&
+	    host->ops->card_busy(host)) {
+		pr_info("%s: eMMC DAT0 busy after SELECT, waiting for internal operation (up to %ds)\n",
+			mmc_hostname(host), MMC_PSLC_CONVERSION_TIMEOUT_MS / 1000);
+		err = mmc_poll_for_busy(card, MMC_PSLC_CONVERSION_TIMEOUT_MS,
+					false, MMC_BUSY_CMD6);
+		if (err) {
+			pr_err("%s: eMMC not ready after %ds\n",
+			       mmc_hostname(host), MMC_PSLC_CONVERSION_TIMEOUT_MS / 1000);
+			goto free_card;
+		}
+	}
+
 	if (!oldcard) {
 		/* Read extended CSD. */
 		err = mmc_read_ext_csd(card);
@@ -1747,6 +1778,36 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 * debugging even if the card is not new.
 	 */
 	mmc_select_card_type(card);
+
+	/*
+	 * If PARTITION_SETTING_COMPLETED is set, the chip may be performing an
+	 * internal pSLC/enhanced-area conversion triggered by the previous
+	 * power cycle. This can hold DAT0 busy for tens of seconds on large
+	 * TLC chips. Poll for READY_FOR_DATA before issuing any CMD6 to avoid
+	 * "Card stuck being busy!" timeouts during init.
+	 */
+	if (card->ext_csd.partition_setting_completed) {
+		pr_info("%s: eMMC pSLC conversion pending (PARTITION_SETTING_COMPLETED set)\n",
+			mmc_hostname(host));
+		/*
+		 * Some chips (e.g. FORESEE E32GCSAF1ABE00) do not hold DAT0
+		 * busy before the first CMD6; instead, they hold DAT0 busy for
+		 * tens of seconds *after* the CMD6 R1b response, as the chip
+		 * uses that window to complete the internal conversion.
+		 * Extend generic_cmd6_time so every mmc_switch() during init
+		 * polls via hardware DAT0 long enough to survive this.
+		 */
+		if (card->ext_csd.generic_cmd6_time < MMC_PSLC_CONVERSION_TIMEOUT_MS)
+			card->ext_csd.generic_cmd6_time = MMC_PSLC_CONVERSION_TIMEOUT_MS;
+		/* Also poll in case the chip already holds DAT0 low here. */
+		err = mmc_poll_for_busy(card, MMC_PSLC_CONVERSION_TIMEOUT_MS,
+					false, MMC_BUSY_CMD6);
+		if (err) {
+			pr_err("%s: eMMC not ready after %ds, aborting init\n",
+			       mmc_hostname(host), MMC_PSLC_CONVERSION_TIMEOUT_MS / 1000);
+			goto free_card;
+		}
+	}
 
 	/* Enable ERASE_GRP_DEF. This bit is lost after a reset or power off. */
 	if (card->ext_csd.rev >= 3) {
