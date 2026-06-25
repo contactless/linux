@@ -1,3 +1,9 @@
+linux-wb (6.8.0-wb160) stable; urgency=medium
+
+  * scripts: pull custom init param (allowing to replace initramfs init)
+
+ -- Vladimir Romanov <v.romanov@wirenboard.com>  Thu, 25 Jun 2026 21:49:12 +0300
+
 linux-wb (6.8.0-wb159) stable; urgency=medium
 
   * wb8: enable sdnand in bootlet
