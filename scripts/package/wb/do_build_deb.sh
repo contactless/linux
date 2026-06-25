@@ -34,6 +34,20 @@ make_bootlet() {
     # Prepare initramfs
     zcat "$INITRAMFS_DIR/initramfs.cpio.gz" > "$KBUILD_OUTPUT/initramfs.cpio"
 
+    # Optional: replace /init with a custom file.
+    # Set CUSTOM_INIT=/path/to/init before calling this script.
+    if [ -n "${CUSTOM_INIT:-}" ]; then
+        [ -f "$CUSTOM_INIT" ] || { echo "ERROR: CUSTOM_INIT=$CUSTOM_INIT: file not found" >&2; exit 1; }
+        echo "  Replacing initramfs /init with $CUSTOM_INIT"
+        local INIT_TMP
+        INIT_TMP=$(mktemp -d)
+        install -m 0755 "$CUSTOM_INIT" "$INIT_TMP/init"
+        # Append a second cpio archive — kernel processes concatenated archives in order,
+        # last entry for the same path wins, so this overrides the original /init.
+        (cd "$INIT_TMP" && find . -name init | cpio -o -H newc --quiet) \
+            >> "$KBUILD_OUTPUT/initramfs.cpio"
+        rm -rf "$INIT_TMP"
+    fi
 
     set -x
     INSTALL_MOD_PATH="initramfs-modules"
