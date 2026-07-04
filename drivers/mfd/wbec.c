@@ -25,6 +25,7 @@
 /* For power off WBEC activates PWON pin on PMIC for 6s */
 #define WBEC_POWER_RESET_DELAY_MS			10000
 
+/* Indices must match EC firmware linux_poweron_reason enum (regmap ABI) */
 static const char * const wbec_poweron_reason[] = {
 	"Power supply on",
 	"Power button",
@@ -33,6 +34,8 @@ static const char * const wbec_poweron_reason[] = {
 	"Reboot instead of poweroff",
 	"Watchdog",
 	"PMIC is unexpectedly off",
+	"Unknown",
+	"Watchdog (warm reset)",
 };
 
 static const struct regmap_config wbec_regmap_config_v1 = {
