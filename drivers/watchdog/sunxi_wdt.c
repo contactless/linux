@@ -18,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/of.h>
+#include <linux/panic_notifier.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
 #include <linux/watchdog.h>
@@ -35,6 +36,7 @@
 
 static bool nowayout = WATCHDOG_NOWAYOUT;
 static unsigned int timeout;
+static unsigned int panic_wdt_timeout = CONFIG_SUNXI_WATCHDOG_PANIC_TIMEOUT;
 
 /*
  * This structure stores the register offsets for different variants
@@ -255,6 +257,69 @@ static const struct of_device_id sunxi_wdt_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, sunxi_wdt_dt_ids);
 
+/*
+ * Panic handling: when the panic_wdt_timeout module parameter is nonzero, arm
+ * the watchdog from a panic notifier so a panicked machine resets itself
+ * shortly after the panic, even with the kernel panic timeout set to 0.
+ *
+ * The notifier only ARMS the watchdog and returns: panic notifiers run
+ * before kmsg_dump(), so the panic record must still be written (e.g. to
+ * pstore/ramoops) before the reset fires. The watchdog resets the SoC
+ * without cutting power, leaving DRAM - and thus ramoops records - intact.
+ *
+ * All register accesses in the ops used here are plain MMIO with no
+ * locking, which is safe in panic context (secondary CPUs are stopped).
+ */
+static struct sunxi_wdt_dev *sunxi_wdt_panic_instance;
+
+static int sunxi_wdt_panic_notify(struct notifier_block *nb,
+				  unsigned long code, void *unused)
+{
+	struct sunxi_wdt_dev *sunxi_wdt = READ_ONCE(sunxi_wdt_panic_instance);
+	unsigned int t = READ_ONCE(panic_wdt_timeout);
+
+	if (!sunxi_wdt || !t)
+		return NOTIFY_DONE;
+
+	t = clamp(t, (unsigned int)WDT_MIN_TIMEOUT,
+		  (unsigned int)WDT_MAX_TIMEOUT);
+
+	pr_emerg("%s: arming watchdog, reset in %u s\n", DRV_NAME, t);
+
+	sunxi_wdt->wdt_dev.timeout = t;
+	sunxi_wdt_start(&sunxi_wdt->wdt_dev);
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block sunxi_wdt_panic_nb = {
+	.notifier_call = sunxi_wdt_panic_notify,
+	/* run early: arming a recovery watchdog must not be skipped
+	 * because another notifier crashed before us */
+	.priority = INT_MAX,
+};
+
+static void sunxi_wdt_unregister_panic_notifier(void *data)
+{
+	atomic_notifier_chain_unregister(&panic_notifier_list,
+					 &sunxi_wdt_panic_nb);
+	WRITE_ONCE(sunxi_wdt_panic_instance, NULL);
+}
+
+static int sunxi_wdt_register_panic_notifier(struct device *dev,
+					     struct sunxi_wdt_dev *sunxi_wdt)
+{
+	if (cmpxchg(&sunxi_wdt_panic_instance, NULL, sunxi_wdt))
+		return 0;	/* already owned by another instance */
+
+	atomic_notifier_chain_register(&panic_notifier_list,
+				       &sunxi_wdt_panic_nb);
+
+	return devm_add_action_or_reset(dev,
+					sunxi_wdt_unregister_panic_notifier,
+					NULL);
+}
+
 static int sunxi_wdt_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -293,6 +358,10 @@ static int sunxi_wdt_probe(struct platform_device *pdev)
 	if (unlikely(err))
 		return err;
 
+	err = sunxi_wdt_register_panic_notifier(dev, sunxi_wdt);
+	if (err)
+		return err;
+
 	dev_info(dev, "Watchdog enabled (timeout=%d sec, nowayout=%d)",
 		 sunxi_wdt->wdt_dev.timeout, nowayout);
 
@@ -311,6 +380,10 @@ module_platform_driver(sunxi_wdt_driver);
 
 module_param(timeout, uint, 0);
 MODULE_PARM_DESC(timeout, "Watchdog heartbeat in seconds");
+
+module_param(panic_wdt_timeout, uint, 0644);
+MODULE_PARM_DESC(panic_wdt_timeout, "Arm watchdog on kernel panic with this timeout in seconds (default="
+		 __MODULE_STRING(CONFIG_SUNXI_WATCHDOG_PANIC_TIMEOUT) ", 0 to disable)");
 
 module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started "

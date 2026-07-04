@@ -699,6 +699,20 @@ config SUNXI_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called sunxi_wdt.
 
+config SUNXI_WATCHDOG_PANIC_TIMEOUT
+	int "Arm the watchdog on kernel panic (seconds, 0 to disable)"
+	depends on SUNXI_WATCHDOG
+	range 0 16
+	default 0
+	help
+	  If nonzero, a panic notifier arms the watchdog with the given
+	  timeout, so a panicked machine resets itself shortly after the
+	  panic has been logged (e.g. to pstore/ramoops) even when the
+	  panic timeout is 0. The watchdog performs a SoC-level reset
+	  that leaves DRAM contents intact, so ramoops records survive.
+	  Can be overridden at runtime via the sunxi_wdt.panic_timeout
+	  module parameter. If unsure, say 0.
+
 config NPCM7XX_WATCHDOG
 	tristate "Nuvoton NPCM750 watchdog"
 	depends on ARCH_NPCM || COMPILE_TEST
