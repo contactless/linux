@@ -1203,6 +1203,12 @@
 		#interrupt-cells = <1>;
 
 		wakeup-source;
+		/*
+		 * PWROK is wired to the T507 RESET pin; the EC pulses it to
+		 * warm-reset the SoC with DRAM (ramoops) preserved. The PMIC
+		 * must not restart on that pulse.
+		 */
+		x-powers,no-pwrok-restart;
 		overtemp_shutdown = <1>;
 		overtemp_value = <145>;
 

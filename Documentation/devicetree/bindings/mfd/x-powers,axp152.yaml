@@ -67,6 +67,17 @@ allOf:
         properties:
           compatible:
             contains:
+              const: x-powers,axp15060
+
+    then:
+      properties:
+        x-powers,no-pwrok-restart: false
+
+  - if:
+      not:
+        properties:
+          compatible:
+            contains:
               enum:
                 - x-powers,axp15060
                 - x-powers,axp305
@@ -140,6 +151,15 @@ properties:
       Set this when the N_VBUSEN pin is used as an output pin to control an
       external regulator to drive the OTG VBus, rather then as an input pin
       which signals whether the board is driving OTG VBus or not.
+
+  x-powers,no-pwrok-restart:
+    type: boolean
+    description: >
+      Set this when the board relies on the PMIC ignoring an external low
+      pulse on the PWROK pin (for example when PWROK is wired as a reset
+      input to the SoC and an external supervisor pulses it to reset the
+      SoC while all PMIC outputs stay enabled). Clears the "restart on
+      PWROK drive low" function in case a bootloader enabled it.
 
   x-powers,self-working-mode:
     type: boolean

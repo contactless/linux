@@ -33,6 +33,8 @@
 #define AXP806_REG_ADDR_EXT_ADDR_MASTER_MODE	0
 #define AXP806_REG_ADDR_EXT_ADDR_SLAVE_MODE	BIT(4)
 
+#define AXP15060_PWR_DIS_DOWN_PWROK_RESTART	BIT(4)
+
 static const char * const axp20x_model_names[] = {
 	[AXP152_ID] = "AXP152",
 	[AXP192_ID] = "AXP192",
@@ -1449,6 +1451,27 @@ int axp20x_device_probe(struct axp20x_dev *axp20x)
 		else
 			regmap_write(axp20x->regmap, AXP806_REG_ADDR_EXT,
 				     AXP806_REG_ADDR_EXT_ADDR_SLAVE_MODE);
+	}
+
+	/*
+	 * On some boards the PWROK pin is wired as a reset input to the SoC
+	 * and an external supervisor pulses it low to reset the SoC while
+	 * the PMIC keeps all outputs enabled, so that DRAM contents (e.g.
+	 * pstore/ramoops records) survive the reset. That only works with
+	 * the "restart the PMIC on external PWROK drive low" function
+	 * disabled. The function is disabled on power-on reset, but a
+	 * bootloader may have enabled it; disable it when the devicetree
+	 * says the board relies on PWROK being ignored by the PMIC.
+	 */
+	if (axp20x->variant == AXP15060_ID &&
+	    of_property_read_bool(axp20x->dev->of_node,
+				  "x-powers,no-pwrok-restart")) {
+		ret = regmap_clear_bits(axp20x->regmap,
+					AXP15060_PWR_DISABLE_DOWN_SEQ,
+					AXP15060_PWR_DIS_DOWN_PWROK_RESTART);
+		if (ret)
+			dev_warn(axp20x->dev,
+				 "failed to disable PWROK restart: %d\n", ret);
 	}
 
 	/* Only if there is an interrupt line connected towards the CPU. */
