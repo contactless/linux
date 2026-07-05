@@ -19,3 +19,14 @@ config SUNXI_SRAM
 	  Say y here to enable the SRAM controller support. This
 	  device is responsible on mapping the SRAM in the sunXi SoCs
 	  whether to the CPU/DMA, or to the devices.
+
+config WB_RAMOOPS_PANIC_RESET
+	bool "Wiren Board: SoC watchdog warm reset on panic when ramoops is present"
+	depends on ARCH_SUNXI && PSTORE_RAM
+	help
+	  On panic, arm the (otherwise idle) SoC watchdog so a Wiren
+	  Board 7 (Allwinner R40/A40i) or Wiren Board 8 (Allwinner
+	  T507/H616) takes a DRAM-preserving warm reset and the panic
+	  log survives in the ramoops region for the bootloader to
+	  persist. Arms itself only when a ramoops reserved-memory
+	  node is present.
