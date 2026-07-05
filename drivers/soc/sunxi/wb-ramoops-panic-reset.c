@@ -4,9 +4,13 @@
  * T507/H616): warm-reset the SoC shortly after a panic so the panic
  * log persists in the ramoops region.
  *
- * The ramoops region at the top of DRAM survives a SoC watchdog reset
- * (DRAM stays powered), after which U-Boot parks the records on eMMC
- * and performs a full recovery power cycle (the "pstore shuttle").
+ * The ramoops region (a fixed low DRAM address, 0x46000000, carried by
+ * the reserved-memory node in the board DT) survives a SoC watchdog
+ * reset (DRAM stays powered), after which U-Boot parks the records on
+ * eMMC and performs a full recovery power cycle (the "pstore shuttle").
+ * A fixed address also lets a kernel-only update capture logs: the
+ * region survives the warm reset and this same kernel harvests it on
+ * the next boot even under an old U-Boot with no shuttle.
  * Without this hook a panicked kernel just parks until the EC watchdog
  * acts: on pre-2.4.0 EC firmware the EC watchdog action is a full
  * power cycle, destroying DRAM and the records; 2.4.0+ warm-resets
@@ -27,7 +31,9 @@
  * The hook arms itself only if a ramoops region actually registered:
  * on systems booted by an older U-Boot (no injected ramoops node)
  * panic behaviour is intentionally left unchanged, so updating the
- * kernel alone changes nothing (no-lockstep updates).
+ * kernel alone changes nothing (no-lockstep updates). It also declines
+ * to re-arm when it detects it just warm-reset from a panic (see the
+ * loop brake below), leaving a repeat panic to the EC watchdog.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -114,10 +120,13 @@ static bool wb_reset_from_panic;
 static void wb_breadcrumb_clear_fn(struct work_struct *work)
 {
 	/* Healthy uptime reached: allow the next panic to warm-reset again. */
+	bool was_held = wb_reset_from_panic;
+
 	if (wb_rtc_breadcrumb)
 		writel(0, wb_rtc_breadcrumb);
 	wb_reset_from_panic = false;
-	pr_info("healthy, panic warm-reset re-armed\n");
+	if (was_held)
+		pr_info("healthy, panic warm-reset re-armed\n");
 }
 static DECLARE_DELAYED_WORK(wb_breadcrumb_clear, wb_breadcrumb_clear_fn);
 
