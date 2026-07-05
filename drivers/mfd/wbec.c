@@ -33,6 +33,9 @@ static const char * const wbec_poweron_reason[] = {
 	"Reboot instead of poweroff",
 	"Watchdog",
 	"PMIC is unexpectedly off",
+	"Unknown",
+	"Watchdog (warm reset)",
+	"Full power cycle request",
 };
 
 static const struct regmap_config wbec_regmap_config_v1 = {
