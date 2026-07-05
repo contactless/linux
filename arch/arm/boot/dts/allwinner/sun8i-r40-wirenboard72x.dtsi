@@ -40,16 +40,16 @@
 
 	/* Fixed-address pstore/ramoops region; survives a warm reset so the
 	 * same kernel can harvest it even under an old U-Boot with no shuttle.
-	 * The base MUST match U-Boot WB_RAMOOPS_BASE (0x46000000).
+	 * The base MUST match U-Boot WB_RAMOOPS_BASE (0x43800000).
 	 */
 	reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
 
-		ramoops@46000000 {
+		ramoops@43800000 {
 			compatible = "ramoops";
-			reg = <0x46000000 0x100000>;
+			reg = <0x43800000 0x100000>;
 			record-size = <0x20000>;
 			console-size = <0x40000>;
 			ecc-size = <32>;

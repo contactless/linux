@@ -4,7 +4,7 @@
  * T507/H616): warm-reset the SoC shortly after a panic so the panic
  * log persists in the ramoops region.
  *
- * The ramoops region (a fixed low DRAM address, 0x46000000, carried by
+ * The ramoops region (a fixed low DRAM address, 0x43800000, carried by
  * the reserved-memory node in the board DT) survives a SoC watchdog
  * reset (DRAM stays powered), after which U-Boot parks the records on
  * eMMC and performs a full recovery power cycle (the "pstore shuttle").
