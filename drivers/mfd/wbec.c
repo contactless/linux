@@ -25,14 +25,21 @@
 /* For power off WBEC activates PWON pin on PMIC for 6s */
 #define WBEC_POWER_RESET_DELAY_MS			10000
 
+/*
+ * Mirrors LINUX_POWERON_REASON in wb-embedded-controller src/wbec.c;
+ * append-only ABI.
+ */
 static const char * const wbec_poweron_reason[] = {
-	"Power supply on",
-	"Power button",
-	"RTC alarm",
-	"Reboot",
-	"Reboot instead of poweroff",
-	"Watchdog",
-	"PMIC is unexpectedly off",
+	[0] = "Power supply on",
+	[1] = "Power button",
+	[2] = "RTC alarm",
+	[3] = "Reboot",
+	[4] = "Reboot instead of poweroff",
+	[5] = "Watchdog",
+	[6] = "PMIC is unexpectedly off",
+	[7] = "Unknown",
+	[8] = "Watchdog (warm reset)",
+	[9] = "Full power cycle request",
 };
 
 static const struct regmap_config wbec_regmap_config_v1 = {
