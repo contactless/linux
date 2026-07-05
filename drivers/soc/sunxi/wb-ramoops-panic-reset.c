@@ -39,6 +39,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/panic_notifier.h>
+#include <linux/workqueue.h>
 
 /*
  * Register layouts and arming sequence mirror the restart handler in
@@ -90,11 +91,55 @@ static const struct of_device_id wb_wdt_matches[] = {
 static void __iomem *wb_wdt_regs;
 static const struct wb_wdt_variant *wb_wdt_variant;
 
+/*
+ * Loop brake. A kernel that panics on every boot would otherwise
+ * warm-reset forever. There is no hardware "reset cause" latch on these
+ * SoCs (the watchdog status register is interrupt-mode only and clears
+ * on reset), but the RTC block has general-purpose registers documented
+ * "for storing power-off information": one of them survives a warm reset
+ * and is wiped by the EC's hard 5 V cycle, which is exactly the reset-
+ * reason signal we need. The panic handler stamps it before arming;
+ * if a boot comes up still stamped and we have not yet cleared it after
+ * a healthy uptime, we decline to arm again and let the EC watchdog
+ * escalate to a hard power cycle (which wipes the stamp and breaks the
+ * loop). H616 only for now; the R40 RTC's wipe-on-hard-cycle behaviour
+ * is not yet verified, so R40 keeps arming unconditionally.
+ */
+#define WB_RTC_BREADCRUMB_PHYS	0x0700010c	/* RTC GP data reg 3 */
+#define WB_RTC_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
+
+static void __iomem *wb_rtc_breadcrumb;
+static bool wb_reset_from_panic;
+
+static void wb_breadcrumb_clear_fn(struct work_struct *work)
+{
+	/* Healthy uptime reached: allow the next panic to warm-reset again. */
+	if (wb_rtc_breadcrumb)
+		writel(0, wb_rtc_breadcrumb);
+	wb_reset_from_panic = false;
+	pr_info("healthy, panic warm-reset re-armed\n");
+}
+static DECLARE_DELAYED_WORK(wb_breadcrumb_clear, wb_breadcrumb_clear_fn);
+
 static int wb_ramoops_panic_reset(struct notifier_block *nb,
 				  unsigned long action, void *data)
 {
 	const struct wb_wdt_variant *v = wb_wdt_variant;
 	u32 val;
+
+	/*
+	 * If this boot itself came back from a panic-armed warm reset and
+	 * has not yet proven healthy, do not arm again: let the EC watchdog
+	 * hard-cycle the board so a crash loop cannot spin on warm resets.
+	 */
+	if (wb_reset_from_panic) {
+		pr_emerg("panic again after a warm reset; not re-arming, leaving it to the EC watchdog\n");
+		return NOTIFY_DONE;
+	}
+
+	/* Stamp the reset-reason breadcrumb before triggering the reset. */
+	if (wb_rtc_breadcrumb)
+		writel(WB_RTC_BREADCRUMB_MAGIC, wb_rtc_breadcrumb);
 
 	/* Set whole-system reset function */
 	val = readl(wb_wdt_regs + v->cfg);
@@ -157,6 +202,27 @@ static int __init wb_ramoops_panic_reset_init(void)
 		return -ENOMEM;
 
 	wb_wdt_variant = match->data;
+
+	/*
+	 * Reset-reason breadcrumb (H616 only for now). If this boot came up
+	 * with the panic stamp still set, we just warm-reset from a panic:
+	 * hold off arming until a healthy uptime clears it.
+	 */
+	if (of_machine_is_compatible("allwinner,sun50i-h616")) {
+		wb_rtc_breadcrumb = ioremap(WB_RTC_BREADCRUMB_PHYS, 4);
+		if (wb_rtc_breadcrumb &&
+		    readl(wb_rtc_breadcrumb) == WB_RTC_BREADCRUMB_MAGIC) {
+			wb_reset_from_panic = true;
+			pr_info("came back from a panic warm reset; holding off re-arm\n");
+		}
+	}
+	/*
+	 * Clear the stamp once we have stayed up long enough to count as a
+	 * healthy session (runs whether or not the stamp was set, so a plain
+	 * boot re-arms immediately and a post-panic boot re-arms after the
+	 * delay). 60 s comfortably exceeds pstore harvest.
+	 */
+	schedule_delayed_work(&wb_breadcrumb_clear, msecs_to_jiffies(60000));
 
 	atomic_notifier_chain_register(&panic_notifier_list,
 				       &wb_ramoops_panic_nb);
