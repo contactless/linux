@@ -591,3 +591,11 @@ CONFIG_PREEMPTIRQ_DELAY_TEST=m
 CONFIG_STRICT_DEVMEM=y
 CONFIG_DEBUG_USER=y
 CONFIG_CONFIGFS_FS=y
+
+# Pstore/ramoops: persist kernel panic + console logs in a RAM region
+# across warm resets. The reserved-memory "ramoops" node is injected by
+# the Wiren Board U-Boot DT fixup (WIRENBOARD_RAMOOPS_FIXUP); without it
+# these options are inert. PSTORE_RAM auto-selects REED_SOLOMON*.
+CONFIG_PSTORE=y
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_CONSOLE=y
