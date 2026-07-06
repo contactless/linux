@@ -66,6 +66,14 @@ struct wb_wdt_variant {
 	u8 timeout_shift;
 	u8 reset_mask;
 	u8 reset_val;		/* whole-system reset */
+	/*
+	 * Physical address of the RTC general-purpose register used as the
+	 * panic-loop-breaker breadcrumb (see the loop brake below). Must be a
+	 * register that survives a warm reset but is wiped by the EC's hard 5 V
+	 * cycle. 0 = no verified register on this SoC: arm unconditionally, no
+	 * loop brake.
+	 */
+	u32 rtc_breadcrumb_phys;
 };
 
 /* H616/T507: watchdog in the timer block, dedicated CFG register */
@@ -76,6 +84,7 @@ static const struct wb_wdt_variant sun6i_wdt_variant = {
 	.timeout_shift = 4,
 	.reset_mask = 0x03,
 	.reset_val = 0x01,
+	.rtc_breadcrumb_phys = 0x0700010c,	/* RTC base 0x07000000 + GP data reg 3 */
 };
 
 /* R40/A40i: CFG and MODE share one register (offset 0x04) */
@@ -86,6 +95,14 @@ static const struct wb_wdt_variant sun4i_wdt_variant = {
 	.timeout_shift = 3,
 	.reset_mask = 0x02,
 	.reset_val = 0x02,
+	/*
+	 * R40 shares the sun6i-rtc battery-backed GP data registers (8 x 32-bit
+	 * at RTC base + 0x100). GP data reg 0 is bench-confirmed on WB7.4.2 to
+	 * survive a sun4i-WDT warm reset and to be wiped by the EC full 5 V
+	 * cycle - the same semantics as the H616 breadcrumb - and is free (no
+	 * nvmem-cell consumer references it in the R40 DT).
+	 */
+	.rtc_breadcrumb_phys = 0x01c20500,	/* RTC base 0x01c20400 + GP data reg 0 */
 };
 
 static const struct of_device_id wb_wdt_matches[] = {
@@ -108,10 +125,12 @@ static const struct wb_wdt_variant *wb_wdt_variant;
  * if a boot comes up still stamped and we have not yet cleared it after
  * a healthy uptime, we decline to arm again and let the EC watchdog
  * escalate to a hard power cycle (which wipes the stamp and breaks the
- * loop). H616 only for now; the R40 RTC's wipe-on-hard-cycle behaviour
- * is not yet verified, so R40 keeps arming unconditionally.
+ * loop). The register is per-SoC (wb_wdt_variant.rtc_breadcrumb_phys):
+ * H616 uses RTC GP data reg 3, R40 uses RTC GP data reg 0 - both
+ * bench-confirmed to survive a warm reset and be wiped by the EC hard
+ * cycle. A SoC with the field left 0 has no breadcrumb and arms
+ * unconditionally.
  */
-#define WB_RTC_BREADCRUMB_PHYS	0x0700010c	/* RTC GP data reg 3 */
 #define WB_RTC_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
 
 static void __iomem *wb_rtc_breadcrumb;
@@ -213,12 +232,13 @@ static int __init wb_ramoops_panic_reset_init(void)
 	wb_wdt_variant = match->data;
 
 	/*
-	 * Reset-reason breadcrumb (H616 only for now). If this boot came up
-	 * with the panic stamp still set, we just warm-reset from a panic:
-	 * hold off arming until a healthy uptime clears it.
+	 * Reset-reason breadcrumb, per SoC (wb_wdt_variant.rtc_breadcrumb_phys;
+	 * 0 = none, arm unconditionally). If this boot came up with the panic
+	 * stamp still set, we just warm-reset from a panic: hold off arming
+	 * until a healthy uptime clears it.
 	 */
-	if (of_machine_is_compatible("allwinner,sun50i-h616")) {
-		wb_rtc_breadcrumb = ioremap(WB_RTC_BREADCRUMB_PHYS, 4);
+	if (wb_wdt_variant->rtc_breadcrumb_phys) {
+		wb_rtc_breadcrumb = ioremap(wb_wdt_variant->rtc_breadcrumb_phys, 4);
 		if (wb_rtc_breadcrumb &&
 		    readl(wb_rtc_breadcrumb) == WB_RTC_BREADCRUMB_MAGIC) {
 			wb_reset_from_panic = true;
