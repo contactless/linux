@@ -96,13 +96,19 @@ static const struct wb_wdt_variant sun4i_wdt_variant = {
 	.reset_mask = 0x02,
 	.reset_val = 0x02,
 	/*
-	 * R40 shares the sun6i-rtc battery-backed GP data registers (8 x 32-bit
-	 * at RTC base + 0x100). GP data reg 0 is bench-confirmed on WB7.4.2 to
-	 * survive a sun4i-WDT warm reset and to be wiped by the EC full 5 V
-	 * cycle - the same semantics as the H616 breadcrumb - and is free (no
-	 * nvmem-cell consumer references it in the R40 DT).
+	 * R40: no usable breadcrumb, so no panic-loop brake (0 = arm
+	 * unconditionally). The sun6i-rtc GP data registers survive a *bare*
+	 * sun4i-WDT warm reset, but E2E bench testing on WB7.4.2 showed the
+	 * *panic-path* warm reset wipes the entire GP data bank - all 8 regs,
+	 * including ones this driver never writes - so a post-panic boot never
+	 * sees the stamp and the brake could never engage. Leaving it 0 is honest
+	 * about that, rather than depending on a register proven to be cleared.
+	 * Consequence: a persistent panic on R40 warm-reset loops instead of
+	 * escalating to an EC hard cycle. TODO: give R40 a store that survives its
+	 * panic path (U-Boot bootcount, or a shuttle-side counter in the eMMC park
+	 * header) before relying on a loop brake here.
 	 */
-	.rtc_breadcrumb_phys = 0x01c20500,	/* RTC base 0x01c20400 + GP data reg 0 */
+	.rtc_breadcrumb_phys = 0,	/* R40 panic path wipes RTC GP regs; see above */
 };
 
 static const struct of_device_id wb_wdt_matches[] = {
@@ -126,10 +132,12 @@ static const struct wb_wdt_variant *wb_wdt_variant;
  * a healthy uptime, we decline to arm again and let the EC watchdog
  * escalate to a hard power cycle (which wipes the stamp and breaks the
  * loop). The register is per-SoC (wb_wdt_variant.rtc_breadcrumb_phys):
- * H616 uses RTC GP data reg 3, R40 uses RTC GP data reg 0 - both
- * bench-confirmed to survive a warm reset and be wiped by the EC hard
- * cycle. A SoC with the field left 0 has no breadcrumb and arms
- * unconditionally.
+ * H616 uses RTC GP data reg 3, bench-confirmed to survive a warm reset and
+ * be wiped by the EC hard 5 V cycle. R40 has NO usable breadcrumb: its GP
+ * regs survive a bare warm reset but the panic-path warm reset wipes the
+ * whole bank (E2E-confirmed on WB7.4.2), so its field is left 0. A SoC with
+ * the field 0 has no breadcrumb and arms unconditionally (no loop brake) -
+ * see the R40 variant note above.
  */
 #define WB_RTC_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
 
@@ -239,8 +247,9 @@ static int __init wb_ramoops_panic_reset_init(void)
 	 */
 	if (wb_wdt_variant->rtc_breadcrumb_phys) {
 		wb_rtc_breadcrumb = ioremap(wb_wdt_variant->rtc_breadcrumb_phys, 4);
-		if (wb_rtc_breadcrumb &&
-		    readl(wb_rtc_breadcrumb) == WB_RTC_BREADCRUMB_MAGIC) {
+		if (!wb_rtc_breadcrumb)
+			pr_warn("breadcrumb ioremap failed; panic-loop brake disabled (arms every boot)\n");
+		else if (readl(wb_rtc_breadcrumb) == WB_RTC_BREADCRUMB_MAGIC) {
 			wb_reset_from_panic = true;
 			pr_info("came back from a panic warm reset; holding off re-arm\n");
 		}
