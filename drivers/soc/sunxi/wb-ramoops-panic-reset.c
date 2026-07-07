@@ -298,6 +298,20 @@ static int __init wb_ramoops_panic_reset_init(void)
 
 			pr_info("breadcrumb @%pa reads 0x%08x\n",
 				&breadcrumb_phys, stamp);
+			/*
+			 * Plain equality is deliberate. On R40 the store is a
+			 * DRAM word whose contents survive a warm reset but are
+			 * not guaranteed bit-perfect - a rare flipped bit makes
+			 * this read != MAGIC (observed on the panic_timeout/
+			 * declined-panic reset path in bench testing). That is
+			 * the fail-safe direction: we just treat the boot as
+			 * normal and arm, costing at worst one extra warm reset
+			 * before the brake re-engages on a clean read. A
+			 * bit-tolerant compare would instead risk a false
+			 * positive - a random DRAM word within a few bits of
+			 * MAGIC wrongly read as "came back from panic", declining
+			 * to warm-reset a legitimate panic - so it is avoided.
+			 */
 			if (stamp == WB_BREADCRUMB_MAGIC) {
 				wb_reset_from_panic = true;
 				pr_info("came back from a panic warm reset; holding off re-arm\n");
