@@ -66,6 +66,24 @@
 			ecc-size = <32>;
 			no-map;
 		};
+
+		/*
+		 * Panic-loop-brake breadcrumb (R40 only). One word here is
+		 * stamped "PAN1" by wb-ramoops-panic-reset before it warm-
+		 * resets the SoC on panic; a boot that comes up still stamped
+		 * declines to re-arm and lets the EC hard-cycle, breaking a
+		 * crash loop. Immediately above the ramoops region, so it sits
+		 * in the same warm-reset-surviving / power-cycle-wiped low-DRAM
+		 * window (base + 57 MiB, below KERNEL_COMP_ADDR_R). R40 needs a
+		 * DRAM breadcrumb because its RTC GP bank is wiped by the panic-
+		 * path warm reset (H616 uses an RTC register instead). Address
+		 * must match breadcrumb_phys in the driver. no-map so the
+		 * driver's ioremap gives an uncached, reset-surviving mapping.
+		 */
+		wb_panic_breadcrumb: wb-panic-breadcrumb@43900000 {
+			reg = <0x43900000 0x1000>;
+			no-map;
+		};
 	};
 
 	regulators {

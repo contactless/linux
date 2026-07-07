@@ -67,13 +67,21 @@ struct wb_wdt_variant {
 	u8 reset_mask;
 	u8 reset_val;		/* whole-system reset */
 	/*
-	 * Physical address of the RTC general-purpose register used as the
-	 * panic-loop-breaker breadcrumb (see the loop brake below). Must be a
-	 * register that survives a warm reset but is wiped by the EC's hard 5 V
-	 * cycle. 0 = no verified register on this SoC: arm unconditionally, no
-	 * loop brake.
+	 * Physical address of the panic-loop-breaker breadcrumb word (see the
+	 * loop brake below). Must be storage that survives a warm reset but is
+	 * wiped by the EC's hard 5 V cycle. Two kinds are used:
+	 *   - H616: an RTC general-purpose MMIO register in the always-on
+	 *     domain, left intact by the warm reset.
+	 *   - R40: a word in a dedicated no-map DRAM reservation - R40's RTC GP
+	 *     bank is wiped by the panic-path warm reset, but low DRAM (same
+	 *     physics as the ramoops region) survives it and is lost on a real
+	 *     power cycle.
+	 * The driver ioremap()s this address and reads/writes one word; ioremap
+	 * gives an uncached mapping either way, so the panic-time stamp reaches
+	 * the register/DRAM without a cache flush (safe in panic context).
+	 * 0 = no breadcrumb on this SoC: arm unconditionally, no loop brake.
 	 */
-	u32 rtc_breadcrumb_phys;
+	u32 breadcrumb_phys;
 };
 
 /* H616/T507: watchdog in the timer block, dedicated CFG register */
@@ -84,7 +92,7 @@ static const struct wb_wdt_variant sun6i_wdt_variant = {
 	.timeout_shift = 4,
 	.reset_mask = 0x03,
 	.reset_val = 0x01,
-	.rtc_breadcrumb_phys = 0x0700010c,	/* RTC base 0x07000000 + GP data reg 3 */
+	.breadcrumb_phys = 0x0700010c,	/* RTC base 0x07000000 + GP data reg 3 */
 };
 
 /* R40/A40i: CFG and MODE share one register (offset 0x04) */
@@ -96,19 +104,19 @@ static const struct wb_wdt_variant sun4i_wdt_variant = {
 	.reset_mask = 0x02,
 	.reset_val = 0x02,
 	/*
-	 * R40: no usable breadcrumb, so no panic-loop brake (0 = arm
-	 * unconditionally). The sun6i-rtc GP data registers survive a *bare*
-	 * sun4i-WDT warm reset, but E2E bench testing on WB7.4.2 showed the
-	 * *panic-path* warm reset wipes the entire GP data bank - all 8 regs,
-	 * including ones this driver never writes - so a post-panic boot never
-	 * sees the stamp and the brake could never engage. Leaving it 0 is honest
-	 * about that, rather than depending on a register proven to be cleared.
-	 * Consequence: a persistent panic on R40 warm-reset loops instead of
-	 * escalating to an EC hard cycle. TODO: give R40 a store that survives its
-	 * panic path (U-Boot bootcount, or a shuttle-side counter in the eMMC park
-	 * header) before relying on a loop brake here.
+	 * R40 breadcrumb: a word in the dedicated no-map DRAM reservation at
+	 * 0x43900000 (immediately above the ramoops region; see the
+	 * wb-panic-breadcrumb node in the board DT). R40's sun6i-rtc GP data
+	 * bank cannot carry the breadcrumb - E2E bench testing on WB7.4.2 showed
+	 * the *panic-path* warm reset wipes the entire bank (all 8 regs, a
+	 * *bare* sun4i-WDT reset preserves them but the panic path does not).
+	 * Low DRAM instead survives that warm reset (the whole ramoops premise)
+	 * and is lost on a genuine EC 5 V cycle - exactly the reset-reason
+	 * signal the loop brake needs. Being no-map, ioremap() maps it uncached,
+	 * so the panic-time stamp reaches DRAM without a cache flush and the
+	 * address does not trip the ARM ioremap-on-RAM check.
 	 */
-	.rtc_breadcrumb_phys = 0,	/* R40 panic path wipes RTC GP regs; see above */
+	.breadcrumb_phys = 0x43900000,	/* must match wb-panic-breadcrumb@43900000 in the board DT */
 };
 
 static const struct of_device_id wb_wdt_matches[] = {
@@ -131,17 +139,17 @@ static const struct wb_wdt_variant *wb_wdt_variant;
  * if a boot comes up still stamped and we have not yet cleared it after
  * a healthy uptime, we decline to arm again and let the EC watchdog
  * escalate to a hard power cycle (which wipes the stamp and breaks the
- * loop). The register is per-SoC (wb_wdt_variant.rtc_breadcrumb_phys):
- * H616 uses RTC GP data reg 3, bench-confirmed to survive a warm reset and
- * be wiped by the EC hard 5 V cycle. R40 has NO usable breadcrumb: its GP
- * regs survive a bare warm reset but the panic-path warm reset wipes the
- * whole bank (E2E-confirmed on WB7.4.2), so its field is left 0. A SoC with
- * the field 0 has no breadcrumb and arms unconditionally (no loop brake) -
- * see the R40 variant note above.
+ * loop). The breadcrumb storage is per-SoC (wb_wdt_variant.breadcrumb_phys),
+ * both kinds bench-confirmed to survive a warm reset and be wiped by the EC
+ * hard 5 V cycle: H616 uses RTC GP data reg 3 (an always-on MMIO register);
+ * R40 uses a word in a no-map DRAM reservation, because its RTC GP bank is
+ * wiped by the panic-path warm reset (see the sun4i variant note above).
+ * A SoC with the field 0 has no breadcrumb and arms unconditionally (no
+ * loop brake).
  */
-#define WB_RTC_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
+#define WB_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
 
-static void __iomem *wb_rtc_breadcrumb;
+static void __iomem *wb_breadcrumb;
 static bool wb_reset_from_panic;
 
 static void wb_breadcrumb_clear_fn(struct work_struct *work)
@@ -149,8 +157,8 @@ static void wb_breadcrumb_clear_fn(struct work_struct *work)
 	/* Healthy uptime reached: allow the next panic to warm-reset again. */
 	bool was_held = wb_reset_from_panic;
 
-	if (wb_rtc_breadcrumb)
-		writel(0, wb_rtc_breadcrumb);
+	if (wb_breadcrumb)
+		writel(0, wb_breadcrumb);
 	wb_reset_from_panic = false;
 	if (was_held)
 		pr_info("healthy, panic warm-reset re-armed\n");
@@ -174,8 +182,8 @@ static int wb_ramoops_panic_reset(struct notifier_block *nb,
 	}
 
 	/* Stamp the reset-reason breadcrumb before triggering the reset. */
-	if (wb_rtc_breadcrumb)
-		writel(WB_RTC_BREADCRUMB_MAGIC, wb_rtc_breadcrumb);
+	if (wb_breadcrumb)
+		writel(WB_BREADCRUMB_MAGIC, wb_breadcrumb);
 
 	/* Set whole-system reset function */
 	val = readl(wb_wdt_regs + v->cfg);
@@ -240,18 +248,24 @@ static int __init wb_ramoops_panic_reset_init(void)
 	wb_wdt_variant = match->data;
 
 	/*
-	 * Reset-reason breadcrumb, per SoC (wb_wdt_variant.rtc_breadcrumb_phys;
+	 * Reset-reason breadcrumb, per SoC (wb_wdt_variant.breadcrumb_phys;
 	 * 0 = none, arm unconditionally). If this boot came up with the panic
 	 * stamp still set, we just warm-reset from a panic: hold off arming
 	 * until a healthy uptime clears it.
 	 */
-	if (wb_wdt_variant->rtc_breadcrumb_phys) {
-		wb_rtc_breadcrumb = ioremap(wb_wdt_variant->rtc_breadcrumb_phys, 4);
-		if (!wb_rtc_breadcrumb)
+	if (wb_wdt_variant->breadcrumb_phys) {
+		wb_breadcrumb = ioremap(wb_wdt_variant->breadcrumb_phys, 4);
+		if (!wb_breadcrumb) {
 			pr_warn("breadcrumb ioremap failed; panic-loop brake disabled (arms every boot)\n");
-		else if (readl(wb_rtc_breadcrumb) == WB_RTC_BREADCRUMB_MAGIC) {
-			wb_reset_from_panic = true;
-			pr_info("came back from a panic warm reset; holding off re-arm\n");
+		} else {
+			u32 stamp = readl(wb_breadcrumb);
+
+			pr_info("breadcrumb @0x%08x reads 0x%08x\n",
+				wb_wdt_variant->breadcrumb_phys, stamp);
+			if (stamp == WB_BREADCRUMB_MAGIC) {
+				wb_reset_from_panic = true;
+				pr_info("came back from a panic warm reset; holding off re-arm\n");
+			}
 		}
 	}
 	/*
