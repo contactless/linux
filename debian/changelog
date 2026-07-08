@@ -1,3 +1,13 @@
+linux-wb (6.8.0-wb160) stable; urgency=medium
+
+  * wbec-uart: fix xmit races between SPI exchange and tty flush/shutdown:
+    NULL deref that killed the EC IRQ thread and left ttyMOD1/2 dead with
+    unkillable D-state processes until reboot, and tail advance into a
+    flushed buffer that resurrected up to 4 KB of stale data onto the bus
+    and delayed port close by 10 s
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.com>  Tue, 07 Jul 2026 17:32:01 +0300
+
 linux-wb (6.8.0-wb159) stable; urgency=medium
 
   * wb8: enable sdnand in bootlet
