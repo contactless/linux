@@ -65,6 +65,16 @@ struct wbec_uart_one_port {
 	struct work_struct start_tx_work;
 	struct completion tx_complete;
 	struct regmap *regmap;
+	/*
+	 * Set on tty flush, cleared when xmit is sampled for an exchange;
+	 * both under the port lock. Exchanges are serialized (one threaded
+	 * IRQ caller under wbec_uart_mutex), so at most one sample epoch is
+	 * in flight and a bool is enough to tell whether a flush landed
+	 * between sampling xmit and accounting the exchange result:
+	 * advancing the tail of a flushed buffer would move it past the
+	 * head and resurrect up to UART_XMIT_SIZE of stale data as pending.
+	 */
+	bool xmit_flushed;
 };
 
 static struct wbec_uart_one_port *wbec_uart_ports[WBEC_UART_PORT_COUNT] = {};
@@ -145,16 +155,23 @@ static void swap_bytes(u16 *buf, int len)
 static void wbec_collect_data_for_exchange(struct wbec_uart_one_port *wbec_one_port, struct uart_tx *tx)
 {
 	struct uart_port *port = &wbec_one_port->port;
-	struct circ_buf *xmit;
+	struct circ_buf *xmit = &port->state->xmit;
+	unsigned long flags;
 
-	if (port == NULL) {
-		tx->bytes_to_send_count = 0;
-		return;
-	}
+	uart_port_lock_irqsave(port, &flags);
 
-	xmit = &port->state->xmit;
+	wbec_one_port->xmit_flushed = false;
 
-	if (uart_circ_empty(xmit) || uart_tx_stopped(port)) {
+	/*
+	 * On shutdown the serial core frees the xmit buffer and sets
+	 * xmit->buf to NULL under the port lock without clearing head/tail.
+	 * The close path can reach it with data still pending and no flush
+	 * (e.g. uart_wait_until_sent() timed out or was interrupted by a
+	 * signal), so a NULL buf may look non-empty. Sample the buffer only
+	 * under the port lock and treat a NULL buf as "nothing to send", as
+	 * uart_write() does.
+	 */
+	if (!xmit->buf || uart_circ_empty(xmit) || uart_tx_stopped(port)) {
 		tx->bytes_to_send_count = 0;
 	} else {
 		int i;
@@ -174,6 +191,8 @@ static void wbec_collect_data_for_exchange(struct wbec_uart_one_port *wbec_one_p
 		if (to_send)
 			reinit_completion(&wbec_one_port->tx_complete);
 	}
+
+	uart_port_unlock_irqrestore(port, flags);
 }
 
 static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_port,
@@ -227,12 +246,19 @@ static void wbec_process_received_exchange(struct wbec_uart_one_port *wbec_one_p
 	if (rx->ready_for_tx) {
 		unsigned long flags;
 
-		if (bytes_sent_in_exchange > 0)
-			uart_xmit_advance(port, bytes_sent_in_exchange);
-
 		uart_port_lock_irqsave(port, &flags);
-		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-			uart_write_wakeup(port);
+		/*
+		 * Skip the accounting if the buffer was freed by a concurrent
+		 * shutdown or flushed since the data for this exchange was
+		 * sampled: the sampled bytes no longer exist in the buffer.
+		 */
+		if (xmit->buf && !wbec_one_port->xmit_flushed) {
+			if (bytes_sent_in_exchange > 0)
+				uart_xmit_advance(port, bytes_sent_in_exchange);
+
+			if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+				uart_write_wakeup(port);
+		}
 		uart_port_unlock_irqrestore(port, flags);
 	}
 
@@ -311,6 +337,20 @@ static void wbec_start_tx_work_handler(struct work_struct *work)
 	regmap_write(regmap, wbec_uart_regmap_address[port->line].tx_start, 0x1);
 }
 
+
+static void wbec_uart_flush_buffer(struct uart_port *port)
+{
+	struct wbec_uart_one_port *p = container_of(port,
+					      struct wbec_uart_one_port,
+					      port);
+
+	/*
+	 * Called under the port lock right after uart_circ_clear().
+	 * Invalidate the bytes sampled for an in-flight SPI exchange, see
+	 * wbec_process_received_exchange().
+	 */
+	p->xmit_flushed = true;
+}
 
 static unsigned int wbec_uart_tx_empty(struct uart_port *port)
 {
@@ -533,6 +573,7 @@ static const struct uart_ops wbec_uart_ops = {
 	.break_ctl	= wbec_uart_break_ctl,
 	.startup	= wbec_uart_startup,
 	.shutdown	= wbec_uart_shutdown,
+	.flush_buffer	= wbec_uart_flush_buffer,
 	.set_termios	= wbec_uart_set_termios,
 	.type		= wbec_uart_type,
 	.request_port	= wbec_uart_request_port,
