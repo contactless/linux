@@ -115,6 +115,27 @@ static const struct wb_wdt_variant sun4i_wdt_variant = {
 	.breadcrumb_phys = 0x01c20500,	/* RTC base 0x01c20400 + GP data reg 0 */
 };
 
+/*
+ * The watchdog block is located through the DT (below), but its registers are
+ * driven here rather than through sunxi_wdt, because no supported path exists:
+ *
+ *  - The watchdog core exports only registration helpers. watchdog_start(),
+ *    watchdog_ping() and watchdog_set_timeout() are static to watchdog_dev.c,
+ *    reachable only via the /dev/watchdogN chardev under mutex_lock(), and
+ *    watchdog_start() arms a kthread_work/hrtimer. None of that may be called
+ *    from a panic notifier.
+ *  - The one op reachable from atomic context, ->restart, resets at the
+ *    shortest interval the hardware offers (0.5 s). The panic path still has
+ *    to write the pstore dmesg record and flush the console, hence ~6 s here.
+ *  - do_kernel_restart() would not reach sunxi-wdt's ->restart anyway:
+ *    wbec_restart outranks it and cuts power (see the escalation note above).
+ *
+ * More fundamentally, the watchdog is armed as a *deadline*, not as a restart
+ * call: a restart handler only runs if the panic path reaches its end, whereas
+ * an armed watchdog still fires if panic() itself wedges.
+ *
+ * The cost is duplicating sunxi_wdt_reg's offsets for the two variants we run.
+ */
 static const struct of_device_id wb_wdt_matches[] = {
 	{ .compatible = "allwinner,sun6i-a31-wdt", .data = &sun6i_wdt_variant },
 	{ .compatible = "allwinner,sun4i-a10-wdt", .data = &sun4i_wdt_variant },
@@ -145,8 +166,8 @@ static const struct wb_wdt_variant *wb_wdt_variant;
  * How the escalation actually fires: on a declined panic the notifier does
  * not arm the SoC watchdog, so the reboot takes the kernel's own restart
  * path - panic_timeout -> emergency_restart -> the highest-priority restart
- * handler, which on Wiren Board is wbec_restart (sys-off priority 192, above
- * sunxi-wdt's 128). That asks the EC to "reset power": a brief 5 V cut that
+ * handler, which on Wiren Board is wbec_restart (SYS_OFF_PRIO_FIRMWARE, 224,
+ * above sunxi-wdt's 128). That asks the EC to "reset power": a brief 5 V cut that
  * clears the RTC stamp (but, by DRAM remanence, would have left a DRAM word
  * intact - which is why the breadcrumb must live in the RTC, not DRAM). If
  * panic_timeout is 0 the board instead parks until the EC watchdog cuts
