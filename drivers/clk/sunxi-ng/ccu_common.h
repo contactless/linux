@@ -49,6 +49,47 @@ static inline struct ccu_common *hw_to_ccu_common(struct clk_hw *hw)
 	return container_of(hw, struct ccu_common, hw);
 }
 
+/**
+ * struct ccu_pm_pll - a PLL that has to be re-enabled and re-locked when the
+ * CCU register state is restored after a context-losing system suspend.
+ * @reg:	offset of the PLL control register
+ * @enable:	enable bit(s); the lock is only polled if these were set when
+ *		the context was saved (i.e. the PLL was running)
+ * @lock:	lock-status bit to poll after re-enabling, or 0 if the PLL has
+ *		no usable lock bit (a fixed settle delay is used instead)
+ */
+struct ccu_pm_pll {
+	u16	reg;
+	u32	enable;
+	u32	lock;
+};
+
+/**
+ * struct ccu_pm - per-SoC description of how to preserve peripheral clock
+ * state across a system suspend that powers the clock controller off.
+ *
+ * Only SoCs whose system-suspend implementation loses CCU register state
+ * populate this (e.g. Allwinner "suspend-to-off", where the PMIC drops
+ * VDD-SYS and every peripheral rail). Leaving &sunxi_ccu_desc.pm NULL keeps
+ * the context-retaining SoCs on their existing, no-op suspend path.
+ *
+ * @reg_size:		size of the register window to snapshot, in bytes
+ * @firmware_regs:	register offsets owned by firmware -- already live when
+ *			the kernel resumes (the base PLLs and the CPU/bus/DRAM
+ *			clock tree). Never written back on restore.
+ * @num_firmware_regs:	number of entries in @firmware_regs
+ * @plls:		PLLs to re-enable and re-lock before the muxes and
+ *			dividers that draw from them are restored
+ * @num_plls:		number of entries in @plls
+ */
+struct ccu_pm {
+	u16				reg_size;
+	const u16			*firmware_regs;
+	unsigned int			num_firmware_regs;
+	const struct ccu_pm_pll		*plls;
+	unsigned int			num_plls;
+};
+
 struct sunxi_ccu_desc {
 	struct ccu_common		**ccu_clks;
 	unsigned long			num_ccu_clks;
@@ -57,6 +98,8 @@ struct sunxi_ccu_desc {
 
 	const struct ccu_reset_map	*resets;
 	unsigned long			num_resets;
+
+	const struct ccu_pm		*pm;
 };
 
 void ccu_helper_wait_for_lock(struct ccu_common *common, u32 lock);

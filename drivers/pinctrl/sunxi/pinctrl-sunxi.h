@@ -74,6 +74,14 @@
 
 #define IRQ_MEM_SIZE		0x20
 
+/*
+ * Number of consecutive 32-bit registers, starting at a bank's
+ * IRQ_CFG_REG window, that together hold the whole EINT state saved for
+ * system sleep: four config words (trigger type), the control (enable)
+ * word, the status word and the debounce word.
+ */
+#define SUNXI_EINT_SAVE_WORDS	7
+
 #define IRQ_EDGE_RISING		0x00
 #define IRQ_EDGE_FALLING	0x01
 #define IRQ_LEVEL_HIGH		0x02
@@ -142,6 +150,13 @@ struct sunxi_pinctrl_desc {
 	bool				irq_read_needs_mux;
 	bool				disable_strict_mode;
 	enum sunxi_desc_bias_voltage	io_bias_cfg_variant;
+	/*
+	 * Set on platforms where the PIO power domain can be switched off
+	 * during system suspend, losing all register state.  Enables a full
+	 * register-context save/restore across system sleep via
+	 * sunxi_pinctrl_pm_ops.  Leave unset where the block is retained.
+	 */
+	bool				pm_save_regs;
 };
 
 struct sunxi_pinctrl_function {
@@ -158,6 +173,16 @@ struct sunxi_pinctrl_group {
 struct sunxi_pinctrl_regulator {
 	struct regulator	*regulator;
 	refcount_t		refcount;
+};
+
+/* Register context saved across a state-losing system suspend. */
+struct sunxi_pinctrl_pm_regs {
+	u32	*gpio;		/* nbanks * (bank_mem_size / 4) words */
+	u32	*eint;		/* irq_banks * SUNXI_EINT_SAVE_WORDS words */
+	u32	*grp_cfg;	/* nbanks words, GRP_CONFIG bias variant only */
+	u32	pow_mod_sel;
+	u32	pow_mod_ctl;
+	bool	valid;
 };
 
 struct sunxi_pinctrl {
@@ -180,6 +205,8 @@ struct sunxi_pinctrl {
 	u32				pull_regs_offset;
 	u32				dlevel_field_width;
 	u32				pow_mod_sel_offset;
+	u32				nbanks;
+	struct sunxi_pinctrl_pm_regs	pm_regs;
 };
 
 #define SUNXI_PIN(_pin, ...)					\
@@ -300,6 +327,8 @@ static inline u32 sunxi_grp_config_reg(u16 pin)
 
 	return GRP_CFG_REG + bank * 0x4;
 }
+
+extern const struct dev_pm_ops sunxi_pinctrl_pm_ops;
 
 int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 				  const struct sunxi_pinctrl_desc *desc,

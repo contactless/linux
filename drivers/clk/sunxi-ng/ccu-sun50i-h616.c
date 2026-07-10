@@ -1100,6 +1100,61 @@ static const struct ccu_reset_map sun50i_h616_ccu_resets[] = {
 	[RST_BUS_HDCP]		= { 0xc4c, BIT(16) },
 };
 
+/*
+ * On the T507/WB8 a system suspend is a suspend-to-off: firmware puts the
+ * LPDDR4 in self-refresh and the PMIC drops VDD-SYS, so on resume the whole
+ * CCU is back at reset defaults. Firmware restores only what it needs to
+ * re-enter the kernel -- the base PLLs (CPUX, DDR0, PERIPH0) and the live
+ * CPU/bus/DRAM clock tree -- and the kernel restores the rest from a syscore
+ * handler (see ccu_common.c). These are the register offsets firmware owns and
+ * that are therefore already running when the kernel resumes; the kernel must
+ * never write them.
+ */
+static const u16 sun50i_h616_ccu_firmware_regs[] = {
+	SUN50I_H616_PLL_CPUX_REG,	/* CPU PLL */
+	SUN50I_H616_PLL_DDR0_REG,	/* DRAM PLL */
+	SUN50I_H616_PLL_DDR1_REG,	/* DRAM-domain PLL: firmware's if used, */
+					/* otherwise stays at its reset default */
+	SUN50I_H616_PLL_PERIPH0_REG,	/* bus-tree source PLL */
+	0x500,	/* CPUX / AXI / CPU-APB -- the CPU executes on this */
+	0x510,	/* PSI / AHB1 / AHB2 bus fabric */
+	0x51c,	/* AHB3 bus fabric */
+	0x520,	/* APB1 bus fabric */
+	0x524,	/* APB2 bus fabric */
+	0x540,	/* MBUS -- memory bus to DRAM */
+	0x800,	/* DRAM clock */
+	0x804,	/* MBUS mat clock gates */
+	0x80c,	/* BUS_DRAM gate/reset */
+	0x810,	/* end of the firmware-owned DRAM window (NAND0, unused on WB8) */
+};
+
+/*
+ * Peripheral PLLs to re-enable and re-lock before restoring the muxes and
+ * dividers that draw from them. The base PLLs (CPUX/DDR0/DDR1/PERIPH0) are
+ * owned by firmware and are not listed here. The GPU PLL has no usable lock
+ * bit on T507, so it is restored with a fixed settle delay (lock = 0) instead
+ * of a poll -- matching the GPU rate-change notifier, which likewise never
+ * waits for the GPU PLL to lock.
+ */
+static const struct ccu_pm_pll sun50i_h616_ccu_plls[] = {
+	{ .reg = SUN50I_H616_PLL_PERIPH1_REG, .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_GPU_REG,     .enable = BIT(31), .lock = 0 },
+	{ .reg = SUN50I_H616_PLL_VIDEO0_REG,  .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_VIDEO1_REG,  .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_VIDEO2_REG,  .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_VE_REG,      .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_DE_REG,      .enable = BIT(31), .lock = BIT(28) },
+	{ .reg = SUN50I_H616_PLL_AUDIO_REG,   .enable = BIT(31), .lock = BIT(28) },
+};
+
+static const struct ccu_pm sun50i_h616_ccu_pm = {
+	.reg_size		= 0x1000,
+	.firmware_regs		= sun50i_h616_ccu_firmware_regs,
+	.num_firmware_regs	= ARRAY_SIZE(sun50i_h616_ccu_firmware_regs),
+	.plls			= sun50i_h616_ccu_plls,
+	.num_plls		= ARRAY_SIZE(sun50i_h616_ccu_plls),
+};
+
 static const struct sunxi_ccu_desc sun50i_h616_ccu_desc = {
 	.ccu_clks	= sun50i_h616_ccu_clks,
 	.num_ccu_clks	= ARRAY_SIZE(sun50i_h616_ccu_clks),
@@ -1108,6 +1163,8 @@ static const struct sunxi_ccu_desc sun50i_h616_ccu_desc = {
 
 	.resets		= sun50i_h616_ccu_resets,
 	.num_resets	= ARRAY_SIZE(sun50i_h616_ccu_resets),
+
+	.pm		= &sun50i_h616_ccu_pm,
 };
 
 static const u32 pll_regs[] = {

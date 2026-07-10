@@ -151,7 +151,26 @@ struct mv64xxx_i2c_data {
 	bool			atomic;
 	struct work_struct error_work;
 	bool bus_disabled;
+	/*
+	 * jiffies of the first transfer error in the current failing streak
+	 * (0 == healthy), reset on the next good transfer. Used to fail
+	 * transfers fast once the bus has been erroring continuously past
+	 * MV64XXX_I2C_BUS_FAIL_TIMEOUT instead of churning error->recover->retry
+	 * forever (which pins the client's regmap mutex and D-states every
+	 * consumer of that bus).
+	 */
+	unsigned long failing_since;
 };
+
+/*
+ * If the bus keeps erroring for this long without a single good transfer,
+ * stop the error/recover/retry churn and fail transfers hard (-ETIMEDOUT)
+ * rather than -EAGAIN, so a caller cannot spin on a wedged or absent slave
+ * (e.g. a PMIC that lost power under us across a suspend-to-off) forever.
+ * Far longer than normal transient-error recovery (~50-150 ms), so ordinary
+ * single-NAK recovery is unaffected.
+ */
+#define MV64XXX_I2C_BUS_FAIL_TIMEOUT	(5 * HZ)
 
 static struct mv64xxx_i2c_regs mv64xxx_i2c_regs_mv64xxx = {
 	.addr		= 0x00,
@@ -335,6 +354,9 @@ mv64xxx_i2c_fsm(struct mv64xxx_i2c_data *drv_data, u32 status)
 
 		// reset i2c:
 		mv64xxx_i2c_hw_init(drv_data);
+
+		if (!drv_data->failing_since)
+			drv_data->failing_since = jiffies;
 
 		if (!drv_data->bus_disabled) {
 			drv_data->bus_disabled = true;
@@ -759,6 +781,26 @@ mv64xxx_i2c_xfer_core(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	int rc, ret = num;
 
 	if (drv_data->bus_disabled) {
+		/*
+		 * Bus is mid error->recover->retry. Normally bounce with -EAGAIN
+		 * so the I2C core retries once recovery re-enables it. But if the
+		 * bus has been erroring continuously past MV64XXX_I2C_BUS_FAIL_-
+		 * TIMEOUT (a wedged or powered-off slave), stop churning and fail
+		 * hard with -ETIMEDOUT: -EAGAIN invites the caller to spin on us
+		 * forever holding its regmap mutex and D-stating every other
+		 * consumer, whereas -ETIMEDOUT is terminal and lets it unwind.
+		 * error_work keeps attempting recovery, and failing_since resets
+		 * on the next good transfer, so the bus returns to normal the
+		 * instant the slave answers again.
+		 */
+		if (drv_data->failing_since &&
+		    time_after(jiffies, drv_data->failing_since +
+					MV64XXX_I2C_BUS_FAIL_TIMEOUT)) {
+			dev_warn_ratelimited(&adap->dev,
+				"mv64xxx_i2c: bus erroring > %u ms, failing xfer\n",
+				jiffies_to_msecs(MV64XXX_I2C_BUS_FAIL_TIMEOUT));
+			return -ETIMEDOUT;
+		}
 		dev_dbg(&adap->dev,
 			 "mv64xxx_i2c: bus is disabled, ignoring xfer\n");
 		msleep(50);
@@ -780,6 +822,9 @@ mv64xxx_i2c_xfer_core(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	if (rc < 0)
 		ret = rc;
+	else
+		/* Good transfer: clear the fail-fast budget. */
+		drv_data->failing_since = 0;
 
 	drv_data->num_msgs = 0;
 	drv_data->msgs = NULL;

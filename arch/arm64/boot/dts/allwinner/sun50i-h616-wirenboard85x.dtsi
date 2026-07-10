@@ -904,6 +904,14 @@
 		interrupt-parent = <&pio>;
 		interrupts = <PE 7 IRQ_TYPE_EDGE_RISING>;
 
+		/*
+		 * Arm the in-kernel suspend-to-off coordinator: the phandle
+		 * points at the sun6i RTC whose data0 register carries the
+		 * BL31 suspend-to-off magic. Its presence gates the feature,
+		 * so only WB8/H616 (this SoC) enables it.
+		 */
+		wirenboard,suspend-magic-rtc = <&rtc>;
+
 		wbec_watchdog: wbec-watchdog@0 {
 			compatible = "wirenboard,wbec-watchdog";
 			reg = <0>;
@@ -1676,4 +1684,21 @@
 
 &iommu {
 	status = "okay";
+};
+
+/*
+ * Suspend-to-off contract with the boot firmware: on resume, U-Boot
+ * SPL's board init runs before the resume branch and programs VDD-CPU
+ * to its 0.90 V cold-boot value (CONFIG_AXP_DCDC2_VOLT), and BL31 then
+ * restores the PLL frequency the kernel parked at. The OPP the kernel
+ * parks at across suspend must therefore be safe at 0.90 V on every
+ * speed bin. 480 MHz is 0.90 V-rated and bin-universal
+ * (opp-supported-hw 0x1f). The primary fix lives in BL31 (it restores
+ * the recorded voltage before the recorded frequency); this is the
+ * kernel-side belt in case firmware and kernel ever skew.
+ */
+&cpu_opp_table {
+	opp-480000000 {
+		opp-suspend;
+	};
 };

@@ -634,6 +634,34 @@ static int sun6i_spi_runtime_suspend(struct device *dev)
 	return 0;
 }
 
+static int sun6i_spi_suspend(struct device *dev)
+{
+	struct spi_controller *host = dev_get_drvdata(dev);
+	int ret;
+
+	ret = spi_controller_suspend(host);
+	if (ret)
+		return ret;
+
+	ret = pm_runtime_force_suspend(dev);
+	if (ret)
+		spi_controller_resume(host);
+
+	return ret;
+}
+
+static int sun6i_spi_resume(struct device *dev)
+{
+	struct spi_controller *host = dev_get_drvdata(dev);
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+	if (ret)
+		return ret;
+
+	return spi_controller_resume(host);
+}
+
 static bool sun6i_spi_can_dma(struct spi_controller *host,
 			      struct spi_device *spi,
 			      struct spi_transfer *xfer)
@@ -826,8 +854,8 @@ static const struct of_device_id sun6i_spi_match[] = {
 MODULE_DEVICE_TABLE(of, sun6i_spi_match);
 
 static const struct dev_pm_ops sun6i_spi_pm_ops = {
-	.runtime_resume		= sun6i_spi_runtime_resume,
-	.runtime_suspend	= sun6i_spi_runtime_suspend,
+	RUNTIME_PM_OPS(sun6i_spi_runtime_suspend, sun6i_spi_runtime_resume, NULL)
+	SYSTEM_SLEEP_PM_OPS(sun6i_spi_suspend, sun6i_spi_resume)
 };
 
 static struct platform_driver sun6i_spi_driver = {
@@ -836,7 +864,7 @@ static struct platform_driver sun6i_spi_driver = {
 	.driver	= {
 		.name		= "sun6i-spi",
 		.of_match_table	= sun6i_spi_match,
-		.pm		= &sun6i_spi_pm_ops,
+		.pm		= pm_ptr(&sun6i_spi_pm_ops),
 	},
 };
 module_platform_driver(sun6i_spi_driver);

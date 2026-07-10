@@ -7,10 +7,13 @@
 
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/iopoll.h>
+#include <linux/list.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/syscore_ops.h>
 
 #include "ccu_common.h"
 #include "ccu_gate.h"
@@ -109,6 +112,178 @@ int ccu_pll_notifier_register(struct ccu_pll_nb *pll_nb)
 }
 EXPORT_SYMBOL_NS_GPL(ccu_pll_notifier_register, "SUNXI_CCU");
 
+/*
+ * System-suspend context save/restore.
+ *
+ * On some Allwinner platforms a system ("mem") suspend is implemented as a
+ * suspend-to-off: firmware puts the DRAM in self-refresh and the PMIC drops
+ * VDD-SYS and every peripheral rail, so on resume the whole CCU register file
+ * is back at its reset defaults. Firmware only restores the clocks it needs to
+ * re-enter the kernel -- the base PLLs and the CPU/bus/DRAM clock tree -- and
+ * leaves the peripheral clock, gate and reset state for the kernel to bring
+ * back.
+ *
+ * We do that from a syscore handler on purpose. syscore_resume() runs on the
+ * resume path after firmware but before any device is resumed -- even at the
+ * _noirq level -- single-CPU with interrupts off. That is the only phase at
+ * which we can guarantee every peripheral clock, gate and reset line is back
+ * to its pre-suspend value before a driver touches its hardware, and it lets
+ * us work purely from a pre-saved register image, without taking any clk
+ * framework lock or sleeping.
+ *
+ * Because the image is a raw snapshot of the running controller, only the
+ * clocks that were enabled at suspend time are re-enabled on resume, so the
+ * clk framework's view (which clocks it believes are gated) stays consistent
+ * with the hardware, and clocks whose rate was set via the framework get their
+ * exact dividers back with no need to re-run set_rate.
+ */
+struct ccu_pm_cache {
+	struct list_head	node;
+	void __iomem		*base;
+	const struct ccu_pm	*pm;
+	u32			*regs;
+};
+
+static LIST_HEAD(ccu_pm_caches);
+
+/* PLL lock poll: match ccu_helper_wait_for_lock()'s 70 ms bound. */
+#define CCU_PM_LOCK_DELAY_US	10
+#define CCU_PM_LOCK_TIMEOUT_US	70000
+/* Settle time for PLLs that have no usable lock bit (e.g. the T507 GPU PLL). */
+#define CCU_PM_PLL_SETTLE_US	100
+
+static bool ccu_pm_reg_is_firmware(const struct ccu_pm *pm, unsigned int off)
+{
+	unsigned int i;
+
+	for (i = 0; i < pm->num_firmware_regs; i++)
+		if (pm->firmware_regs[i] == off)
+			return true;
+
+	return false;
+}
+
+static bool ccu_pm_reg_is_pll(const struct ccu_pm *pm, unsigned int off)
+{
+	unsigned int i;
+
+	for (i = 0; i < pm->num_plls; i++)
+		if (pm->plls[i].reg == off)
+			return true;
+
+	return false;
+}
+
+static int ccu_pm_suspend(void)
+{
+	struct ccu_pm_cache *cache;
+
+	list_for_each_entry(cache, &ccu_pm_caches, node) {
+		unsigned int off;
+
+		for (off = 0; off < cache->pm->reg_size; off += sizeof(u32))
+			cache->regs[off / sizeof(u32)] = readl(cache->base + off);
+	}
+
+	return 0;
+}
+
+static void ccu_pm_restore_pll(struct ccu_pm_cache *cache,
+			       const struct ccu_pm_pll *pll)
+{
+	u32 val = cache->regs[pll->reg / sizeof(u32)];
+	u32 reg;
+
+	/*
+	 * The saved value already carries the enable, lock-enable and
+	 * output-enable bits that probe set up.
+	 */
+	writel(val, cache->base + pll->reg);
+
+	/* A PLL that was gated at suspend time stays gated; nothing to lock. */
+	if (!(val & pll->enable))
+		return;
+
+	if (pll->lock)
+		WARN_ON(readl_poll_timeout_atomic(cache->base + pll->reg, reg,
+						  reg & pll->lock,
+						  CCU_PM_LOCK_DELAY_US,
+						  CCU_PM_LOCK_TIMEOUT_US));
+	else
+		udelay(CCU_PM_PLL_SETTLE_US);
+}
+
+static void ccu_pm_resume(void)
+{
+	struct ccu_pm_cache *cache;
+
+	list_for_each_entry(cache, &ccu_pm_caches, node) {
+		const struct ccu_pm *pm = cache->pm;
+		unsigned int off, i;
+
+		/*
+		 * PLLs first, so they have re-locked before anything that muxes
+		 * off a PLL is restored.
+		 */
+		for (i = 0; i < pm->num_plls; i++)
+			ccu_pm_restore_pll(cache, &pm->plls[i]);
+
+		/*
+		 * Everything else in ascending offset order. Module clocks
+		 * (muxes/dividers) sit at lower offsets than the bus-gate/reset
+		 * register they share a peripheral with, so restoring each word
+		 * re-enables the gate and deasserts the reset together, in the
+		 * same state they had at suspend. Firmware-owned registers (the
+		 * base PLLs and the live CPU/bus/DRAM tree) and the PLLs already
+		 * handled above are skipped.
+		 */
+		for (off = 0; off < pm->reg_size; off += sizeof(u32)) {
+			if (ccu_pm_reg_is_firmware(pm, off) ||
+			    ccu_pm_reg_is_pll(pm, off))
+				continue;
+
+			writel(cache->regs[off / sizeof(u32)], cache->base + off);
+		}
+	}
+}
+
+static struct syscore_ops ccu_pm_syscore_ops = {
+	.suspend	= ccu_pm_suspend,
+	.resume		= ccu_pm_resume,
+};
+
+static int ccu_pm_init(void __iomem *reg, const struct ccu_pm *pm)
+{
+	struct ccu_pm_cache *cache;
+
+	cache = kzalloc(sizeof(*cache), GFP_KERNEL);
+	if (!cache)
+		return -ENOMEM;
+
+	cache->regs = kcalloc(pm->reg_size / sizeof(u32), sizeof(u32),
+			      GFP_KERNEL);
+	if (!cache->regs) {
+		kfree(cache);
+		return -ENOMEM;
+	}
+
+	cache->base = reg;
+	cache->pm = pm;
+
+	/*
+	 * The clock controller is an essential, never-unbound provider, so the
+	 * cache is registered for the lifetime of the system: the syscore ops
+	 * are registered once, on the first participating instance, and the
+	 * cache is never freed.
+	 */
+	if (list_empty(&ccu_pm_caches))
+		register_syscore_ops(&ccu_pm_syscore_ops);
+
+	list_add_tail(&cache->node, &ccu_pm_caches);
+
+	return 0;
+}
+
 static int sunxi_ccu_probe(struct sunxi_ccu *ccu, struct device *dev,
 			   struct device_node *node, void __iomem *reg,
 			   const struct sunxi_ccu_desc *desc)
@@ -181,8 +356,16 @@ static int sunxi_ccu_probe(struct sunxi_ccu *ccu, struct device *dev,
 	if (ret)
 		goto err_del_provider;
 
+	if (desc->pm) {
+		ret = ccu_pm_init(reg, desc->pm);
+		if (ret)
+			goto err_unreg_reset;
+	}
+
 	return 0;
 
+err_unreg_reset:
+	reset_controller_unregister(&reset->rcdev);
 err_del_provider:
 	of_clk_del_provider(node);
 err_clk_unreg:

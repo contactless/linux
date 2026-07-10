@@ -73,6 +73,21 @@
    #define WBEC_REG_POWER_CTRL_OFF_MSK                      BIT(0)
    #define WBEC_REG_POWER_CTRL_REBOOT_MSK                   BIT(1)
 
+/*
+ * Region SUSPEND_CTRL: RW
+ *
+ * EC-coordinated suspend-to-off window (EC firmware branch
+ * feature/ec-suspend-mode). Before a power-off suspend the SoC announces the
+ * sleep window here: TIMEOUT_S sizes the EC recovery deadline (the EC warm-
+ * resets the board timeout+10 s after the announce if it never sees a resume),
+ * and OFF_MODE tells the EC that the whole SoC (VDD-SYS, 3V3) is going dark so
+ * it masks its "3V3 lost / PMIC died" detector and swaps the watchdog for the
+ * deadline. The EC wakes the board at its own RTC alarm or the power button.
+ */
+#define WBEC_REG_SUSPEND_CTRL_TIMEOUT_S                     0xA4
+#define WBEC_REG_SUSPEND_CTRL_OFF_MODE                     0xA5
+   #define WBEC_REG_SUSPEND_CTRL_OFF_MODE_EN_MSK            BIT(0)
+
 /* Region IRQ_FLAGS: RW */
 #define WBEC_REG_IRQ_FLAGS                                  0xB0
 #define WBEC_REG_IRQ_MSK                                    0xB2
@@ -113,6 +128,14 @@ struct wbec {
 	struct dentry *wbec_dir;
 	void (*irq_handler)(struct wbec *wbec);
 	bool support_v2_protocol;
+
+	/*
+	 * Suspend-to-off coordinator (WB8/H616 only, DT-gated). When armed,
+	 * @suspend_magic_reg is the ioremap of the sun6i RTC data0 register the
+	 * platform firmware (BL31) reads to select suspend-to-off; NULL means
+	 * the board does not use EC-coordinated power-off suspend.
+	 */
+	void __iomem *suspend_magic_reg;
 };
 
 #endif

@@ -34,6 +34,16 @@ properties:
 
   wakeup-source: true
 
+  wirenboard,suspend-magic-rtc:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      Phandle to the Allwinner sun6i RTC whose general-purpose data register 0
+      (GP_DATA0, at offset 0x100 from the RTC register base) is used to hand the
+      platform firmware (BL31) the magic value that selects the deepest,
+      power-off suspend-to-off path. Present only on boards whose firmware
+      implements that path (H616/T507, Wiren Board 8); when absent the driver
+      leaves the EC-coordinated power-off suspend feature disabled.
+
 required:
   - compatible
   - reg
