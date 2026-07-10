@@ -30,3 +30,9 @@ config WB_RAMOOPS_PANIC_RESET
 	  log survives in the ramoops region for the bootloader to
 	  persist. Arms itself only when a ramoops reserved-memory
 	  node is present.
+
+	  The panic-loop brake reads a battery-backed RTC GP register.
+	  On the H616 that register's bus clock is enabled by rtc-sun6i
+	  (RTC_DRV_SUN6I), so keep that driver enabled there; without it
+	  the brake self-disables (the warm reset still works). The R40
+	  register needs no such clock.

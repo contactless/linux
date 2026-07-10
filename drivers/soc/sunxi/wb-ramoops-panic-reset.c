@@ -28,12 +28,14 @@
  * before the dump completes. An operator-configured panic_timeout
  * shorter than 6 s intentionally wins over this hook.
  *
- * The hook arms itself only if a ramoops region actually registered:
- * on systems booted by an older U-Boot (no injected ramoops node)
- * panic behaviour is intentionally left unchanged, so updating the
- * kernel alone changes nothing (no-lockstep updates). It also declines
- * to re-arm when it detects it just warm-reset from a panic (see the
- * loop brake below), letting a repeat panic escalate to an EC power cut.
+ * The hook arms itself only if a ramoops region is present in the DT.
+ * Wiren Board kernels declare that node in their own board DTB, so a
+ * kernel-only update enables the feature even under an older U-Boot
+ * (no lockstep with the bootloader required). A DT with no ramoops node
+ * -- a foreign or stripped board -- leaves panic behaviour unchanged.
+ * The hook also declines to re-arm when it detects it just warm-reset
+ * from a panic (see the loop brake below), letting a repeat panic
+ * escalate to an EC power cut.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -183,7 +185,14 @@ static void wb_breadcrumb_clear_fn(struct work_struct *work)
 	/* Healthy uptime reached: allow the next panic to warm-reset again. */
 	bool was_held = wb_reset_from_panic;
 
-	if (wb_breadcrumb)
+	/*
+	 * Clear only our own stamp. This RTC GP word lives in a shared,
+	 * userspace-visible NVMEM bank (rtc-sun6i); neighbouring words carry
+	 * unrelated state (e.g. the suspend-to-off resume vector). If the
+	 * word no longer reads our magic, something else owns it now - do not
+	 * zero it.
+	 */
+	if (wb_breadcrumb && readl(wb_breadcrumb) == WB_BREADCRUMB_MAGIC)
 		writel(0, wb_breadcrumb);
 	wb_reset_from_panic = false;
 	if (was_held)
@@ -294,6 +303,19 @@ static int __init wb_ramoops_panic_reset_init(void)
 			if (stamp == WB_BREADCRUMB_MAGIC) {
 				wb_reset_from_panic = true;
 				pr_info("came back from a panic warm reset; holding off re-arm\n");
+			} else if (stamp != 0) {
+				/*
+				 * The word holds data we did not write: another
+				 * owner of this shared RTC GP bank. Do not stamp
+				 * or clear it. Run without the loop brake rather
+				 * than corrupt someone else's NVMEM - a panic
+				 * still warm-resets, it just is not held off on
+				 * the following boot.
+				 */
+				pr_warn("breadcrumb word holds foreign data 0x%08x; not using it, panic-loop brake disabled\n",
+					stamp);
+				iounmap(wb_breadcrumb);
+				wb_breadcrumb = NULL;
 			}
 		}
 	}
