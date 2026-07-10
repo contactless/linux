@@ -17,6 +17,7 @@
 #include <linux/of.h>
 #include <linux/phy/phy-sun4i-usb.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/reset.h>
 #include <linux/soc/sunxi/sunxi_sram.h>
 #include <linux/usb/musb.h>
@@ -265,6 +266,15 @@ static int sunxi_musb_init(struct musb *musb)
 	/* Stop the musb-core from doing runtime pm (not supported on sunxi) */
 	pm_runtime_get(musb->controller);
 
+	/*
+	 * Mark the glue-owned resources (bus clock, reset, PHY, optional SRAM)
+	 * as claimed for this controller. The system-sleep suspend/resume
+	 * callbacks key off glue->musb to decide whether those resources are
+	 * live and therefore whether they must be released/re-acquired; it is
+	 * cleared again in sunxi_musb_exit() when they are torn down.
+	 */
+	glue->musb = musb;
+
 	return 0;
 
 error_reset_assert:
@@ -296,6 +306,13 @@ static int sunxi_musb_exit(struct musb *musb)
 	clk_disable_unprepare(glue->clk);
 	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags))
 		sunxi_sram_release(musb->controller->parent);
+
+	/*
+	 * The glue-owned resources are released; drop the reference the
+	 * system-sleep callbacks use so a suspend that races a controller
+	 * teardown (e.g. a driver unbind) does not release them a second time.
+	 */
+	glue->musb = NULL;
 
 	return 0;
 }
@@ -885,11 +902,156 @@ static const struct of_device_id sunxi_musb_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sunxi_musb_match);
 
+/*
+ * System sleep support.
+ *
+ * On most sunxi SoCs a mem-sleep keeps the USB power domain alive, so the
+ * musb core's musb_suspend()/musb_resume() (which save and restore the
+ * MUSB register block via musb_save_context()/musb_restore_context()) are
+ * enough. On platforms whose firmware drops the whole peripheral power
+ * domain during system suspend the controller, the OTG PHY, the reset line
+ * and the bus clock all come back at their reset defaults, and the register
+ * snapshot the core restores is not enough on its own: the glue-owned state
+ * that is only ever programmed from sunxi_musb_init() (bus clock, reset
+ * de-assert, the sunxi-specific VEND0 PIO-mode select and the full PHY
+ * bring-up) is never redone.
+ *
+ * Handle that here with glue-level dev_pm_ops that mirror the teardown of
+ * sunxi_musb_exit() on suspend and the hardware bring-up of
+ * sunxi_musb_init() on resume. These run in the normal (sleep-capable)
+ * suspend/resume phases because the clock, reset and PHY APIs may sleep;
+ * _noirq would be wrong. The work is idempotent with any transitional
+ * firmware-side register restore, since that runs before the kernel resumes.
+ *
+ * Ordering: the musb-hdrc controller is a child of this glue device, so the
+ * PM core suspends it before us and resumes it after us. On suspend the
+ * child has therefore already quiesced the controller and saved its context
+ * before we power down the PHY and gate the clock. On resume we re-enable
+ * the clock, de-assert reset and re-init the PHY first, so that when the
+ * child's musb_resume() runs its musb_restore_context() writes land on a
+ * live, clocked, de-reset controller. Restoring MUSB_POWER re-asserts the
+ * gadget soft-connect pull-up on a controller that came up with it cleared,
+ * which the host sees as a fresh connect and re-enumerates - no userspace
+ * unbind/rebind or UDC re-attach needed.
+ *
+ * These callbacks release and re-acquire the same glue-owned resources as
+ * sunxi_musb_exit()/sunxi_musb_init(), so they must not run when the
+ * controller has already been torn down (child probe deferred, or a driver
+ * unbind before system suspend - as the transitional userspace suspend hook
+ * still does). They therefore key off glue->musb, which is non-NULL only
+ * while init() has enabled those resources and exit() has not released them;
+ * doing the teardown twice would gate an already-gated bus clock and, worse,
+ * underflow the PHY init_count so phy_init() skips the provider .init() on
+ * resume and the controller comes back unclocked/unconfigured.
+ */
+static int sunxi_musb_suspend(struct device *dev)
+{
+	struct sunxi_glue *glue = dev_get_drvdata(dev);
+
+	/*
+	 * glue->musb is set in sunxi_musb_init() and cleared in
+	 * sunxi_musb_exit(), so it is non-NULL exactly while the glue holds the
+	 * clock/reset/PHY (and optional SRAM) enabled. Bail out when they are
+	 * not held - the controller never started (child probe deferred) or it
+	 * was already torn down before this suspend (e.g. a driver unbind) -
+	 * otherwise we would gate the bus clock, phy_exit() and assert reset a
+	 * second time and underflow their refcounts.
+	 */
+	if (!glue->musb)
+		return 0;
+
+	cancel_work_sync(&glue->work);
+
+	if (test_bit(SUNXI_MUSB_FL_PHY_ON, &glue->flags)) {
+		phy_power_off(glue->phy);
+		clear_bit(SUNXI_MUSB_FL_PHY_ON, &glue->flags);
+	}
+
+	phy_exit(glue->phy);
+
+	if (test_bit(SUNXI_MUSB_FL_HAS_RESET, &glue->flags))
+		reset_control_assert(glue->rst);
+
+	clk_disable_unprepare(glue->clk);
+
+	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags))
+		sunxi_sram_release(dev);
+
+	return 0;
+}
+
+static int sunxi_musb_resume(struct device *dev)
+{
+	struct sunxi_glue *glue = dev_get_drvdata(dev);
+	int ret;
+
+	if (!glue->musb)
+		return 0;
+
+	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags)) {
+		ret = sunxi_sram_claim(dev);
+		if (ret)
+			goto error;
+	}
+
+	ret = clk_prepare_enable(glue->clk);
+	if (ret)
+		goto error_sram_release;
+
+	if (test_bit(SUNXI_MUSB_FL_HAS_RESET, &glue->flags)) {
+		ret = reset_control_deassert(glue->rst);
+		if (ret)
+			goto error_clk_disable;
+	}
+
+	/* sunxi musb is PIO only; VEND0 is reset to 0 (DMA) on power loss. */
+	writeb(SUNXI_MUSB_VEND0_PIO_MODE,
+	       glue->musb->mregs + SUNXI_MUSB_VEND0);
+
+	/*
+	 * Full PHY bring-up from reset defaults. phy_exit() dropped the PHY
+	 * framework init_count to 0 in suspend, so this re-runs the provider's
+	 * .init and reprograms the PHY (and, via the clk/reset framework, its
+	 * clocks and reset) regardless of what state they came back in. The
+	 * PHY power / mode for the current role is re-armed by the work that
+	 * the child's musb_platform_enable() schedules on resume.
+	 */
+	ret = phy_init(glue->phy);
+	if (ret)
+		goto error_reset_assert;
+
+	return 0;
+
+error_reset_assert:
+	if (test_bit(SUNXI_MUSB_FL_HAS_RESET, &glue->flags))
+		reset_control_assert(glue->rst);
+error_clk_disable:
+	clk_disable_unprepare(glue->clk);
+error_sram_release:
+	if (test_bit(SUNXI_MUSB_FL_HAS_SRAM, &glue->flags))
+		sunxi_sram_release(dev);
+error:
+	/*
+	 * Resume failed and unwound every resource it had taken, leaving the
+	 * glue as torn down as suspend left it. Clear glue->musb so the next
+	 * suspend/resume no-ops instead of running the teardown a second time
+	 * against already-released resources -- phy_exit() on a zero PHY
+	 * init_count, clk_disable_unprepare() on an already-gated clock -- the
+	 * same double-teardown refcount underflow glue->musb guards against.
+	 */
+	glue->musb = NULL;
+	return ret;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(sunxi_musb_pm_ops, sunxi_musb_suspend,
+				sunxi_musb_resume);
+
 static struct platform_driver sunxi_musb_driver = {
 	.probe = sunxi_musb_probe,
 	.remove = sunxi_musb_remove,
 	.driver = {
 		.name = "musb-sunxi",
+		.pm = pm_sleep_ptr(&sunxi_musb_pm_ops),
 		.of_match_table = sunxi_musb_match,
 	},
 };
