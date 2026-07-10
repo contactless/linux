@@ -534,6 +534,15 @@ static int psci_system_suspend(unsigned long unused)
 
 	err = invoke_psci_fn(PSCI_FN_NATIVE(1_0, SYSTEM_SUSPEND),
 			      pa_cpu_resume, 0, 0);
+	/*
+	 * This return is only reached when the firmware did NOT suspend:
+	 * on success the system resumes via cpu_resume. A silent -EPERM
+	 * here (PSCI_RET_DENIED) is very hard to tell apart from a
+	 * suspend-and-instant-wake, so name the failure.
+	 */
+	if (err)
+		pr_err("PSCI: SYSTEM_SUSPEND failed: %d (online CPUs: %u)\n",
+		       err, num_online_cpus());
 	return psci_to_linux_errno(err);
 }
 
