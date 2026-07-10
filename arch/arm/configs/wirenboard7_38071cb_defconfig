@@ -476,3 +476,16 @@ CONFIG_HWLAT_TRACER=y
 CONFIG_FTRACE_SYSCALLS=y
 CONFIG_STRICT_DEVMEM=y
 CONFIG_DEBUG_USER=y
+
+# Pstore/ramoops: persist kernel panic + console logs in a RAM region
+# across warm resets. The region comes from the reserved-memory "ramoops"
+# node this board's dtsi declares. A Wiren Board U-Boot rewrites that node
+# from its own compiled-in region (WIRENBOARD_RAMOOPS_FIXUP), since it is
+# U-Boot that parks and restores the region across a power cycle; the value
+# in the dtsi is what applies when no such U-Boot is present, which is what
+# lets a kernel-only update capture panic logs. PSTORE_RAM auto-selects
+# REED_SOLOMON*.
+CONFIG_PSTORE=y
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_CONSOLE=y
+CONFIG_WB_RAMOOPS_PANIC_RESET=y
