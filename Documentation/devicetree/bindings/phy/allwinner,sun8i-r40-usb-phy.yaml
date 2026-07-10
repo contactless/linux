@@ -98,6 +98,25 @@ properties:
   wirenboard,mux-on-id-pin:
     description: On Wiren Board 7 USB0 is muxed between USB-A connector for host mode and USB-C connector for peripheral mode. The mux is controller by voltage on perihperal connector. The same signal is used as USB ID.
 
+patternProperties:
+  "^allwinner,usb[0-2]-tx-amplitude$":
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 3
+    default: 0
+    description:
+      TX amplitude tune value for the given PHY. The default (0, the
+      minimum) may result in a high-speed TX signal too weak for some
+      link partners to receive.
+
+  "^allwinner,usb[0-2]-tx-slew-rate$":
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 7
+    default: 5
+    description:
+      TX slew rate tune value for the given PHY.
+
 required:
   - "#phy-cells"
   - compatible
