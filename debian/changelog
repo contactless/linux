@@ -1,3 +1,11 @@
+linux-wb (6.18.22-wb7) stable; urgency=medium
+
+  * phy-sun4i-usb: allow tuning PHY TX amplitude/slew rate via DT;
+    set both to maximum on Wiren Board 7 USB0: fixes high-speed gadget
+    enumeration failures and bulk data corruption on some hosts
+
+ -- Evgeny Boger <boger@wirenboard.com>  Fri, 10 Jul 2026 03:24:30 +0300
+
 linux-wb (6.18.22-wb6) stable; urgency=medium
 
   * scripts: fix wb6x-bootlet build
