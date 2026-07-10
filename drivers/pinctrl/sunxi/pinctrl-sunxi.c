@@ -20,6 +20,7 @@
 #include <linux/of.h>
 #include <linux/of_clk.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 
@@ -1551,6 +1552,229 @@ static int sunxi_pinctrl_setup_debounce(struct sunxi_pinctrl *pctl,
 	return 0;
 }
 
+/*
+ * System-sleep register context save/restore.
+ *
+ * On platforms that switch off the PIO/R_PIO power domain during system
+ * suspend (sunxi_pinctrl_desc.pm_save_regs), the controller comes back
+ * at reset defaults: every mux, data latch, drive level, pull, IO-bias
+ * selection and external-interrupt setting the kernel had programmed is
+ * gone.  The generic pinctrl_pm_select_*() machinery only re-applies
+ * per-consumer pin muxing on resume; it does not cover GPIO output
+ * values, gpio-hogs or the EINT irqchip configuration, so it cannot
+ * bring this hardware back on its own.  Mirroring pinctrl-tegra and
+ * pinctrl-rockchip, we snapshot the whole register file while it is
+ * still alive (->suspend_noirq) and write it back before any consumer
+ * driver or the irq core touches the pins (->resume_noirq).
+ */
+static int sunxi_pinctrl_pm_regs_alloc(struct platform_device *pdev,
+				       struct sunxi_pinctrl *pctl)
+{
+	struct sunxi_pinctrl_pm_regs *ctx = &pctl->pm_regs;
+	u32 bank_words = pctl->bank_mem_size / sizeof(u32);
+
+	ctx->gpio = devm_kcalloc(&pdev->dev, pctl->nbanks * bank_words,
+				 sizeof(*ctx->gpio), GFP_KERNEL);
+	if (!ctx->gpio)
+		return -ENOMEM;
+
+	if (pctl->desc->irq_banks) {
+		ctx->eint = devm_kcalloc(&pdev->dev,
+					 pctl->desc->irq_banks *
+					 SUNXI_EINT_SAVE_WORDS,
+					 sizeof(*ctx->eint), GFP_KERNEL);
+		if (!ctx->eint)
+			return -ENOMEM;
+	}
+
+	if (pctl->desc->io_bias_cfg_variant == BIAS_VOLTAGE_GRP_CONFIG) {
+		ctx->grp_cfg = devm_kcalloc(&pdev->dev, pctl->nbanks,
+					    sizeof(*ctx->grp_cfg), GFP_KERNEL);
+		if (!ctx->grp_cfg)
+			return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static int sunxi_pinctrl_suspend_noirq(struct device *dev)
+{
+	struct sunxi_pinctrl *pctl = dev_get_drvdata(dev);
+	struct sunxi_pinctrl_pm_regs *ctx = &pctl->pm_regs;
+	u32 bank_words = pctl->bank_mem_size / sizeof(u32);
+	unsigned int bank, w;
+	u32 base;
+
+	/* GPIO banks: mux, data, drive level and pull, in hardware order. */
+	for (bank = 0; bank < pctl->nbanks; bank++) {
+		base = sunxi_bank_offset(pctl, bank * PINS_PER_BANK);
+		for (w = 0; w < bank_words; w++)
+			ctx->gpio[bank * bank_words + w] =
+				readl_relaxed(pctl->membase + base + w * 4);
+	}
+
+	/* IO-bias / pin power-mode selection. */
+	switch (pctl->desc->io_bias_cfg_variant) {
+	case BIAS_VOLTAGE_PIO_POW_MODE_CTL:
+		ctx->pow_mod_ctl = readl_relaxed(pctl->membase +
+			pctl->pow_mod_sel_offset + PIO_POW_MOD_CTL_OFS);
+		fallthrough;
+	case BIAS_VOLTAGE_PIO_POW_MODE_SEL:
+		ctx->pow_mod_sel = readl_relaxed(pctl->membase +
+			pctl->pow_mod_sel_offset);
+		break;
+	case BIAS_VOLTAGE_GRP_CONFIG:
+		for (bank = 0; bank < pctl->nbanks; bank++)
+			ctx->grp_cfg[bank] = readl_relaxed(pctl->membase +
+				GRP_CFG_REG + bank * 4);
+		break;
+	default:
+		break;
+	}
+
+	/*
+	 * EINT irqchip: config, control (enable), status and debounce.
+	 * suspend_device_irqs() has already masked every non-wake EINT in
+	 * hardware (IRQCHIP_MASK_ON_SUSPEND) before this noirq callback
+	 * runs, so the control word captured here is exactly the set the
+	 * kernel wants left armed (e.g. wake sources).
+	 */
+	for (bank = 0; bank < pctl->desc->irq_banks; bank++) {
+		base = IRQ_CFG_REG +
+		       sunxi_irq_hw_bank_num(pctl->desc, bank) * IRQ_MEM_SIZE;
+		for (w = 0; w < SUNXI_EINT_SAVE_WORDS; w++)
+			ctx->eint[bank * SUNXI_EINT_SAVE_WORDS + w] =
+				readl_relaxed(pctl->membase + base + w * 4);
+	}
+
+	ctx->valid = true;
+
+	return 0;
+}
+
+static int sunxi_pinctrl_resume_noirq(struct device *dev)
+{
+	struct sunxi_pinctrl *pctl = dev_get_drvdata(dev);
+	struct sunxi_pinctrl_pm_regs *ctx = &pctl->pm_regs;
+	u32 bank_words = pctl->bank_mem_size / sizeof(u32);
+	unsigned int cfg_words = IRQ_PER_BANK * IRQ_CFG_IRQ_BITS /
+				 BITS_PER_TYPE(u32);
+	unsigned int bank, w;
+	u32 base;
+
+	if (!ctx->valid)
+		return 0;
+
+	/*
+	 * Write ordering matters: this is an industrial board whose GPIOs
+	 * gate relays and power rails, so no pad may glitch mid-restore.
+	 *
+	 * 1) Data (output latch) first, while every pad is still an input
+	 *    (reset default).  Loading the latch before the mux switches a
+	 *    pad to output makes it drive the intended level from the first
+	 *    cycle, with no transient through the reset value.
+	 */
+	for (bank = 0; bank < pctl->nbanks; bank++) {
+		base = sunxi_bank_offset(pctl, bank * PINS_PER_BANK);
+		writel_relaxed(ctx->gpio[bank * bank_words + DATA_REGS_OFFSET / 4],
+			       pctl->membase + base + DATA_REGS_OFFSET);
+	}
+
+	/*
+	 * 2) Drive strength and pull, so the pad's electrical behaviour is
+	 *    already correct once it starts driving below.
+	 */
+	for (bank = 0; bank < pctl->nbanks; bank++) {
+		base = sunxi_bank_offset(pctl, bank * PINS_PER_BANK);
+		for (w = 0; w < pctl->dlevel_field_width; w++)
+			writel_relaxed(ctx->gpio[bank * bank_words +
+					DLEVEL_REGS_OFFSET / 4 + w],
+				pctl->membase + base +
+				DLEVEL_REGS_OFFSET + w * 4);
+		for (w = 0; w < PULL_FIELD_WIDTH; w++)
+			writel_relaxed(ctx->gpio[bank * bank_words +
+					pctl->pull_regs_offset / 4 + w],
+				pctl->membase + base +
+				pctl->pull_regs_offset + w * 4);
+	}
+
+	/* 3) IO-bias / power-mode, before any pad changes function. */
+	switch (pctl->desc->io_bias_cfg_variant) {
+	case BIAS_VOLTAGE_PIO_POW_MODE_CTL:
+		writel_relaxed(ctx->pow_mod_ctl, pctl->membase +
+			pctl->pow_mod_sel_offset + PIO_POW_MOD_CTL_OFS);
+		fallthrough;
+	case BIAS_VOLTAGE_PIO_POW_MODE_SEL:
+		writel_relaxed(ctx->pow_mod_sel,
+			       pctl->membase + pctl->pow_mod_sel_offset);
+		break;
+	case BIAS_VOLTAGE_GRP_CONFIG:
+		for (bank = 0; bank < pctl->nbanks; bank++)
+			writel_relaxed(ctx->grp_cfg[bank], pctl->membase +
+				GRP_CFG_REG + bank * 4);
+		break;
+	default:
+		break;
+	}
+
+	/*
+	 * 4) Mux ("cfg") last of the pad fields: pads now take their final
+	 *    function/direction and drive the values latched in step 1.
+	 */
+	for (bank = 0; bank < pctl->nbanks; bank++) {
+		base = sunxi_bank_offset(pctl, bank * PINS_PER_BANK);
+		for (w = 0; w < MUX_FIELD_WIDTH; w++)
+			writel_relaxed(ctx->gpio[bank * bank_words +
+					MUX_REGS_OFFSET / 4 + w],
+				pctl->membase + base + MUX_REGS_OFFSET + w * 4);
+	}
+
+	/*
+	 * 5) EINT trigger config and debounce, then 6) clear any pending
+	 *    bit the restore transitions above may have latched, then
+	 *    7) re-arm the enable mask.  Clearing before enabling stops a
+	 *    stale edge from firing on resume.  The enable mask comes from
+	 *    the snapshot (the driver's own bookkeeping taken while the
+	 *    hardware was alive), never from a read of the now-reset
+	 *    controller.  Non-wake EINTs the core masked at suspend are
+	 *    additionally unmasked by resume_device_irqs() after this
+	 *    callback returns; writing the same enable bit twice is
+	 *    idempotent.
+	 */
+	for (bank = 0; bank < pctl->desc->irq_banks; bank++) {
+		u32 *eint = &ctx->eint[bank * SUNXI_EINT_SAVE_WORDS];
+
+		base = IRQ_CFG_REG +
+		       sunxi_irq_hw_bank_num(pctl->desc, bank) * IRQ_MEM_SIZE;
+
+		for (w = 0; w < cfg_words; w++)
+			writel_relaxed(eint[w], pctl->membase + base + w * 4);
+		writel_relaxed(eint[(IRQ_DEBOUNCE_REG - IRQ_CFG_REG) / 4],
+			       pctl->membase + base +
+			       (IRQ_DEBOUNCE_REG - IRQ_CFG_REG));
+		writel_relaxed(0xffffffff, pctl->membase + base +
+			       (IRQ_STATUS_REG - IRQ_CFG_REG));
+		writel_relaxed(eint[(IRQ_CTRL_REG - IRQ_CFG_REG) / 4],
+			       pctl->membase + base +
+			       (IRQ_CTRL_REG - IRQ_CFG_REG));
+	}
+
+	/*
+	 * Push the posted restore writes out to the controller with a
+	 * read-back, then order that completion before consumer drivers
+	 * and the irq core start touching the pins.
+	 */
+	readl_relaxed(pctl->membase);
+	/* Barrier pairs with the read-back above; see comment. */
+	rmb();
+
+	return 0;
+}
+
+DEFINE_NOIRQ_DEV_PM_OPS(sunxi_pinctrl_pm_ops,
+			sunxi_pinctrl_suspend_noirq,
+			sunxi_pinctrl_resume_noirq);
+
 int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 				  const struct sunxi_pinctrl_desc *desc,
 				  unsigned long flags)
@@ -1668,6 +1892,7 @@ int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 	pctl->chip->can_sleep = false;
 	pctl->chip->ngpio = round_up(last_pin, PINS_PER_BANK) -
 			    pctl->desc->pin_base;
+	pctl->nbanks = pctl->chip->ngpio / PINS_PER_BANK;
 	pctl->chip->label = dev_name(&pdev->dev);
 	pctl->chip->parent = &pdev->dev;
 	pctl->chip->base = pctl->desc->pin_base;
@@ -1743,6 +1968,12 @@ int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 	}
 
 	sunxi_pinctrl_setup_debounce(pctl, node);
+
+	if (desc->pm_save_regs) {
+		ret = sunxi_pinctrl_pm_regs_alloc(pdev, pctl);
+		if (ret)
+			goto gpiochip_error;
+	}
 
 	dev_info(&pdev->dev, "initialized sunXi PIO driver\n");
 

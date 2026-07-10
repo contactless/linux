@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/pm.h>
 #include <linux/pinctrl/pinctrl.h>
 
 #include "pinctrl-sunxi.h"
@@ -878,6 +879,8 @@ static const struct sunxi_pinctrl_desc h616_pinctrl_data = {
 	.irq_read_needs_mux = true,
 	.disable_strict_mode = true,
 	.io_bias_cfg_variant = BIAS_VOLTAGE_PIO_POW_MODE_CTL,
+	/* PIO loses all state when VDD-SYS is gated in system suspend. */
+	.pm_save_regs = true,
 };
 
 static int h616_pinctrl_probe(struct platform_device *pdev)
@@ -895,6 +898,7 @@ static struct platform_driver h616_pinctrl_driver = {
 	.driver	= {
 		.name		= "sun50i-h616-pinctrl",
 		.of_match_table	= h616_pinctrl_match,
+		.pm		= pm_sleep_ptr(&sunxi_pinctrl_pm_ops),
 	},
 };
 builtin_platform_driver(h616_pinctrl_driver);
