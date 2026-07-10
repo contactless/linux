@@ -76,6 +76,22 @@ struct wb_wdt_variant {
 	 * ioremap gives an uncached mapping, so the panic-time stamp reaches the
 	 * register without a cache flush (safe in panic context). 0 = no
 	 * breadcrumb on this SoC: arm unconditionally, no loop brake.
+	 *
+	 * This word lives in the sun6i-rtc GP data bank (32 bytes, 8 words),
+	 * which rtc-sun6i also exports as writable NVMEM and which several
+	 * Wiren Board features share. Known owners, so a new one picks a free
+	 * word rather than a used one:
+	 *
+	 *   H616 (RTC base 0x07000000, GP data at +0x100):
+	 *     reg 0 (0x100)  suspend-to-off resume magic 0x0ff51eeb  (TF-A)
+	 *     reg 2 (0x108)  suspend-to-off resume state            (TF-A)
+	 *     reg 3 (0x10c)  panic breadcrumb                        (this driver)
+	 *   R40 (RTC base 0x01c20400, GP data at +0x100):
+	 *     reg 0 (0x500)  panic breadcrumb                        (this driver)
+	 *
+	 * The driver never assumes exclusivity: it clears the word only while
+	 * it still reads its own magic and backs off if it finds foreign data,
+	 * so a stale map here fails safe rather than corrupting a co-owner.
 	 */
 	u32 breadcrumb_phys;
 };
