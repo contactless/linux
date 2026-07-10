@@ -207,6 +207,29 @@ static const struct sunxi_ccu_desc sun50i_h6_r_ccu_desc = {
 	.num_resets	= ARRAY_SIZE(sun50i_h6_r_ccu_resets),
 };
 
+/*
+ * On the T507/WB8 a system suspend is a suspend-to-off: firmware puts the
+ * LPDDR4 in self-refresh and the PMIC drops VDD-SYS, so on resume the R_CCU is
+ * back at its reset defaults too (the main CCU is restored the same way in
+ * ccu-sun50i-h616.c). Firmware brings the R-CPU / R-bus root (ar100, 0x000)
+ * back up on its own -- it needs the R-domain alive to drive the PMIC over
+ * R_I2C / R_RSB -- so that register is firmware-owned and must not be
+ * rewritten. The kernel restores the rest of the R-domain (the R-APB dividers,
+ * the peripheral bus gates and the IR/1-wire module clocks) from the shared
+ * syscore handler in ccu_common.c, so a kernel-driven R-domain peripheral is
+ * not left gated at its reset default across the off-cycle. The R_CCU has no
+ * PLLs of its own.
+ */
+static const u16 sun50i_h616_r_ccu_firmware_regs[] = {
+	0x000,	/* ar100 / R-bus root: firmware restores it for the PMIC path */
+};
+
+static const struct ccu_pm sun50i_h616_r_ccu_pm = {
+	.reg_size		= 0x210,
+	.firmware_regs		= sun50i_h616_r_ccu_firmware_regs,
+	.num_firmware_regs	= ARRAY_SIZE(sun50i_h616_r_ccu_firmware_regs),
+};
+
 static const struct sunxi_ccu_desc sun50i_h616_r_ccu_desc = {
 	.ccu_clks	= sun50i_h6_r_ccu_clks,
 	.num_ccu_clks	= ARRAY_SIZE(sun50i_h6_r_ccu_clks),
@@ -215,6 +238,8 @@ static const struct sunxi_ccu_desc sun50i_h616_r_ccu_desc = {
 
 	.resets		= sun50i_h616_r_ccu_resets,
 	.num_resets	= ARRAY_SIZE(sun50i_h616_r_ccu_resets),
+
+	.pm		= &sun50i_h616_r_ccu_pm,
 };
 
 static int sun50i_h6_r_ccu_probe(struct platform_device *pdev)
