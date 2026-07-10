@@ -706,6 +706,12 @@
 	dr_mode = "otg";
 	wirenboard,mux-on-id-pin;
 
+	/* Maximum TX amplitude and slew rate: with the default TX tuning
+	 * (minimum amplitude) some hosts fail to receive high-speed data
+	 * from us: gadget enumeration fails and bulk data gets corrupted */
+	allwinner,usb0-tx-amplitude = <3>;
+	allwinner,usb0-tx-slew-rate = <7>;
+
 	status = "okay";
 };
 
@@ -980,7 +986,7 @@
 &usb_otg {
 	dr_mode = "peripheral";
 	status = "okay";
-	maximum-speed = "full-speed";
+	maximum-speed = "high-speed";
 };
 
 /* CPU RTC is useless since it doesn't have separate power supply. However we must keep it on to get proper LOSC for the rest of SoC.*/
