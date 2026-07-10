@@ -117,6 +117,8 @@ struct sun4i_usb_phy_data {
 	const struct sun4i_usb_phy_cfg *cfg;
 	enum usb_dr_mode dr_mode;
 	spinlock_t reg_lock; /* guard access to phyctl reg */
+	struct mutex phy2_lock; /* guard phy2_users (needs_phy2_siddq) */
+	int phy2_users;
 	int num_phys;
 	struct sun4i_usb_phy {
 		struct phy *phy;
@@ -373,6 +375,15 @@ static int sun4i_usb_phy_init(struct phy *_phy)
 		}
 
 		clk_disable_unprepare(phy->clk2);
+
+		/*
+		 * PHY2 is now held out of reset on this PHY's behalf. Count the
+		 * user so PHY2 is only put back into reset once the last of the
+		 * PHYs that share it has been torn down (see sun4i_usb_phy_exit).
+		 */
+		mutex_lock(&data->phy2_lock);
+		data->phy2_users++;
+		mutex_unlock(&data->phy2_lock);
 	}
 
 	if (phy->pmu && data->cfg->hci_phy_ctl_clear) {
@@ -443,7 +454,20 @@ static int sun4i_usb_phy_exit(struct phy *_phy)
 		struct sun4i_usb_phy *phy2 = &data->phys[2];
 
 		clk_disable_unprepare(phy2->clk);
-		reset_control_assert(phy2->reset);
+
+		/*
+		 * PHY2 provides a bias the other PHYs need to work, so it must
+		 * stay out of reset as long as any of them is up. Its reset is
+		 * exclusive (asserting it is unconditional, not ref-counted), so
+		 * only assert it once the last sharing PHY has been torn down;
+		 * otherwise tearing this PHY down (e.g. the musb glue's system
+		 * suspend calling phy_exit() on PHY0) would knock out a
+		 * co-resident EHCI/OHCI host still using PHY1/PHY3.
+		 */
+		mutex_lock(&data->phy2_lock);
+		if (!WARN_ON(data->phy2_users == 0) && --data->phy2_users == 0)
+			reset_control_assert(phy2->reset);
+		mutex_unlock(&data->phy2_lock);
 	}
 
 	sun4i_usb_phy_passby(phy, 0);
@@ -850,6 +874,7 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	spin_lock_init(&data->reg_lock);
+	mutex_init(&data->phy2_lock);
 	INIT_DELAYED_WORK(&data->detect, sun4i_usb_phy0_id_vbus_det_scan);
 	dev_set_drvdata(dev, data);
 	data->cfg = of_device_get_match_data(dev);
