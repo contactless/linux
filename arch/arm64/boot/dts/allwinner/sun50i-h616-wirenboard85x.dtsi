@@ -1685,3 +1685,20 @@
 &iommu {
 	status = "okay";
 };
+
+/*
+ * Suspend-to-off contract with the boot firmware: on resume, U-Boot
+ * SPL's board init runs before the resume branch and programs VDD-CPU
+ * to its 0.90 V cold-boot value (CONFIG_AXP_DCDC2_VOLT), and BL31 then
+ * restores the PLL frequency the kernel parked at. The OPP the kernel
+ * parks at across suspend must therefore be safe at 0.90 V on every
+ * speed bin. 480 MHz is 0.90 V-rated and bin-universal
+ * (opp-supported-hw 0x1f). The primary fix lives in BL31 (it restores
+ * the recorded voltage before the recorded frequency); this is the
+ * kernel-side belt in case firmware and kernel ever skew.
+ */
+&cpu_opp_table {
+	opp-480000000 {
+		opp-suspend;
+	};
+};
