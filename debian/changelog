@@ -1,3 +1,11 @@
+linux-wb (6.8.0-wb161) stable; urgency=medium
+
+  * pinctrl-sunxi: fix output latch corruption on GPIO writes: a write to
+    one GPIO poisoned the latches of input-muxed pins in the same bank,
+    causing sporadic glitches on bit-banged I2C buses
+
+ -- Ilya Titov <ilya.titov@wirenboard.com>  Wed, 12 Aug 2026 15:23:15 +0300
+
 linux-wb (6.8.0-wb160) stable; urgency=medium
 
   * wbec-uart: fix xmit races between SPI exchange and tty flush/shutdown:
