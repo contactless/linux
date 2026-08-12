@@ -1,0 +1,352 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Wiren Board 7 (Allwinner R40/A40i) and Wiren Board 8 (Allwinner
+ * T507/H616): warm-reset the SoC shortly after a panic so the panic
+ * log persists in the ramoops region.
+ *
+ * The ramoops region (a fixed low DRAM address, 0x43800000, carried by
+ * the reserved-memory node in the board DT) survives a SoC watchdog
+ * reset (DRAM stays powered), after which U-Boot parks the records on
+ * eMMC and performs a full recovery power cycle (the "pstore shuttle").
+ * A fixed address also lets a kernel-only update capture logs: the
+ * region survives the warm reset and this same kernel harvests it on
+ * the next boot even under an old U-Boot with no shuttle.
+ * Without this hook a panicked kernel just parks until the EC watchdog
+ * acts: on pre-2.4.0 EC firmware the EC watchdog action is a full
+ * power cycle, destroying DRAM and the records; 2.4.0+ warm-resets
+ * first - this hook makes the reset immediate and firmware-independent.
+ *
+ * The panic notifier arms the SoC watchdog with a ~6 s interval using
+ * a few raw MMIO writes - nothing here can sleep, lock or allocate, so
+ * it is safe in panic context. The sunxi watchdog device (watchdog0)
+ * is idle on Wiren Board systems: userspace feeds the EC watchdog
+ * (watchdog1) instead.
+ *
+ * Why ~6 s instead of the 0.5 s hardware minimum: the panic notifiers
+ * run before kmsg_dump writes the ramoops records and before the
+ * serial console drains the backtrace, so a 0.5 s fuse could fire
+ * before the dump completes. An operator-configured panic_timeout
+ * shorter than 6 s intentionally wins over this hook.
+ *
+ * The hook arms itself only if a ramoops region is present in the DT.
+ * Wiren Board kernels declare that node in their own board DTB, so a
+ * kernel-only update enables the feature even under an older U-Boot
+ * (no lockstep with the bootloader required). A DT with no ramoops node
+ * -- a foreign or stripped board -- leaves panic behaviour unchanged.
+ * The hook also declines to re-arm when it detects it just warm-reset
+ * from a panic (see the loop brake below), letting a repeat panic
+ * escalate to an EC power cut.
+ */
+
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
+#include <linux/init.h>
+#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/notifier.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/panic_notifier.h>
+#include <linux/workqueue.h>
+
+/*
+ * Register layouts and arming sequence mirror the restart handler in
+ * drivers/watchdog/sunxi_wdt.c (sun4i_wdt_reg / sun6i_wdt_reg), except
+ * for the interval: the restart handler uses the minimal 0.5 s, we set
+ * 6 s, which has an exact hardware encoding (wdt_timeout_map[6] = 0x6).
+ * Neither WB variant uses a key value (that is sun20i/sun55i only).
+ */
+#define WDT_CTRL_RELOAD		((1 << 0) | (0x0a57 << 1))
+#define WDT_MODE_EN		(1 << 0)
+#define WDT_TIMEOUT_MASK	0x0F
+#define WDT_INTV_6S		0x6	/* wdt_timeout_map[6] in sunxi_wdt.c */
+
+struct wb_wdt_variant {
+	u8 ctrl;		/* counter restart register */
+	u8 cfg;			/* reset configuration register */
+	u8 mode;		/* enable + interval register */
+	u8 timeout_shift;
+	u8 reset_mask;
+	u8 reset_val;		/* whole-system reset */
+	/*
+	 * Physical address of the RTC general-purpose register used as the
+	 * panic-loop-breaker breadcrumb (see the loop brake below). Must be an
+	 * always-on register that survives a warm reset but is cleared by the
+	 * EC's power cut. The driver ioremap()s it and reads/writes one word;
+	 * ioremap gives an uncached mapping, so the panic-time stamp reaches the
+	 * register without a cache flush (safe in panic context). 0 = no
+	 * breadcrumb on this SoC: arm unconditionally, no loop brake.
+	 *
+	 * This word lives in the sun6i-rtc GP data bank (32 bytes, 8 words),
+	 * which rtc-sun6i also exports as writable NVMEM and which several
+	 * Wiren Board features share. Known owners, so a new one picks a free
+	 * word rather than a used one:
+	 *
+	 *   H616 (RTC base 0x07000000, GP data at +0x100):
+	 *     reg 0 (0x100)  suspend-to-off resume magic 0x0ff51eeb  (TF-A)
+	 *     reg 2 (0x108)  suspend-to-off resume state            (TF-A)
+	 *     reg 3 (0x10c)  panic breadcrumb                        (this driver)
+	 *   R40 (RTC base 0x01c20400, GP data at +0x100):
+	 *     reg 0 (0x500)  panic breadcrumb                        (this driver)
+	 *
+	 * The driver never assumes exclusivity: it clears the word only while
+	 * it still reads its own magic and backs off if it finds foreign data,
+	 * so a stale map here fails safe rather than corrupting a co-owner.
+	 */
+	u32 breadcrumb_phys;
+};
+
+/* H616/T507: watchdog in the timer block, dedicated CFG register */
+static const struct wb_wdt_variant sun6i_wdt_variant = {
+	.ctrl = 0x10,
+	.cfg = 0x14,
+	.mode = 0x18,
+	.timeout_shift = 4,
+	.reset_mask = 0x03,
+	.reset_val = 0x01,
+	.breadcrumb_phys = 0x0700010c,	/* RTC base 0x07000000 + GP data reg 3 */
+};
+
+/* R40/A40i: CFG and MODE share one register (offset 0x04) */
+static const struct wb_wdt_variant sun4i_wdt_variant = {
+	.ctrl = 0x00,
+	.cfg = 0x04,
+	.mode = 0x04,
+	.timeout_shift = 3,
+	.reset_mask = 0x02,
+	.reset_val = 0x02,
+	/*
+	 * R40 uses sun6i-rtc GP data reg 0 (RTC base 0x01c20400 + 0x100), an
+	 * always-on register - the same mechanism as H616. Controlled
+	 * re-investigation on WB7.4.2 confirmed it survives a sun4i-WDT warm
+	 * reset and is cleared by the EC's power cut, exactly the reset-reason
+	 * signal the loop brake needs.
+	 *
+	 * (An earlier revision wrongly concluded the R40 panic path "wipes the
+	 * RTC" and detoured through a no-map DRAM word. That was an EC-power-cut
+	 * confound: the EC "reset power" is a *brief* 5 V cut that zeroes the RTC
+	 * but leaves DRAM intact by remanence, so it masquerades as a warm reset.
+	 * A DRAM word therefore *fails* the wipe requirement - it survives that
+	 * brief cut byte-perfect and the stamp never clears - whereas the RTC
+	 * register clears correctly. The RTC is the right store for both SoCs.)
+	 */
+	.breadcrumb_phys = 0x01c20500,	/* RTC base 0x01c20400 + GP data reg 0 */
+};
+
+/*
+ * The watchdog block is located through the DT (below), but its registers are
+ * driven here rather than through sunxi_wdt, because no supported path exists:
+ *
+ *  - The watchdog core exports only registration helpers. watchdog_start(),
+ *    watchdog_ping() and watchdog_set_timeout() are static to watchdog_dev.c,
+ *    reachable only via the /dev/watchdogN chardev under mutex_lock(), and
+ *    watchdog_start() arms a kthread_work/hrtimer. None of that may be called
+ *    from a panic notifier.
+ *  - The one op reachable from atomic context, ->restart, resets at the
+ *    shortest interval the hardware offers (0.5 s). The panic path still has
+ *    to write the pstore dmesg record and flush the console, hence ~6 s here.
+ *  - do_kernel_restart() would not reach sunxi-wdt's ->restart anyway:
+ *    wbec_restart outranks it and cuts power (see the escalation note above).
+ *
+ * More fundamentally, the watchdog is armed as a *deadline*, not as a restart
+ * call: a restart handler only runs if the panic path reaches its end, whereas
+ * an armed watchdog still fires if panic() itself wedges.
+ *
+ * The cost is duplicating sunxi_wdt_reg's offsets for the two variants we run.
+ */
+static const struct of_device_id wb_wdt_matches[] = {
+	{ .compatible = "allwinner,sun6i-a31-wdt", .data = &sun6i_wdt_variant },
+	{ .compatible = "allwinner,sun4i-a10-wdt", .data = &sun4i_wdt_variant },
+	{ /* sentinel */ }
+};
+
+static void __iomem *wb_wdt_regs;
+static const struct wb_wdt_variant *wb_wdt_variant;
+
+/*
+ * Loop brake. A kernel that panics on every boot would otherwise
+ * warm-reset forever. There is no hardware "reset cause" latch on these
+ * SoCs (the watchdog status register is interrupt-mode only and clears on
+ * reset), but the RTC block has general-purpose registers documented "for
+ * storing power-off information": one survives a warm reset and is cleared
+ * by the EC's power cut - exactly the reset-reason signal we need. The panic
+ * handler stamps it before arming; if a boot comes up still stamped and we
+ * have not yet cleared it after a healthy uptime, we decline to arm again
+ * and let the reboot escalate to an EC power cut (which clears the stamp and
+ * breaks the fast warm-reset loop).
+ *
+ * The register is per-SoC (wb_wdt_variant.breadcrumb_phys), both bench- and
+ * E2E-confirmed to survive a warm reset and be cleared by the EC power cut:
+ * H616 uses RTC GP data reg 3 (0x0700010c), R40 uses RTC GP data reg 0
+ * (0x01c20500). A SoC with the field 0 has no breadcrumb and arms
+ * unconditionally (no loop brake).
+ *
+ * How the escalation actually fires: on a declined panic the notifier does
+ * not arm the SoC watchdog, so the reboot takes the kernel's own restart
+ * path - panic_timeout -> emergency_restart -> the highest-priority restart
+ * handler, which on Wiren Board is wbec_restart (SYS_OFF_PRIO_FIRMWARE, 224,
+ * above sunxi-wdt's 128). That asks the EC to "reset power": a brief 5 V cut that
+ * clears the RTC stamp (but, by DRAM remanence, would have left a DRAM word
+ * intact - which is why the breadcrumb must live in the RTC, not DRAM). If
+ * panic_timeout is 0 the board instead parks until the EC watchdog cuts
+ * power - same effect on the stamp.
+ */
+#define WB_BREADCRUMB_MAGIC	0x50414e31	/* "PAN1" */
+
+static void __iomem *wb_breadcrumb;
+static bool wb_reset_from_panic;
+
+static void wb_breadcrumb_clear_fn(struct work_struct *work)
+{
+	/* Healthy uptime reached: allow the next panic to warm-reset again. */
+	bool was_held = wb_reset_from_panic;
+
+	/*
+	 * Clear only our own stamp. This RTC GP word lives in a shared,
+	 * userspace-visible NVMEM bank (rtc-sun6i); neighbouring words carry
+	 * unrelated state (e.g. the suspend-to-off resume vector). If the
+	 * word no longer reads our magic, something else owns it now - do not
+	 * zero it.
+	 */
+	if (wb_breadcrumb && readl(wb_breadcrumb) == WB_BREADCRUMB_MAGIC)
+		writel(0, wb_breadcrumb);
+	wb_reset_from_panic = false;
+	if (was_held)
+		pr_info("healthy, panic warm-reset re-armed\n");
+}
+static DECLARE_DELAYED_WORK(wb_breadcrumb_clear, wb_breadcrumb_clear_fn);
+
+static int wb_ramoops_panic_reset(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	const struct wb_wdt_variant *v = wb_wdt_variant;
+	u32 val;
+
+	/*
+	 * If this boot itself came back from a panic-armed warm reset and has
+	 * not yet proven healthy, do not arm again. The reboot then takes the
+	 * kernel restart path (panic_timeout -> emergency_restart -> wbec_restart)
+	 * and the EC cuts power, which clears the RTC stamp and escalates the
+	 * crash loop off the fast warm-reset path. If panic_timeout is 0 the EC
+	 * watchdog does the power cut instead.
+	 */
+	if (wb_reset_from_panic) {
+		pr_emerg("panic again after a warm reset; not re-arming, escalating to an EC power cut\n");
+		return NOTIFY_DONE;
+	}
+
+	/* Stamp the reset-reason breadcrumb before triggering the reset. */
+	if (wb_breadcrumb)
+		writel(WB_BREADCRUMB_MAGIC, wb_breadcrumb);
+
+	/* Set whole-system reset function */
+	val = readl(wb_wdt_regs + v->cfg);
+	val &= ~(u32)v->reset_mask;
+	val |= v->reset_val;
+	writel(val, wb_wdt_regs + v->cfg);
+
+	/*
+	 * Set the ~6 s interval and enable. On sun4i CFG and MODE are
+	 * the same register, so this read-modify-write must (and does)
+	 * preserve the reset bit written above.
+	 */
+	val = readl(wb_wdt_regs + v->mode);
+	val &= ~((u32)WDT_TIMEOUT_MASK << v->timeout_shift);
+	val |= WDT_INTV_6S << v->timeout_shift;
+	val |= WDT_MODE_EN;
+	writel(val, wb_wdt_regs + v->mode);
+
+	/* Restart the counter so the full interval runs from now */
+	writel(WDT_CTRL_RELOAD, wb_wdt_regs + v->ctrl);
+
+	pr_emerg("SoC watchdog armed, warm reset in ~6 s\n");
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block wb_ramoops_panic_nb = {
+	.notifier_call = wb_ramoops_panic_reset,
+	/* run late: let other notifiers log first, the dump is on panic anyway */
+	.priority = INT_MIN + 1,
+};
+
+static int __init wb_ramoops_panic_reset_init(void)
+{
+	const struct of_device_id *match;
+	struct device_node *np;
+
+	if (!of_machine_is_compatible("allwinner,sun50i-h616") &&
+	    !of_machine_is_compatible("allwinner,sun8i-r40"))
+		return 0;
+
+	/*
+	 * Arm only when a ramoops region exists (injected into
+	 * /reserved-memory by the Wiren Board U-Boot DT fixup).
+	 */
+	np = of_find_compatible_node(NULL, NULL, "ramoops");
+	if (!np)
+		return 0;
+	of_node_put(np);
+
+	np = of_find_matching_node_and_match(NULL, wb_wdt_matches, &match);
+	if (!np) {
+		pr_warn("no SoC watchdog node found, not armed\n");
+		return 0;
+	}
+
+	wb_wdt_regs = of_iomap(np, 0);
+	of_node_put(np);
+	if (!wb_wdt_regs)
+		return -ENOMEM;
+
+	wb_wdt_variant = match->data;
+
+	/*
+	 * Reset-reason breadcrumb, per SoC (wb_wdt_variant.breadcrumb_phys;
+	 * 0 = none, arm unconditionally). If this boot came up with the panic
+	 * stamp still set, we just warm-reset from a panic: hold off arming
+	 * until a healthy uptime clears it.
+	 */
+	if (wb_wdt_variant->breadcrumb_phys) {
+		wb_breadcrumb = ioremap(wb_wdt_variant->breadcrumb_phys, 4);
+		if (!wb_breadcrumb) {
+			pr_warn("breadcrumb ioremap failed; panic-loop brake disabled (arms every boot)\n");
+		} else {
+			u32 stamp = readl(wb_breadcrumb);
+
+			pr_info("breadcrumb @0x%08x reads 0x%08x\n",
+				wb_wdt_variant->breadcrumb_phys, stamp);
+			if (stamp == WB_BREADCRUMB_MAGIC) {
+				wb_reset_from_panic = true;
+				pr_info("came back from a panic warm reset; holding off re-arm\n");
+			} else if (stamp != 0) {
+				/*
+				 * The word holds data we did not write: another
+				 * owner of this shared RTC GP bank. Do not stamp
+				 * or clear it. Run without the loop brake rather
+				 * than corrupt someone else's NVMEM - a panic
+				 * still warm-resets, it just is not held off on
+				 * the following boot.
+				 */
+				pr_warn("breadcrumb word holds foreign data 0x%08x; not using it, panic-loop brake disabled\n",
+					stamp);
+				iounmap(wb_breadcrumb);
+				wb_breadcrumb = NULL;
+			}
+		}
+	}
+	/*
+	 * Clear the stamp once we have stayed up long enough to count as a
+	 * healthy session (runs whether or not the stamp was set, so a plain
+	 * boot re-arms immediately and a post-panic boot re-arms after the
+	 * delay). 60 s comfortably exceeds pstore harvest.
+	 */
+	schedule_delayed_work(&wb_breadcrumb_clear, msecs_to_jiffies(60000));
+
+	atomic_notifier_chain_register(&panic_notifier_list,
+				       &wb_ramoops_panic_nb);
+	pr_info("armed (ramoops present)\n");
+
+	return 0;
+}
+late_initcall(wb_ramoops_panic_reset_init);

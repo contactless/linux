@@ -25,14 +25,21 @@
 /* For power off WBEC activates PWON pin on PMIC for 6s */
 #define WBEC_POWER_RESET_DELAY_MS			10000
 
+/*
+ * Mirrors LINUX_POWERON_REASON in wb-embedded-controller src/wbec.c;
+ * append-only ABI.
+ */
 static const char * const wbec_poweron_reason[] = {
-	"Power supply on",
-	"Power button",
-	"RTC alarm",
-	"Reboot",
-	"Reboot instead of poweroff",
-	"Watchdog",
-	"PMIC is unexpectedly off",
+	[0] = "Power supply on",
+	[1] = "Power button",
+	[2] = "RTC alarm",
+	[3] = "Reboot",
+	[4] = "Reboot instead of poweroff",
+	[5] = "Watchdog",
+	[6] = "PMIC is unexpectedly off",
+	[7] = "Unknown",
+	[8] = "Watchdog (warm reset)",
+	[9] = "Full power cycle request",
 };
 
 static const struct regmap_config wbec_regmap_config_v1 = {
@@ -354,7 +361,13 @@ static int wbec_probe(struct spi_device *spi)
 
 	ret = wbec_check_present(wbec);
 	if (ret == -ENODEV) {
-		dev_info(wbec->dev, "WBEC not found with v2 protocol, trying v1\n");
+		/*
+		 * Expected on every board that speaks the v1 protocol (the v2
+		 * pad-word protocol is a newer-EC feature): probe v2 first, then
+		 * fall back to v1. Keep this at debug level so a normal v1 board
+		 * does not log a scary "not found" line during ordinary probing.
+		 */
+		dev_dbg(wbec->dev, "no WBEC on v2 protocol, falling back to v1\n");
 		/* don't worry about memory leak, previous regmap will be freed by devm */
 		wbec->regmap = devm_regmap_init_spi(spi, &wbec_regmap_config_v1);
 

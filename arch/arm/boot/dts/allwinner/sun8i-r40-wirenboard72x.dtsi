@@ -38,6 +38,36 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	/* Fixed-address pstore/ramoops region; survives a warm reset so the
+	 * same kernel can harvest it even under an old U-Boot with no shuttle.
+	 * The base MUST match U-Boot WB_RAMOOPS_BASE (0x43800000).
+	 *
+	 * The address was chosen for the arm64/H616 boot map but is reused
+	 * here for R40. On R40 it clears the used load addresses (fdt
+	 * 0x43000000, overlay 0x43300000) and sits ~4 MiB above the stock
+	 * RAMDISK_ADDR_R (0x43400000). WB firmware boots without an initrd
+	 * (bootz "... - ..."), so ramdisk_addr_r is unused; if that ever
+	 * changes, an initrd >4 MiB would overlap this region. The WB7 U-Boot
+	 * shuttle carries R40 static_asserts bounding this address against
+	 * RAMDISK_ADDR_R, so such an env change trips a build error there.
+	 * Retention validated on real WB7.4.2 hardware (panic -> sun4i WDT
+	 * warm reset -> kernel harvests dmesg + console from this region).
+	 */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		ramoops@43800000 {
+			compatible = "ramoops";
+			reg = <0x43800000 0x100000>;
+			record-size = <0x20000>;
+			console-size = <0x40000>;
+			ecc-size = <32>;
+			no-map;
+		};
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
