@@ -1622,6 +1622,16 @@ int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 		return -ENOMEM;
 
 	/*
+	 * The bus clock has to be enabled before any register access, which
+	 * happens as soon as the shadow is seeded below, and later on from
+	 * the pin hogs applied when the pinctrl device registers.
+	 */
+	ret = of_clk_get_parent_count(node);
+	clk = devm_clk_get_enabled(&pdev->dev, ret == 1 ? NULL : "apb");
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	/*
 	 * Seed the output latch shadow from the hardware so pins the
 	 * bootloader left in output mode keep their state; see
 	 * sunxi_pinctrl_gpio_set() for why a shadow is needed.  This must
@@ -1728,13 +1738,6 @@ int sunxi_pinctrl_init_with_flags(struct platform_device *pdev,
 					     pin->pin.number, 1);
 		if (ret)
 			goto gpiochip_error;
-	}
-
-	ret = of_clk_get_parent_count(node);
-	clk = devm_clk_get_enabled(&pdev->dev, ret == 1 ? NULL : "apb");
-	if (IS_ERR(clk)) {
-		ret = PTR_ERR(clk);
-		goto gpiochip_error;
 	}
 
 	pctl->irq = devm_kcalloc(&pdev->dev,
