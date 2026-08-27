@@ -12,6 +12,7 @@
  * Author: Sylwester Nawrocki <s.nawrocki@samsung.com>
  */
 
+#include <linux/bitfield.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -78,6 +79,17 @@
 #define PHY_DISCON_TH_SEL		0x2a
 #define PHY_SQUELCH_DETECT		0x3c
 
+/*
+ * TX tune field layout, written as 5 bits starting at
+ * PHY_TX_AMPLITUDE_TUNE. The default is inherited from the
+ * Allwinner BSP: amplitude 0 (minimum), slew rate 5.
+ */
+#define PHY_TX_AMPLITUDE_MASK		GENMASK(1, 0)
+#define PHY_TX_AMPLITUDE_MAX		3
+#define PHY_TX_SLEWRATE_MASK		GENMASK(4, 2)
+#define PHY_TX_SLEWRATE_MAX		7
+#define PHY_TX_TUNE_DEFAULT		0x14
+
 /* A83T specific control bits for PHY0 */
 #define PHY_CTL_VBUSVLDEXT		BIT(5)
 #define PHY_CTL_SIDDQ			BIT(3)
@@ -127,6 +139,7 @@ struct sun4i_usb_phy_data {
 		struct clk *clk2;
 		bool regulator_on;
 		int index;
+		u32 tx_tune;
 	} phys[MAX_PHYS];
 	/* phy0 / otg related variables */
 	struct extcon_dev *extcon;
@@ -394,7 +407,7 @@ static int sun4i_usb_phy_init(struct phy *_phy)
 			sun4i_usb_phy_write(phy, PHY_RES45_CAL_EN, 0x01, 1);
 
 		/* Adjust PHY's magnitude and rate */
-		sun4i_usb_phy_write(phy, PHY_TX_AMPLITUDE_TUNE, 0x14, 5);
+		sun4i_usb_phy_write(phy, PHY_TX_AMPLITUDE_TUNE, phy->tx_tune, 5);
 
 		/* Disconnect threshold adjustment */
 		sun4i_usb_phy_write(phy, PHY_DISCON_TH_SEL,
@@ -915,6 +928,7 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
 	for (i = 0; i < MAX_PHYS; i++) {
 		struct sun4i_usb_phy *phy = data->phys + i;
 		char name[32];
+		u32 val;
 
 		if (data->cfg->missing_phys & BIT(i))
 			continue;
@@ -926,6 +940,30 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
 				break;
 			dev_err(dev, "failed to get reset %s\n", name);
 			return PTR_ERR(phy->reset);
+		}
+
+		phy->tx_tune = PHY_TX_TUNE_DEFAULT;
+
+		snprintf(name, sizeof(name), "allwinner,usb%d-tx-amplitude", i);
+		if (!of_property_read_u32(np, name, &val)) {
+			if (val > PHY_TX_AMPLITUDE_MAX) {
+				dev_warn(dev, "%s out of range, clamping to %d\n",
+					 name, PHY_TX_AMPLITUDE_MAX);
+				val = PHY_TX_AMPLITUDE_MAX;
+			}
+			phy->tx_tune &= ~PHY_TX_AMPLITUDE_MASK;
+			phy->tx_tune |= FIELD_PREP(PHY_TX_AMPLITUDE_MASK, val);
+		}
+
+		snprintf(name, sizeof(name), "allwinner,usb%d-tx-slew-rate", i);
+		if (!of_property_read_u32(np, name, &val)) {
+			if (val > PHY_TX_SLEWRATE_MAX) {
+				dev_warn(dev, "%s out of range, clamping to %d\n",
+					 name, PHY_TX_SLEWRATE_MAX);
+				val = PHY_TX_SLEWRATE_MAX;
+			}
+			phy->tx_tune &= ~PHY_TX_SLEWRATE_MASK;
+			phy->tx_tune |= FIELD_PREP(PHY_TX_SLEWRATE_MASK, val);
 		}
 
 		snprintf(name, sizeof(name), "usb%d_vbus", i);
