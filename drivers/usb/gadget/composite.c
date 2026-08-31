@@ -1838,7 +1838,13 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
 				}
 			} else {
-				if (gadget->lpm_capable || cdev->use_webusb)
+				/*
+				 * WebUSB requires bcdUSB >= 2.10; Chromium does not
+				 * read the landing page from a device below that.
+				 */
+				if (cdev->use_webusb)
+					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
+				else if (gadget->lpm_capable)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0201);
 				else
 					cdev->desc.bcdUSB = cpu_to_le16(0x0200);
