@@ -1,3 +1,11 @@
+linux-wb (6.8.0-wb162) stable; urgency=medium
+
+  * usb: gadget: composite: report bcdUSB 0x0210 when WebUSB is enabled,
+    so that Chromium reads the WebUSB landing page and shows the
+    plug-in notification for the Debug Network gadget
+
+ -- Evgeny Boger <boger@wirenboard.com>  Mon, 31 Aug 2026 17:04:48 +0300
+
 linux-wb (6.8.0-wb161) stable; urgency=medium
 
   * pinctrl-sunxi: fix output latch corruption on GPIO writes: a write to
