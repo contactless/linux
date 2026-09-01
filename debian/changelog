@@ -1,3 +1,11 @@
+linux-wb (6.8.0-wb163) stable; urgency=medium
+
+  * usb: gadget: configfs: add MS OS 2.0 descriptors support, without which
+    Windows cannot be told the DeviceInterfaceGUID of a composite gadget
+    function and applications get no device path for it
+
+ -- Evgeny Boger <boger@wirenboard.com>  Tue, 01 Sep 2026 19:51:03 +0300
+
 linux-wb (6.8.0-wb162) stable; urgency=medium
 
   * usb: gadget: composite: report bcdUSB 0x0210 when WebUSB is enabled,
