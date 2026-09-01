@@ -452,6 +452,10 @@ static inline struct usb_composite_driver *to_cdriver(
  * @b_webusb_vendor_code: 0x0 by default, vendor code for WebUSB
  * @landing_page: empty by default, landing page to announce in WebUSB
  * @use_webusb: false by default, interested gadgets set it
+ * @b_msos20_vendor_code: vendor code for the MS OS 2.0 descriptor set request
+ * @msos20_desc_set: MS OS 2.0 descriptor set to announce, or NULL
+ * @msos20_desc_set_len: length of @msos20_desc_set
+ * @use_msos20: false by default, interested gadgets set it
  * @os_desc_config: the configuration to be used with OS descriptors
  * @setup_pending: true when setup request is queued but not completed
  * @os_desc_pending: true when os_desc request is queued but not completed
@@ -477,6 +481,11 @@ struct usb_composite_dev {
 	u8				b_webusb_vendor_code;
 	char				landing_page[WEBUSB_URL_RAW_MAX_LENGTH];
 	unsigned int			use_webusb:1;
+
+	u8				b_msos20_vendor_code;
+	const u8			*msos20_desc_set;
+	u16				msos20_desc_set_len;
+	unsigned int			use_msos20:1;
 
 	/* private: */
 	/* internals */
