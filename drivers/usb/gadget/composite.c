@@ -19,6 +19,7 @@
 #include <linux/usb/composite.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/webusb.h>
+#include <linux/usb/msos20.h>
 #include <asm/unaligned.h>
 
 #include "u_os_desc.h"
@@ -901,6 +902,26 @@ static int bos_desc(struct usb_composite_dev *cdev)
 			webusb_cap_data->iLandingPage = WEBUSB_LANDING_PAGE_PRESENT;
 		else
 			webusb_cap_data->iLandingPage = WEBUSB_LANDING_PAGE_NOT_PRESENT;
+	}
+
+	if (cdev->use_msos20 && cdev->msos20_desc_set_len) {
+		struct usb_msos20_platform_descriptor *msos20_cap;
+
+		msos20_cap = cdev->req->buf + le16_to_cpu(bos->wTotalLength);
+		bos->bNumDeviceCaps++;
+		le16_add_cpu(&bos->wTotalLength, USB_DT_USB_MSOS20_CAP_SIZE);
+
+		msos20_cap->bLength = USB_DT_USB_MSOS20_CAP_SIZE;
+		msos20_cap->bDescriptorType = USB_DT_DEVICE_CAPABILITY;
+		msos20_cap->bDevCapabilityType = USB_PLAT_DEV_CAP_TYPE;
+		msos20_cap->bReserved = 0;
+		memcpy(msos20_cap->PlatformCapabilityUUID, MSOS20_UUID,
+		       sizeof(MSOS20_UUID));
+		msos20_cap->dwWindowsVersion = cpu_to_le32(MSOS20_WINDOWS_VERSION_8_1);
+		msos20_cap->wMSOSDescriptorSetTotalLength =
+			cpu_to_le16(cdev->msos20_desc_set_len);
+		msos20_cap->bMS_VendorCode = cdev->b_msos20_vendor_code;
+		msos20_cap->bAltEnumCode = 0;
 	}
 
 	return le16_to_cpu(bos->wTotalLength);
@@ -1842,7 +1863,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				 * WebUSB requires bcdUSB >= 2.10; Chromium does not
 				 * read the landing page from a device below that.
 				 */
-				if (cdev->use_webusb)
+				if (cdev->use_webusb || cdev->use_msos20)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
 				else if (gadget->lpm_capable)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0201);
@@ -1879,7 +1900,8 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			break;
 		case USB_DT_BOS:
 			if (gadget_is_superspeed(gadget) ||
-			    gadget->lpm_capable || cdev->use_webusb) {
+			    gadget->lpm_capable || cdev->use_webusb ||
+			    cdev->use_msos20) {
 				value = bos_desc(cdev);
 				value = min(w_length, (u16) value);
 			}
@@ -2164,6 +2186,20 @@ unknown:
 		 * WebUSB URL descriptor handling, following:
 		 * https://wicg.github.io/webusb/#device-requests
 		 */
+		/*
+		 * MS OS 2.0 descriptor set, requested with the vendor code
+		 * announced in the BOS platform capability descriptor. See the
+		 * "Microsoft OS 2.0 Descriptors Specification".
+		 */
+		if (cdev->use_msos20 && cdev->msos20_desc_set &&
+		    ctrl->bRequestType == (USB_DIR_IN | USB_TYPE_VENDOR) &&
+		    ctrl->bRequest == cdev->b_msos20_vendor_code &&
+		    w_index == MSOS20_DESCRIPTOR_INDEX) {
+			value = min_t(u16, w_length, cdev->msos20_desc_set_len);
+			memcpy(cdev->req->buf, cdev->msos20_desc_set, value);
+			goto check_value;
+		}
+
 		if (cdev->use_webusb &&
 		    ctrl->bRequestType == (USB_DIR_IN | USB_TYPE_VENDOR) &&
 		    w_index == WEBUSB_GET_URL &&

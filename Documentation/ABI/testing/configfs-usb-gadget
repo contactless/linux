@@ -156,3 +156,25 @@ Description:
 		bVendorCode	one-byte value used for custom per-device
 		landingPage	UTF-8 encoded URL of the device's landing page
 		=============	===============================================
+
+What:		/config/usb-gadget/gadget/msos20
+Date:		Sep 2026
+KernelVersion:	6.8
+Description:
+		This group contains "Microsoft OS 2.0 Descriptors" specific
+		attributes.
+
+		=============== =============================================
+		use		flag turning MS OS 2.0 descriptors on/off
+		bVendorCode	one-byte value used for the vendor request
+				that fetches the descriptor set
+		descriptor_set	binary attribute holding the MS OS 2.0
+				descriptor set; its contents come from
+				userspace, the kernel validates only the
+				set header
+		=============== =============================================
+
+		When enabled, a platform capability descriptor announcing the
+		descriptor set is added to the BOS descriptor, and the device
+		reports bcdUSB 0x0210 as the specification requires.
+

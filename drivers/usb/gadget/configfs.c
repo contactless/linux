@@ -8,6 +8,7 @@
 #include <linux/usb/composite.h>
 #include <linux/usb/gadget_configfs.h>
 #include <linux/usb/webusb.h>
+#include <linux/usb/msos20.h>
 #include "configfs.h"
 #include "u_f.h"
 #include "u_os_desc.h"
@@ -41,6 +42,7 @@ struct gadget_info {
 	struct config_group strings_group;
 	struct config_group os_desc_group;
 	struct config_group webusb_group;
+	struct config_group msos20_group;
 
 	struct mutex lock;
 	struct usb_gadget_strings *gstrings[MAX_USB_STRING_LANGS + 1];
@@ -55,6 +57,11 @@ struct gadget_info {
 	bool use_webusb;
 	u16 bcd_webusb_version;
 	u8 b_webusb_vendor_code;
+
+	bool use_msos20;
+	u8 b_msos20_vendor_code;
+	u8 *msos20_desc_set;
+	u16 msos20_desc_set_len;
 	char landing_page[WEBUSB_URL_RAW_MAX_LENGTH];
 
 	spinlock_t spinlock;
@@ -1090,6 +1097,136 @@ static ssize_t webusb_landingPage_store(struct config_item *item, const char *pa
 	return len;
 }
 
+static inline struct gadget_info *msos20_item_to_gadget_info(
+		struct config_item *item)
+{
+	return container_of(to_config_group(item),
+			struct gadget_info, msos20_group);
+}
+
+static ssize_t msos20_use_show(struct config_item *item, char *page)
+{
+	return sysfs_emit(page, "%d\n",
+			msos20_item_to_gadget_info(item)->use_msos20);
+}
+
+static ssize_t msos20_use_store(struct config_item *item, const char *page,
+				size_t len)
+{
+	struct gadget_info *gi = msos20_item_to_gadget_info(item);
+	int ret;
+	bool use;
+
+	ret = kstrtobool(page, &use);
+	if (ret)
+		return ret;
+
+	mutex_lock(&gi->lock);
+	gi->use_msos20 = use;
+	mutex_unlock(&gi->lock);
+
+	return len;
+}
+
+static ssize_t msos20_bVendorCode_show(struct config_item *item, char *page)
+{
+	return sysfs_emit(page, "0x%02x\n",
+			msos20_item_to_gadget_info(item)->b_msos20_vendor_code);
+}
+
+static ssize_t msos20_bVendorCode_store(struct config_item *item,
+					const char *page, size_t len)
+{
+	struct gadget_info *gi = msos20_item_to_gadget_info(item);
+	int ret;
+	u8 b_vendor_code;
+
+	ret = kstrtou8(page, 0, &b_vendor_code);
+	if (ret)
+		return ret;
+
+	mutex_lock(&gi->lock);
+	gi->b_msos20_vendor_code = b_vendor_code;
+	mutex_unlock(&gi->lock);
+
+	return len;
+}
+
+/*
+ * The descriptor set is opaque to the kernel: userspace is responsible for its
+ * contents, the kernel only checks the set header so that a truncated or
+ * mismatched blob is rejected at write time rather than confusing the host.
+ */
+static ssize_t msos20_descriptor_set_read(struct config_item *item, void *buf,
+					  size_t count)
+{
+	struct gadget_info *gi = msos20_item_to_gadget_info(item);
+	ssize_t ret;
+
+	mutex_lock(&gi->lock);
+	if (!buf) {
+		ret = gi->msos20_desc_set_len;
+	} else {
+		ret = min_t(size_t, count, gi->msos20_desc_set_len);
+		memcpy(buf, gi->msos20_desc_set, ret);
+	}
+	mutex_unlock(&gi->lock);
+
+	return ret;
+}
+
+static ssize_t msos20_descriptor_set_write(struct config_item *item,
+					   const void *buf, size_t count)
+{
+	struct gadget_info *gi = msos20_item_to_gadget_info(item);
+	const __le16 *hdr = buf;
+	u8 *desc_set;
+
+	if (count < MSOS20_SET_HEADER_SIZE || count > MSOS20_DESC_SET_MAX_LENGTH)
+		return -EINVAL;
+
+	/* set header: wLength == 10, wDescriptorType == MS_OS_20_SET_HEADER */
+	if (le16_to_cpu(hdr[0]) != MSOS20_SET_HEADER_SIZE || le16_to_cpu(hdr[1]) != 0)
+		return -EINVAL;
+
+	/* wTotalLength must describe the whole blob */
+	if (le16_to_cpu(hdr[4]) != count)
+		return -EINVAL;
+
+	desc_set = kmemdup(buf, count, GFP_KERNEL);
+	if (!desc_set)
+		return -ENOMEM;
+
+	mutex_lock(&gi->lock);
+	kfree(gi->msos20_desc_set);
+	gi->msos20_desc_set = desc_set;
+	gi->msos20_desc_set_len = count;
+	mutex_unlock(&gi->lock);
+
+	return count;
+}
+
+CONFIGFS_ATTR(msos20_, use);
+CONFIGFS_ATTR(msos20_, bVendorCode);
+CONFIGFS_BIN_ATTR(msos20_, descriptor_set, NULL, MSOS20_DESC_SET_MAX_LENGTH);
+
+static struct configfs_attribute *msos20_attrs[] = {
+	&msos20_attr_use,
+	&msos20_attr_bVendorCode,
+	NULL,
+};
+
+static struct configfs_bin_attribute *msos20_bin_attrs[] = {
+	&msos20_attr_descriptor_set,
+	NULL,
+};
+
+static struct config_item_type msos20_type = {
+	.ct_attrs	= msos20_attrs,
+	.ct_bin_attrs	= msos20_bin_attrs,
+	.ct_owner	= THIS_MODULE,
+};
+
 CONFIGFS_ATTR(webusb_, use);
 CONFIGFS_ATTR(webusb_, bVendorCode);
 CONFIGFS_ATTR(webusb_, bcdVersion);
@@ -1728,6 +1865,13 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 		gi->cdev.usb_strings = s;
 	}
 
+	if (gi->use_msos20 && gi->msos20_desc_set_len) {
+		cdev->use_msos20 = true;
+		cdev->b_msos20_vendor_code = gi->b_msos20_vendor_code;
+		cdev->msos20_desc_set = gi->msos20_desc_set;
+		cdev->msos20_desc_set_len = gi->msos20_desc_set_len;
+	}
+
 	if (gi->use_webusb) {
 		cdev->use_webusb = true;
 		cdev->bcd_webusb_version = gi->bcd_webusb_version;
@@ -2004,6 +2148,10 @@ static struct config_group *gadgets_make(
 	config_group_init_type_name(&gi->webusb_group, "webusb",
 			&webusb_type);
 	configfs_add_default_group(&gi->webusb_group, &gi->group);
+
+	config_group_init_type_name(&gi->msos20_group, "msos20",
+			&msos20_type);
+	configfs_add_default_group(&gi->msos20_group, &gi->group);
 
 	gi->composite.bind = configfs_do_nothing;
 	gi->composite.unbind = configfs_do_nothing;
