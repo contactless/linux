@@ -1,3 +1,11 @@
+linux-wb (6.8.0-wb164) stable; urgency=medium
+
+  * arm64: wb8.config: enable USB_GADGET_DEBUG_FILES so the RNDIS gadget
+    function exposes its handshake state in /proc/driver/rndis-NNN; wb-utils
+    reads it to tell an RNDIS host from one that needs CDC ECM (macOS)
+
+ -- Evgeny Boger <boger@wirenboard.com>  Sat, 05 Sep 2026 21:51:53 +0300
+
 linux-wb (6.8.0-wb163) stable; urgency=medium
 
   * usb: gadget: configfs: add MS OS 2.0 descriptors support, without which
